@@ -1,19 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Polyline, Popup, GeoJSON, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { TrackingPoint } from '../types';
 
-const AT_FALLBACK_COORDS: [number, number][] = [
-  [34.627, -84.194], [34.98, -83.73], [35.07, -83.56], [35.43, -83.43],
-  [35.71, -82.95], [36.10, -82.42], [36.60, -81.52], [37.32, -80.52],
-  [37.75, -79.45], [38.45, -78.45], [39.00, -77.75], [39.27, -77.60],
-  [39.54, -77.48], [39.73, -77.50], [40.05, -77.12], [40.40, -76.55],
-  [40.73, -75.65], [40.97, -75.12], [41.15, -74.85], [41.24, -74.35],
-  [41.55, -73.75], [41.77, -73.48], [42.05, -73.23], [42.40, -73.15],
-  [42.70, -73.10], [43.15, -72.82], [43.53, -72.15], [43.73, -71.80],
-  [44.16, -71.68], [44.27, -71.30], [44.50, -71.08], [44.95, -70.55],
-  [45.30, -69.80], [45.90, -68.92],
-];
 
 const pointIcon = L.divIcon({
   className: '',
@@ -45,24 +34,18 @@ interface MapProps {
 }
 
 function ATTrailLayer() {
-  const map = useMap();
-  const [geoData, setGeoData] = useState<any>(null);
-  const [useFallback, setUseFallback] = useState(false);
+  const [trailCoords, setTrailCoords] = useState<[number, number][]>([]);
 
   useEffect(() => {
-    fetch('https://mapservices.nps.gov/arcgis/rest/services/NationalTrails/FeatureServer/0/query?where=TrailName+LIKE+%27%25Appalachian%25%27&outFields=*&f=geojson&resultRecordCount=5000')
+    fetch('/at-trail.json')
       .then((res) => res.json())
-      .then(setGeoData)
-      .catch(() => setUseFallback(true));
+      .then((coords: [number, number][]) => setTrailCoords(coords))
+      .catch((err) => console.error('Failed to load AT trail:', err));
   }, []);
 
-  if (useFallback) {
-    return <Polyline positions={AT_FALLBACK_COORDS} pathOptions={{ color: '#e94560', weight: 3, opacity: 0.6, dashArray: '8,6' }} />;
-  }
+  if (trailCoords.length === 0) return null;
 
-  if (!geoData) return null;
-
-  return <GeoJSON data={geoData} style={{ color: '#e94560', weight: 3, opacity: 0.8 }} />;
+  return <Polyline positions={trailCoords} pathOptions={{ color: '#e94560', weight: 3, opacity: 0.6 }} />;
 }
 
 function MapClickHandler({ picking, onClick }: { picking: boolean; onClick: (lat: number, lng: number) => void }) {
