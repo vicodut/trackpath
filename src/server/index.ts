@@ -197,7 +197,7 @@ app.get('/api/sync-status', (_req: Request, res: Response) => {
 
 // --- SPA fallback (production) ---
 if (process.env.NODE_ENV === 'production') {
-  app.get('*', (_req: Request, res: Response) => {
+  app.get('/{*path}', (_req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, '../../dist/client/index.html'));
   });
 }
