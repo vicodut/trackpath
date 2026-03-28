@@ -10,6 +10,7 @@ export interface TrackingPoint {
   message: string | null;
   eventType: string | null;
   createdAt: string | null;
+  calculatedSpeedKmh?: number | null;
 }
 
 export interface SyncResult {

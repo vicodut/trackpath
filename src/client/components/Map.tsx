@@ -145,7 +145,7 @@ export function Map({ points, selectedPoint, pickingFromMap, onMapClick, sidebar
               <strong>{time}</strong><br />
               {pt.latitude.toFixed(5)}, {pt.longitude.toFixed(5)}
               {pt.altitude && <><br />Alt: {pt.altitude.toFixed(0)}m</>}
-              {pt.velocity && <><br />Speed: {pt.velocity} km/h</>}
+              {pt.velocity ? <><br />Speed: {pt.velocity} km/h</> : pt.calculatedSpeedKmh ? <><br />Speed: ~{pt.calculatedSpeedKmh.toFixed(1)} km/h</> : null}
               {pt.message && <><br /><em>{pt.message}</em></>}
             </Popup>
           </Marker>

@@ -13,6 +13,10 @@ export function usePoints() {
     try {
       const pts = await api.getPoints();
       setPoints(pts);
+      const lastTime = pts.length > 0
+        ? new Date(pts[pts.length - 1].timestamp).toLocaleString()
+        : null;
+      setStatus({ message: `Ready${lastTime ? ` — last: ${lastTime}` : ''}`, type: '' });
     } catch (err) {
       console.error('Failed to load points:', err);
     }
@@ -23,7 +27,10 @@ export function usePoints() {
     try {
       const data = await api.syncPoints();
       setPoints(data.points);
-      setStatus({ message: `Synced! ${data.synced} new points (${data.total} total)`, type: 'success' });
+      const lastTime = data.points.length > 0
+        ? new Date(data.points[data.points.length - 1].timestamp).toLocaleString()
+        : null;
+      setStatus({ message: `Synced! ${data.synced} new points (${data.total} total)${lastTime ? ` — last: ${lastTime}` : ''}`, type: 'success' });
       return data;
     } catch (err) {
       setStatus({ message: `Sync failed: ${(err as Error).message}`, type: '' });
@@ -48,6 +55,17 @@ export function usePoints() {
     await api.deletePoint(id);
   }, []);
 
+  const pointsWithSpeed = useMemo(() => {
+    return points.map((pt, i) => {
+      if (i === 0 || pt.velocity != null) return pt;
+      const prev = points[i - 1];
+      const distKm = haversine(prev.latitude, prev.longitude, pt.latitude, pt.longitude);
+      const timeDiffH = (new Date(pt.timestamp).getTime() - new Date(prev.timestamp).getTime()) / 3600000;
+      if (timeDiffH <= 0) return pt;
+      return { ...pt, calculatedSpeedKmh: distKm / timeDiffH };
+    });
+  }, [points]);
+
   const totalDistanceKm = useMemo(() => {
     if (points.length < 2) return 0;
     let total = 0;
@@ -67,7 +85,7 @@ export function usePoints() {
     return () => clearInterval(interval);
   }, [loadPoints]);
 
-  return { points, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, loadPoints };
+  return { points: pointsWithSpeed, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, loadPoints };
 }
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {

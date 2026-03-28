@@ -21,7 +21,7 @@ export function PointCard({ point, onSelect, onDelete }: PointCardProps) {
       <div className="point-meta">
         <span>
           {point.altitude ? `Alt: ${point.altitude.toFixed(0)}m` : ''}
-          {point.velocity ? ` | ${point.velocity} km/h` : ''}
+          {point.velocity ? ` | ${point.velocity} km/h` : point.calculatedSpeedKmh ? ` | ~${point.calculatedSpeedKmh.toFixed(1)} km/h` : ''}
           {point.eventType ? ` | ${point.eventType}` : ''}
         </span>
         <button
