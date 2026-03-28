@@ -1,0 +1,7 @@
+node_modules/
+dist/
+tracking.db
+tracking.db-shm
+tracking.db-wal
+drizzle/
+.env
