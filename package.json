@@ -14,6 +14,7 @@
   },
   "description": "Appalachian Trail hike tracker with Garmin inReach integration",
   "dependencies": {
+    "better-auth": "^1.5.6",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",

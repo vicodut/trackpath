@@ -3,7 +3,7 @@ import { TrackingPoint } from '../types';
 interface PointCardProps {
   point: TrackingPoint;
   onSelect: (point: TrackingPoint) => void;
-  onDelete: (id: number) => void;
+  onDelete?: (id: number) => void;
 }
 
 export function PointCard({ point, onSelect, onDelete }: PointCardProps) {
@@ -24,12 +24,14 @@ export function PointCard({ point, onSelect, onDelete }: PointCardProps) {
           {point.velocity ? ` | ${point.velocity} km/h` : point.calculatedSpeedKmh ? ` | ~${point.calculatedSpeedKmh.toFixed(1)} km/h` : ''}
           {point.eventType ? ` | ${point.eventType}` : ''}
         </span>
-        <button
-          className="delete-btn"
-          onClick={(e) => { e.stopPropagation(); onDelete(point.id); }}
-        >
-          remove
-        </button>
+        {onDelete && (
+          <button
+            className="delete-btn"
+            onClick={(e) => { e.stopPropagation(); onDelete(point.id); }}
+          >
+            remove
+          </button>
+        )}
       </div>
     </div>
   );

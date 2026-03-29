@@ -38,7 +38,7 @@ export function usePoints() {
     }
   }, []);
 
-  const addPoint = useCallback(async (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null }) => {
+  const addPoint = useCallback(async (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null; tag?: string | null }) => {
     try {
       await api.addPoint(data);
       setStatus({ message: 'Point added!', type: 'success' });

@@ -1,10 +1,12 @@
 import 'dotenv/config';
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { parseString } from 'xml2js';
 import path from 'path';
 import { eq, asc } from 'drizzle-orm';
+import { toNodeHandler, fromNodeHeaders } from 'better-auth/node';
 import { db, sql as pgClient } from '../db/index.js';
 import { trackingPoints, NewTrackingPoint } from '../db/schema.js';
+import { auth } from './auth.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -106,16 +108,50 @@ async function getAllPoints() {
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../../dist/client')));
 }
+
+// --- Better Auth handler (must be before express.json) ---
+app.all("/api/auth/{*splat}", toNodeHandler(auth));
+
 app.use(express.json());
 
+// --- Auth middleware ---
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+  if (!session) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(session.user.email)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  next();
+}
+
 // --- API routes ---
+
+app.get('/api/me', async (req: Request, res: Response) => {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+  if (!session) {
+    res.json({ user: null, isAdmin: false });
+    return;
+  }
+  const isAdmin = ADMIN_EMAILS.includes(session.user.email);
+  res.json({ user: session.user, isAdmin });
+});
 
 app.get('/api/points', async (_req: Request, res: Response) => {
   const points = await getAllPoints();
   res.json(points);
 });
 
-app.post('/api/sync', async (_req: Request, res: Response) => {
+app.post('/api/sync', requireAuth, async (_req: Request, res: Response) => {
   const mapshareId = process.env.MAPSHARE_ID;
   if (!mapshareId) {
     res.status(400).json({ error: 'MAPSHARE_ID environment variable not set' });
@@ -133,8 +169,8 @@ app.post('/api/sync', async (_req: Request, res: Response) => {
   }
 });
 
-app.post('/api/points', async (req: Request, res: Response) => {
-  const { latitude, longitude, altitude, message } = req.body;
+app.post('/api/points', requireAuth, async (req: Request, res: Response) => {
+  const { latitude, longitude, altitude, message, tag } = req.body;
   if (!latitude || !longitude) {
     res.status(400).json({ error: 'latitude and longitude are required' });
     return;
@@ -149,14 +185,14 @@ app.post('/api/points', async (req: Request, res: Response) => {
     velocity: null,
     course: null,
     message: message || null,
-    eventType: 'manual',
+    eventType: tag || 'manual',
   };
 
   await db.insert(trackingPoints).values(point);
   res.json({ ok: true, point });
 });
 
-app.delete('/api/points/:id', async (req: Request, res: Response) => {
+app.delete('/api/points/:id', requireAuth, async (req: Request, res: Response) => {
   await db.delete(trackingPoints).where(eq(trackingPoints.id, Number(req.params.id)));
   res.json({ ok: true });
 });

@@ -7,10 +7,10 @@ interface SidebarProps {
   totalDistanceKm: number;
   onSelectPoint: (point: TrackingPoint) => void;
   onDeletePoint: (id: number) => void;
-  onAddPoint: (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null }) => Promise<boolean>;
-  onPickFromMap: () => void;
-  pickingFromMap: boolean;
+  onAddPoint: (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null; tag?: string | null }) => Promise<boolean>;
+  onFormToggle: (open: boolean) => void;
   pickedCoords: { lat: number; lng: number } | null;
+  isAdmin: boolean;
 }
 
 export function Sidebar({
@@ -19,9 +19,9 @@ export function Sidebar({
   onSelectPoint,
   onDeletePoint,
   onAddPoint,
-  onPickFromMap,
-  pickingFromMap,
+  onFormToggle,
   pickedCoords,
+  isAdmin,
 }: SidebarProps) {
   return (
     <div className="sidebar">
@@ -32,19 +32,20 @@ export function Sidebar({
           <span>Distance: <strong>{totalDistanceKm.toFixed(1)}</strong> km</span>
         </div>
       </div>
-      <AddPointForm
-        onSubmit={onAddPoint}
-        onPickFromMap={onPickFromMap}
-        pickingFromMap={pickingFromMap}
-        pickedCoords={pickedCoords}
-      />
+      {isAdmin && (
+        <AddPointForm
+          onSubmit={onAddPoint}
+          onFormToggle={onFormToggle}
+          pickedCoords={pickedCoords}
+        />
+      )}
       <div className="points-list">
         {[...points].reverse().map((pt) => (
           <PointCard
             key={pt.id}
             point={pt}
             onSelect={onSelectPoint}
-            onDelete={onDeletePoint}
+            onDelete={isAdmin ? onDeletePoint : undefined}
           />
         ))}
       </div>

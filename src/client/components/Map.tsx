@@ -25,6 +25,27 @@ const flagIcon = L.divIcon({
   iconAnchor: [4, 28],
 });
 
+const TAG_EMOJIS: Record<string, string> = {
+  poop: '💩',
+  resupply: '🛒',
+  hostel: '🏠',
+  camp: '⛺',
+  shelter: '🛖',
+  water: '💧',
+  viewpoint: '👀',
+};
+
+function getTagIcon(tag: string) {
+  const emoji = TAG_EMOJIS[tag];
+  if (!emoji) return null;
+  return L.divIcon({
+    className: '',
+    html: `<div style="font-size:32px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5));">${emoji}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+}
+
 interface MapProps {
   points: TrackingPoint[];
   selectedPoint: TrackingPoint | null;
@@ -89,7 +110,9 @@ function InvalidateOnResize({ sidebarVisible }: { sidebarVisible: boolean }) {
 }
 
 export function Map({ points, selectedPoint, pickingFromMap, onMapClick, sidebarVisible }: MapProps) {
-  const pathCoords: [number, number][] = points.map((p) => [p.latitude, p.longitude]);
+  const pathCoords: [number, number][] = points
+    .filter((p) => !p.garminId?.startsWith('manual-'))
+    .map((p) => [p.latitude, p.longitude]);
 
   return (
     <MapContainer center={[37.5, -79.5]} zoom={6} id="map" style={{ flex: 1, minHeight: 0 }}>
@@ -121,7 +144,7 @@ export function Map({ points, selectedPoint, pickingFromMap, onMapClick, sidebar
           <Marker
             key={pt.id}
             position={[pt.latitude, pt.longitude]}
-            icon={isLatest ? latestIcon : pointIcon}
+            icon={(pt.eventType && getTagIcon(pt.eventType)) || (isLatest ? latestIcon : pointIcon)}
             zIndexOffset={isLatest ? 1000 : 0}
           >
             <Popup>

@@ -1,18 +1,26 @@
 import { useState } from 'react';
 
+const TAGS = ['resupply', 'poop', 'hostel', 'camp', 'shelter', 'water', 'viewpoint'] as const;
+
 interface AddPointFormProps {
-  onSubmit: (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null }) => Promise<boolean>;
-  onPickFromMap: () => void;
-  pickingFromMap: boolean;
+  onSubmit: (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null; tag?: string | null }) => Promise<boolean>;
+  onFormToggle: (open: boolean) => void;
   pickedCoords: { lat: number; lng: number } | null;
 }
 
-export function AddPointForm({ onSubmit, onPickFromMap, pickingFromMap, pickedCoords }: AddPointFormProps) {
+export function AddPointForm({ onSubmit, onFormToggle, pickedCoords }: AddPointFormProps) {
   const [open, setOpen] = useState(false);
+
+  const toggleOpen = () => {
+    const next = !open;
+    setOpen(next);
+    onFormToggle(next);
+  };
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
   const [alt, setAlt] = useState('');
   const [msg, setMsg] = useState('');
+  const [tag, setTag] = useState('');
 
   // Sync picked coords into form
   if (pickedCoords && lat !== pickedCoords.lat.toFixed(6)) {
@@ -30,6 +38,7 @@ export function AddPointForm({ onSubmit, onPickFromMap, pickingFromMap, pickedCo
       longitude,
       altitude: alt ? parseFloat(alt) : null,
       message: msg.trim() || null,
+      tag: tag || null,
     });
 
     if (ok) {
@@ -37,12 +46,13 @@ export function AddPointForm({ onSubmit, onPickFromMap, pickingFromMap, pickedCo
       setLng('');
       setAlt('');
       setMsg('');
+      setTag('');
     }
   }
 
   return (
     <div className="add-form">
-      <button className="add-form-toggle" onClick={() => setOpen(!open)}>
+      <button className="add-form-toggle" onClick={toggleOpen}>
         + Add a tracking point
       </button>
       {open && (
@@ -77,17 +87,21 @@ export function AddPointForm({ onSubmit, onPickFromMap, pickingFromMap, pickedCo
             value={alt}
             onChange={(e) => setAlt(e.target.value)}
           />
+          <label>Tag</label>
+          <select className="tag-select" value={tag} onChange={(e) => setTag(e.target.value)}>
+            <option value="">-- none --</option>
+            {TAGS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
           <label>Message (optional)</label>
           <textarea
             placeholder="e.g. Camp for the night near shelter"
             value={msg}
             onChange={(e) => setMsg(e.target.value)}
           />
-          <p className={`pick-hint ${pickingFromMap ? 'active' : ''}`}>
-            {pickingFromMap ? 'Click anywhere on the map...' : 'Click on the map to pick coordinates'}
-          </p>
+          <p className="pick-hint active">Tap on the map to set coordinates</p>
           <div className="add-form-actions">
-            <button onClick={onPickFromMap}>Pick on map</button>
             <button className="primary" onClick={handleSubmit}>Add point</button>
           </div>
         </div>
