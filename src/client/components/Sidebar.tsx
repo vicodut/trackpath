@@ -5,7 +5,7 @@ import { AddPointForm } from './AddPointForm';
 import { PointCard } from './PointCard';
 
 const TAG_FILTERS = [
-  { key: 'all', label: 'ALL', emoji: '' },
+  { key: 'inreach', label: 'INREACH', emoji: '📡' },
   { key: 'resupply', label: 'RESUPPLY', emoji: '🛒' },
   { key: 'poop', label: 'POOP', emoji: '💩' },
   { key: 'hostel', label: 'HOSTEL', emoji: '🏠' },
@@ -33,7 +33,19 @@ function SidebarContent({
   points, totalDistanceKm, totalElevationGain, stravaActivities,
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, pickedCoords, isAdmin, forceFormOpen,
 }: SidebarProps) {
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+
+  const toggleFilter = (key: string) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   const stravaElevation = useMemo(() =>
     stravaActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0),
@@ -42,9 +54,15 @@ function SidebarContent({
   const totalElev = totalElevationGain + stravaElevation;
 
   const filteredPoints = useMemo(() => {
-    if (activeFilter === 'all') return points;
-    return points.filter(pt => pt.eventType === activeFilter);
-  }, [points, activeFilter]);
+    if (activeFilters.size === 0) return points;
+    return points.filter(pt => {
+      for (const f of activeFilters) {
+        if (f === 'inreach' && pt.garminId && !pt.garminId.startsWith('manual-')) return true;
+        if (f !== 'inreach' && pt.eventType === f) return true;
+      }
+      return false;
+    });
+  }, [points, activeFilters]);
 
   return (
     <>
@@ -60,10 +78,10 @@ function SidebarContent({
         {TAG_FILTERS.map(({ key, emoji }) => (
           <button
             key={key}
-            className={`tag-filter-btn ${activeFilter === key ? 'active' : ''}`}
-            onClick={() => setActiveFilter(key)}
+            className={`tag-filter-btn ${activeFilters.has(key) ? 'active' : ''}`}
+            onClick={() => toggleFilter(key)}
           >
-            {key === 'all' ? 'ALL' : emoji}
+            {emoji}
           </button>
         ))}
       </div>
