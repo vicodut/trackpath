@@ -66,6 +66,18 @@ export function usePoints() {
     });
   }, [points]);
 
+  const totalElevationGain = useMemo(() => {
+    if (points.length < 2) return 0;
+    let gain = 0;
+    for (let i = 1; i < points.length; i++) {
+      if (points[i].altitude != null && points[i - 1].altitude != null) {
+        const diff = points[i].altitude! - points[i - 1].altitude!;
+        if (diff > 0) gain += diff;
+      }
+    }
+    return gain;
+  }, [points]);
+
   const totalDistanceKm = useMemo(() => {
     if (points.length < 2) return 0;
     let total = 0;
@@ -85,7 +97,7 @@ export function usePoints() {
     return () => clearInterval(interval);
   }, [loadPoints]);
 
-  return { points: pointsWithSpeed, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, loadPoints };
+  return { points: pointsWithSpeed, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain, loadPoints };
 }
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {

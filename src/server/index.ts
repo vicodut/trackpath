@@ -5,7 +5,7 @@ import path from 'path';
 import { eq, asc } from 'drizzle-orm';
 import { toNodeHandler, fromNodeHeaders } from 'better-auth/node';
 import { db, sql as pgClient } from '../db/index.js';
-import { trackingPoints, NewTrackingPoint } from '../db/schema.js';
+import { trackingPoints, NewTrackingPoint, stravaTokens, stravaActivities } from '../db/schema.js';
 import { auth } from './auth.js';
 
 const app = express();
@@ -68,6 +68,39 @@ async function ensureTables() {
       updated_at TIMESTAMP NOT NULL
     )
   `;
+  await pgClient`
+    CREATE TABLE IF NOT EXISTS strava_tokens (
+      id SERIAL PRIMARY KEY,
+      access_token TEXT NOT NULL,
+      refresh_token TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      athlete_id TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  await pgClient`
+    CREATE TABLE IF NOT EXISTS strava_activities (
+      id SERIAL PRIMARY KEY,
+      strava_id BIGINT UNIQUE NOT NULL,
+      name TEXT,
+      type TEXT,
+      distance DOUBLE PRECISION,
+      moving_time INTEGER,
+      elevation_gain DOUBLE PRECISION,
+      start_date TEXT,
+      coords TEXT,
+      synced_at TIMESTAMP DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  // Add elevation_gain column if missing, re-sync activities to populate it
+  await pgClient`
+    ALTER TABLE strava_activities ADD COLUMN IF NOT EXISTS elevation_gain DOUBLE PRECISION
+  `.catch(() => {});
+  await pgClient`
+    DELETE FROM strava_activities WHERE elevation_gain IS NULL
+  `.catch(() => {});
+
   await pgClient`
     CREATE TABLE IF NOT EXISTS verification (
       id TEXT PRIMARY KEY,
@@ -212,9 +245,11 @@ app.post('/api/sync', requireAuth, async (_req: Request, res: Response) => {
     const points = await fetchGarminPoints(mapshareId);
     const newCount = await insertPoints(points);
     const allPoints = await getAllPoints();
+    addSyncLog('garmin', `Manual sync: ${newCount} new points (${allPoints.length} total)`);
     res.json({ synced: newCount, total: allPoints.length, points: allPoints });
   } catch (err) {
     console.error('Sync error:', err);
+    addSyncLog('garmin', `Manual sync error: ${(err as Error).message}`);
     res.status(500).json({ error: (err as Error).message });
   }
 });
@@ -247,6 +282,204 @@ app.delete('/api/points/:id', requireAuth, async (req: Request, res: Response) =
   res.json({ ok: true });
 });
 
+// --- Weather forecast ---
+app.get('/api/weather', async (_req: Request, res: Response) => {
+  try {
+    const points = await getAllPoints();
+    // Find last Garmin tracking point
+    const lastGarmin = [...points].reverse().find(p => !p.garminId?.startsWith('manual-'));
+    if (!lastGarmin) {
+      res.json({ error: 'No tracking points available' });
+      return;
+    }
+
+    const { latitude, longitude } = lastGarmin;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weathercode,windspeed_10m_max,windgusts_10m_max&temperature_unit=celsius&windspeed_unit=kmh&timezone=auto&forecast_days=2`;
+    const weatherRes = await fetch(url);
+    const weather = await weatherRes.json();
+
+    res.json({
+      latitude,
+      longitude,
+      pointTimestamp: lastGarmin.timestamp,
+      forecast: weather.daily,
+      timezone: weather.timezone,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// --- Strava OAuth & API ---
+const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
+const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
+
+app.get('/api/strava/connect', requireAuth, (_req: Request, res: Response) => {
+  if (!STRAVA_CLIENT_ID) {
+    res.status(400).json({ error: 'STRAVA_CLIENT_ID not configured' });
+    return;
+  }
+  const redirectUri = `${process.env.BETTER_AUTH_URL}/api/strava/callback`;
+  const url = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read,activity:read_all&approval_prompt=auto`;
+  res.json({ url });
+});
+
+app.get('/api/strava/callback', async (req: Request, res: Response) => {
+  const { code } = req.query;
+  if (!code || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
+    res.status(400).send('Missing code or Strava config');
+    return;
+  }
+
+  try {
+    const tokenRes = await fetch('https://www.strava.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: STRAVA_CLIENT_ID,
+        client_secret: STRAVA_CLIENT_SECRET,
+        code,
+        grant_type: 'authorization_code',
+      }),
+    });
+    const data = await tokenRes.json();
+
+    if (!data.access_token) {
+      res.status(400).send('Failed to get Strava token');
+      return;
+    }
+
+    // Upsert token
+    await pgClient`
+      DELETE FROM strava_tokens WHERE athlete_id = ${String(data.athlete.id)}
+    `;
+    await db.insert(stravaTokens).values({
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresAt: data.expires_at,
+      athleteId: String(data.athlete.id),
+    });
+
+    // Redirect back to app
+    const appUrl = process.env.NODE_ENV === 'production' ? '/' : 'http://localhost:5173/';
+    res.redirect(appUrl);
+  } catch (err) {
+    res.status(500).send('Strava OAuth error: ' + (err as Error).message);
+  }
+});
+
+async function getStravaToken(): Promise<string | null> {
+  const tokens = await db.select().from(stravaTokens).limit(1);
+  if (tokens.length === 0) return null;
+
+  const token = tokens[0];
+  const now = Math.floor(Date.now() / 1000);
+
+  // Refresh if expired or expiring in 5 min
+  if (token.expiresAt < now + 300) {
+    if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) return null;
+
+    const refreshRes = await fetch('https://www.strava.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: STRAVA_CLIENT_ID,
+        client_secret: STRAVA_CLIENT_SECRET,
+        grant_type: 'refresh_token',
+        refresh_token: token.refreshToken,
+      }),
+    });
+    const data = await refreshRes.json();
+
+    if (!data.access_token) return null;
+
+    await db.update(stravaTokens)
+      .set({
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresAt: data.expires_at,
+      })
+      .where(eq(stravaTokens.id, token.id));
+
+    return data.access_token;
+  }
+
+  return token.accessToken;
+}
+
+app.get('/api/strava/status', async (_req: Request, res: Response) => {
+  const tokens = await db.select().from(stravaTokens).limit(1);
+  res.json({ connected: tokens.length > 0 });
+});
+
+app.get('/api/strava/activities', async (_req: Request, res: Response) => {
+  const activities = await db.select().from(stravaActivities).orderBy(asc(stravaActivities.startDate));
+  res.json(activities);
+});
+
+async function syncStravaActivities() {
+  const accessToken = await getStravaToken();
+  if (!accessToken) return { synced: 0, error: 'Strava not connected' };
+
+  const activitiesRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=10', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!activitiesRes.ok) return { synced: 0, error: `Strava API error: ${activitiesRes.status}` };
+  const activities = await activitiesRes.json();
+
+  let synced = 0;
+  for (const act of activities) {
+    const existing = await db.select().from(stravaActivities).where(eq(stravaActivities.stravaId, act.id));
+    if (existing.length > 0) continue;
+
+    let coords: [number, number][] = [];
+    try {
+      const streamRes = await fetch(
+        `https://www.strava.com/api/v3/activities/${act.id}/streams?keys=latlng&key_by_type=true`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (streamRes.ok) {
+        const streamData = await streamRes.json();
+        if (streamData.latlng?.data) {
+          coords = streamData.latlng.data;
+        }
+      }
+    } catch {
+      // No GPS data for this activity
+    }
+
+    await db.insert(stravaActivities).values({
+      stravaId: act.id,
+      name: act.name,
+      type: act.type,
+      distance: act.distance,
+      movingTime: act.moving_time,
+      elevationGain: act.total_elevation_gain || 0,
+      startDate: act.start_date,
+      coords: JSON.stringify(coords),
+    });
+    synced++;
+  }
+
+  return { synced, total: (await db.select().from(stravaActivities)).length };
+}
+
+app.post('/api/strava/sync', requireAuth, async (_req: Request, res: Response) => {
+  try {
+    const result = await syncStravaActivities();
+    if (result.error) {
+      res.status(400).json({ error: result.error });
+      return;
+    }
+    const all = await db.select().from(stravaActivities).orderBy(asc(stravaActivities.startDate));
+    addSyncLog('strava', `Manual sync: ${result.synced} new activities (${all.length} total)`);
+    res.json({ ...result, activities: all });
+  } catch (err) {
+    addSyncLog('strava', `Manual sync error: ${(err as Error).message}`);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // --- Auto-polling ---
 const POLL_INTERVAL = (parseInt(process.env.POLL_INTERVAL_MIN || '5') || 5) * 60 * 1000;
 let lastSyncResult: { time: string | null; newCount: number; error: string | null } = {
@@ -266,10 +499,12 @@ async function autoSync() {
 
     if (newCount > 0) {
       console.log(`Auto-sync: ${newCount} new points`);
+      addSyncLog('garmin', `${newCount} new points synced`);
     }
   } catch (err) {
     lastSyncResult = { time: new Date().toISOString(), newCount: 0, error: (err as Error).message };
     console.error('Auto-sync error:', (err as Error).message);
+    addSyncLog('garmin', `Error: ${(err as Error).message}`);
   }
 }
 
@@ -288,6 +523,55 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// --- Admin status ---
+const syncLogs: { source: string; time: string; message: string }[] = [];
+function addSyncLog(source: string, message: string) {
+  syncLogs.unshift({ source, time: new Date().toISOString(), message });
+  if (syncLogs.length > 50) syncLogs.length = 50;
+}
+
+app.get('/api/admin/status', requireAuth, async (_req: Request, res: Response) => {
+  const points = await getAllPoints();
+  const lastGarmin = [...points].reverse().find(p => !p.garminId?.startsWith('manual-'));
+  const activities = await db.select().from(stravaActivities).orderBy(asc(stravaActivities.startDate));
+  const lastStrava = activities.length > 0 ? activities[activities.length - 1] : null;
+  const tokens = await db.select().from(stravaTokens).limit(1);
+
+  res.json({
+    garmin: {
+      configured: !!process.env.MAPSHARE_ID,
+      mapshareId: process.env.MAPSHARE_ID || null,
+      totalPoints: points.length,
+      lastPointTime: lastGarmin?.timestamp || null,
+      pollIntervalMin: POLL_INTERVAL / 60000,
+    },
+    strava: {
+      connected: tokens.length > 0,
+      athleteId: tokens[0]?.athleteId || null,
+      totalActivities: activities.length,
+      lastActivityDate: lastStrava?.startDate || null,
+      lastActivityName: lastStrava?.name || null,
+    },
+    logs: syncLogs,
+  });
+});
+
+// --- Strava auto-sync (once per day) ---
+const STRAVA_SYNC_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+
+async function autoSyncStrava() {
+  try {
+    const result = await syncStravaActivities();
+    if (result.synced > 0) {
+      console.log(`Strava auto-sync: ${result.synced} new activities`);
+      addSyncLog('strava', `${result.synced} new activities synced`);
+    }
+  } catch (err) {
+    console.error('Strava auto-sync error:', (err as Error).message);
+    addSyncLog('strava', `Error: ${(err as Error).message}`);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`AT Tracker running at http://localhost:${PORT}`);
   if (process.env.MAPSHARE_ID) {
@@ -297,5 +581,10 @@ app.listen(PORT, () => {
   } else {
     console.log('  Set MAPSHARE_ID env var to enable Garmin inReach sync');
     console.log('  Example: MAPSHARE_ID=YourShareName node server.js');
+  }
+  if (STRAVA_CLIENT_ID) {
+    console.log('  Strava auto-sync every 24h');
+    autoSyncStrava();
+    setInterval(autoSyncStrava, STRAVA_SYNC_INTERVAL);
   }
 });

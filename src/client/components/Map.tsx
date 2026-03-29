@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap, useMapEvents } from 'react-leaflet';
-import { TrackingPoint } from '../types';
+import { TrackingPoint, StravaActivity } from '../types';
+import { LayerVisibility } from './LayerToggle';
 
 
 const pointIcon = L.divIcon({
@@ -48,10 +49,12 @@ function getTagIcon(tag: string) {
 
 interface MapProps {
   points: TrackingPoint[];
+  stravaActivities: StravaActivity[];
   selectedPoint: TrackingPoint | null;
   pickingFromMap: boolean;
   onMapClick: (lat: number, lng: number) => void;
   sidebarVisible: boolean;
+  layers: LayerVisibility;
 }
 
 function ATTrailLayer() {
@@ -109,35 +112,49 @@ function InvalidateOnResize({ sidebarVisible }: { sidebarVisible: boolean }) {
   return null;
 }
 
-export function Map({ points, selectedPoint, pickingFromMap, onMapClick, sidebarVisible }: MapProps) {
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}h${m}m` : `${m}m`;
+}
+
+export function Map({ points, stravaActivities, selectedPoint, pickingFromMap, onMapClick, sidebarVisible, layers }: MapProps) {
   const pathCoords: [number, number][] = points
     .filter((p) => !p.garminId?.startsWith('manual-'))
     .map((p) => [p.latitude, p.longitude]);
 
   return (
-    <MapContainer center={[37.5, -79.5]} zoom={6} id="map" style={{ flex: 1, minHeight: 0 }}>
+    <MapContainer center={[37.5, -79.5]} zoom={6} id="map" style={{ width: '100%', height: '100%' }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         maxZoom={19}
         attribution="&copy; OpenStreetMap contributors"
       />
-      <ATTrailLayer />
+      {layers.atTrail && <ATTrailLayer />}
 
       {/* Trail endpoints */}
-      <Marker position={[34.627, -84.194]} icon={flagIcon}>
-        <Popup><strong>Springer Mountain, GA</strong><br />Southern terminus</Popup>
-      </Marker>
-      <Marker position={[45.904, -68.921]} icon={flagIcon}>
-        <Popup><strong>Mt. Katahdin, ME</strong><br />Northern terminus</Popup>
-      </Marker>
+      {layers.atTrail && (
+        <>
+          <Marker position={[34.627, -84.194]} icon={flagIcon}>
+            <Popup><strong>Springer Mountain, GA</strong><br />Southern terminus</Popup>
+          </Marker>
+          <Marker position={[45.904, -68.921]} icon={flagIcon}>
+            <Popup><strong>Mt. Katahdin, ME</strong><br />Northern terminus</Popup>
+          </Marker>
+        </>
+      )}
 
       {/* User path */}
-      {pathCoords.length > 1 && (
+      {layers.garminPath && pathCoords.length > 1 && (
         <Polyline positions={pathCoords} pathOptions={{ color: '#e94560', weight: 3, opacity: 0.9, dashArray: '6,4' }} />
       )}
 
       {/* Point markers */}
       {points.map((pt, idx) => {
+        const isTag = pt.eventType && pt.eventType !== 'manual' && getTagIcon(pt.eventType);
+        if (isTag && !layers.tags[pt.eventType!]) return null;
+        if (!isTag && !layers.garminPoints) return null;
+
         const isLatest = idx === points.length - 1;
         const time = new Date(pt.timestamp).toLocaleString();
         return (
@@ -155,6 +172,29 @@ export function Map({ points, selectedPoint, pickingFromMap, onMapClick, sidebar
               {pt.message && <><br /><em>{pt.message}</em></>}
             </Popup>
           </Marker>
+        );
+      })}
+
+      {/* Strava activities */}
+      {layers.strava && stravaActivities.map((act) => {
+        if (!act.coords) return null;
+        const coords: [number, number][] = JSON.parse(act.coords);
+        if (coords.length === 0) return null;
+        const date = act.startDate ? new Date(act.startDate).toLocaleDateString() : '';
+        const dist = act.distance ? (act.distance / 1000).toFixed(1) : '?';
+        const duration = act.movingTime ? formatDuration(act.movingTime) : '';
+        return (
+          <Polyline
+            key={act.id}
+            positions={coords}
+            pathOptions={{ color: '#ff8c00', weight: 4, opacity: 0.8 }}
+          >
+            <Popup>
+              <strong>{act.name}</strong><br />
+              {date} — {act.type}<br />
+              {dist} km — {duration}
+            </Popup>
+          </Polyline>
         );
       })}
 

@@ -13,6 +13,18 @@ export interface TrackingPoint {
   calculatedSpeedKmh?: number | null;
 }
 
+export interface StravaActivity {
+  id: number;
+  stravaId: number;
+  name: string | null;
+  type: string | null;
+  distance: number | null;
+  movingTime: number | null;
+  elevationGain: number | null;
+  startDate: string | null;
+  coords: string | null;
+}
+
 export interface SyncResult {
   synced: number;
   total: number;

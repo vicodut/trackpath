@@ -1,4 +1,4 @@
-import { pgTable, serial, doublePrecision, text, timestamp, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, serial, doublePrecision, text, timestamp, boolean, integer, bigint } from 'drizzle-orm/pg-core';
 
 export const trackingPoints = pgTable('tracking_points', {
   id: serial('id').primaryKey(),
@@ -54,6 +54,31 @@ export const account = pgTable("account", {
   password: text("password"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
+});
+
+// --- Strava ---
+
+export const stravaTokens = pgTable("strava_tokens", {
+  id: serial("id").primaryKey(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  athleteId: text("athlete_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const stravaActivities = pgTable("strava_activities", {
+  id: serial("id").primaryKey(),
+  stravaId: bigint("strava_id", { mode: "number" }).unique().notNull(),
+  name: text("name"),
+  type: text("type"),
+  distance: doublePrecision("distance"),
+  movingTime: integer("moving_time"),
+  elevationGain: doublePrecision("elevation_gain"),
+  startDate: text("start_date"),
+  coords: text("coords"),
+  syncedAt: timestamp("synced_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const verification = pgTable("verification", {

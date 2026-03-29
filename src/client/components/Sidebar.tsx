@@ -1,11 +1,13 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { TrackingPoint } from '../types';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { TrackingPoint, StravaActivity } from '../types';
 import { AddPointForm } from './AddPointForm';
 import { PointCard } from './PointCard';
 
 interface SidebarProps {
   points: TrackingPoint[];
   totalDistanceKm: number;
+  totalElevationGain: number;
+  stravaActivities: StravaActivity[];
   onSelectPoint: (point: TrackingPoint) => void;
   onDeletePoint: (id: number) => void;
   onAddPoint: (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null; tag?: string | null }) => Promise<boolean>;
@@ -17,6 +19,8 @@ interface SidebarProps {
 export function Sidebar({
   points,
   totalDistanceKm,
+  totalElevationGain,
+  stravaActivities,
   onSelectPoint,
   onDeletePoint,
   onAddPoint,
@@ -78,6 +82,12 @@ export function Sidebar({
     };
   }, [onDragMove, onDragEnd]);
 
+  const stravaElevation = useMemo(() =>
+    stravaActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0),
+  [stravaActivities]);
+
+  const totalElev = totalElevationGain + stravaElevation;
+
   return (
     <div
       className={`sidebar ${isMobile ? 'bottom-sheet' : ''}`}
@@ -93,6 +103,7 @@ export function Sidebar({
         <div className="stats">
           <span>Points: <strong>{points.length}</strong></span>
           <span>Distance: <strong>{totalDistanceKm.toFixed(1)}</strong> km</span>
+          <span>Elev: <strong>{Math.round(totalElev)}</strong> m</span>
         </div>
       </div>
       {isAdmin && (

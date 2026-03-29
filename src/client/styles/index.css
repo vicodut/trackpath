@@ -66,9 +66,15 @@ button.primary:hover { background: #c13b52; }
   overflow: hidden;
 }
 
-#map {
+.map-wrapper {
   flex: 1;
+  position: relative;
   min-height: 0;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
 }
 
 .sidebar {
@@ -281,6 +287,323 @@ button.primary:hover { background: #c13b52; }
   0%, 100% { box-shadow: 0 0 12px rgba(233,69,96,0.8); }
   50% { box-shadow: 0 0 24px rgba(233,69,96,1); }
 }
+
+/* Weather */
+.weather {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 1000;
+  padding: 10px 14px;
+  background: rgba(22, 33, 62, 0.92);
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.weather-title {
+  font-size: 0.7rem;
+  color: #888;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.weather-days {
+  display: flex;
+  gap: 8px;
+}
+
+.weather-day {
+  flex: 1;
+  text-align: center;
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  padding: 8px 4px;
+}
+
+.weather-day-label {
+  font-size: 0.7rem;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.weather-day-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.weather-day-temp {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.temp-max { color: #e94560; }
+.temp-min { color: #888; }
+
+.weather-day-details {
+  font-size: 0.65rem;
+  color: #888;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Stats widget */
+.stats-widget {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1000;
+  background: rgba(22, 33, 62, 0.92);
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  min-width: 180px;
+}
+
+.stats-widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.stats-widget-title {
+  font-size: 0.8rem;
+  color: #53a653;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stats-widget-toggle {
+  font-size: 0.7rem;
+  color: #888;
+}
+
+.stats-widget-body {
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stats-widget-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  gap: 16px;
+}
+
+.stats-widget-row span { color: #888; }
+.stats-widget-row strong { color: #e0e0e0; }
+
+.stats-widget-section {
+  font-size: 0.7rem;
+  color: #53a653;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #0f3460;
+}
+
+.stats-widget-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Layer toggle */
+.layer-toggle {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  background: rgba(22, 33, 62, 0.92);
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  min-width: 160px;
+}
+
+.layer-toggle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.layer-toggle-title {
+  font-size: 0.8rem;
+  color: #53a653;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.layer-toggle-icon {
+  font-size: 0.7rem;
+  color: #888;
+}
+
+.layer-toggle-body {
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.layer-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #e0e0e0;
+  cursor: pointer;
+}
+
+.layer-toggle-row input[type="checkbox"] {
+  accent-color: #53a653;
+}
+
+.layer-toggle-group {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid #0f3460;
+}
+
+.layer-toggle-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #e0e0e0;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.layer-toggle-group-body {
+  margin-top: 6px;
+  padding-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Admin page */
+.admin-page {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #1a1a2e;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.admin-header h2 {
+  font-size: 1.3rem;
+  color: #e94560;
+}
+
+.admin-sections {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.admin-section {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.admin-section h3 {
+  font-size: 1rem;
+  color: #53a653;
+  margin-bottom: 12px;
+}
+
+.admin-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.admin-row span:first-child { color: #888; }
+
+.status-ok { color: #53a653; }
+.status-off { color: #888; }
+
+.admin-logs {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-log {
+  display: flex;
+  gap: 10px;
+  font-size: 0.75rem;
+  padding: 6px 8px;
+  background: #1a1a2e;
+  border-radius: 4px;
+  align-items: center;
+}
+
+.admin-log-empty {
+  font-size: 0.8rem;
+  color: #666;
+  text-align: center;
+  padding: 16px;
+}
+
+.log-source {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.log-garmin { background: #e94560; color: #fff; }
+.log-strava { background: #ff8c00; color: #fff; }
+
+.log-time {
+  color: #666;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+
+.log-message { color: #e0e0e0; }
 
 /* Bottom sheet handle */
 .sheet-handle {
