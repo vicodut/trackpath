@@ -516,13 +516,6 @@ app.get('/api/sync-status', (_req: Request, res: Response) => {
   });
 });
 
-// --- SPA fallback (production) ---
-if (process.env.NODE_ENV === 'production') {
-  app.get('/{*path}', (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../../dist/client/index.html'));
-  });
-}
-
 // --- Admin status ---
 const syncLogs: { source: string; time: string; message: string }[] = [];
 function addSyncLog(source: string, message: string) {
@@ -555,6 +548,13 @@ app.get('/api/admin/status', requireAuth, async (_req: Request, res: Response) =
     logs: syncLogs,
   });
 });
+
+// --- SPA fallback (production) ---
+if (process.env.NODE_ENV === 'production') {
+  app.get('/{*path}', (_req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, '../../dist/client/index.html'));
+  });
+}
 
 // --- Strava auto-sync (once per day) ---
 const STRAVA_SYNC_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
