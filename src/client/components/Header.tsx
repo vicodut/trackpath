@@ -13,7 +13,7 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
 
   return (
     <header className="header">
-      <h1>AT_TRACKER</h1>
+      <h1><img src="/sasquatch-icon.gif" alt="" style={{ width: 28, height: 28, imageRendering: 'pixelated', verticalAlign: 'middle', marginRight: 8 }} />AT_TRACKER</h1>
       <div className="header-actions">
         <button onClick={onStats}>STATS</button>
         {isAdmin && (
