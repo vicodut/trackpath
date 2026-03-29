@@ -92,7 +92,6 @@ function MapClickHandler({
 
   useEffect(() => {
     const container = map.getContainer();
-    let draggingWasEnabled = false;
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
@@ -102,17 +101,11 @@ function MapClickHandler({
       const cy = touch.clientY - rect.top;
       touchStart.current = { x: touch.clientX, y: touch.clientY };
 
-      // Disable map dragging so it doesn't steal the touch
-      draggingWasEnabled = map.dragging.enabled();
-      map.dragging.disable();
-
       longPressTimer.current = setTimeout(() => {
         if (!touchStart.current) return;
         const point = map.containerPointToLatLng(L.point(cx, cy));
         onLongPress(point.lat, point.lng);
         touchStart.current = null;
-        // Re-enable dragging after firing
-        if (draggingWasEnabled) map.dragging.enable();
       }, 600);
     };
 
@@ -135,8 +128,6 @@ function MapClickHandler({
         longPressTimer.current = null;
       }
       touchStart.current = null;
-      // Re-enable dragging on cancel
-      if (draggingWasEnabled) map.dragging.enable();
     };
 
     container.addEventListener('touchstart', onTouchStart, { passive: true });

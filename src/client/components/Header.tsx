@@ -24,13 +24,18 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
 
   useEffect(() => {
     if (!menuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    // Delay to avoid closing on the same tap that opened it
+    const timer = setTimeout(() => {
+      const handleClose = (e: Event) => {
+        if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+          setMenuOpen(false);
+        }
+      };
+      document.addEventListener('pointerdown', handleClose);
+      cleanup = () => document.removeEventListener('pointerdown', handleClose);
+    }, 50);
+    let cleanup: (() => void) | undefined;
+    return () => { clearTimeout(timer); cleanup?.(); };
   }, [menuOpen]);
 
   const closeAndDo = (fn: () => void) => {

@@ -1321,4 +1321,12 @@ button.primary:hover { opacity: 0.9; }
     flex: 1;
     height: 100%;
   }
+
+  .weather {
+    bottom: 16vh;
+  }
+
+  .locate-btn {
+    bottom: 16vh;
+  }
 }
