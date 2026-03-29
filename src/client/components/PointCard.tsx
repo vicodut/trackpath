@@ -22,7 +22,7 @@ export function PointCard({ point, onSelect, onDelete }: PointCardProps) {
 
   return (
     <div className="point-card" onClick={() => onSelect(point)}>
-      <div className="point-time">{emoji && `${emoji} `}{time}</div>
+      <div className="point-time">{emoji && <>{emoji} · </>}{time}</div>
       <div className="point-coords">
         {point.latitude.toFixed(5)}, {point.longitude.toFixed(5)}
       </div>
