@@ -1171,6 +1171,24 @@ button.primary:hover { opacity: 0.9; }
   letter-spacing: 0.05em;
 }
 
+/* Elevation chart */
+.elev-chart-wrapper {
+  position: relative;
+}
+
+.elev-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.elev-chart-label {
+  font-family: var(--font-headline);
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--outline);
+}
+
 /* Events list */
 .stats-events {
   display: flex;

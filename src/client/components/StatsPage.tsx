@@ -10,6 +10,8 @@ interface StatsPageProps {
 }
 
 const AT_TOTAL_KM = 1300;
+const ELEV_CHART_HEIGHT = 200;
+const ELEV_CHART_PADDING = { top: 20, right: 16, bottom: 30, left: 46 };
 const HIKE_START = '2026-04-15';
 const HIKE_END = '2026-07-13';
 
@@ -110,6 +112,149 @@ function intensityClass(km: number): string {
   if (km < 20) return 'heatmap-cell-2';
   if (km < 30) return 'heatmap-cell-3';
   return 'heatmap-cell-4';
+}
+
+function buildElevationProfile(points: TrackingPoint[]) {
+  const sorted = [...points]
+    .filter(p => p.altitude != null)
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  if (sorted.length < 2) return [];
+
+  let cumDist = 0;
+  const profile: { dist: number; alt: number; date: string }[] = [
+    { dist: 0, alt: sorted[0].altitude!, date: sorted[0].timestamp.slice(0, 10) },
+  ];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const d = haversine(
+      sorted[i - 1].latitude, sorted[i - 1].longitude,
+      sorted[i].latitude, sorted[i].longitude,
+    );
+    if (d > 100) continue; // skip unrealistic jumps
+    cumDist += d;
+    profile.push({ dist: cumDist, alt: sorted[i].altitude!, date: sorted[i].timestamp.slice(0, 10) });
+  }
+
+  return profile;
+}
+
+function ElevationChart({ points }: { points: TrackingPoint[] }) {
+  const profile = useMemo(() => buildElevationProfile(points), [points]);
+  const [hovered, setHovered] = useState<{ alt: number; dist: number; x: number; y: number } | null>(null);
+
+  if (profile.length < 2) return <div className="stats-empty">NO_ALTITUDE_DATA</div>;
+
+  const maxDist = profile[profile.length - 1].dist;
+  const alts = profile.map(p => p.alt);
+  const minAlt = Math.min(...alts);
+  const maxAlt = Math.max(...alts);
+  const altRange = maxAlt - minAlt || 1;
+
+  const w = 800;
+  const h = ELEV_CHART_HEIGHT;
+  const { top, right, bottom, left } = ELEV_CHART_PADDING;
+  const plotW = w - left - right;
+  const plotH = h - top - bottom;
+
+  const toX = (dist: number) => left + (dist / maxDist) * plotW;
+  const toY = (alt: number) => top + plotH - ((alt - minAlt) / altRange) * plotH;
+
+  // Build SVG path
+  const pathD = profile.map((p, i) => {
+    const x = toX(p.dist);
+    const y = toY(p.alt);
+    return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+  }).join(' ');
+
+  // Filled area
+  const areaD = pathD + ` L${toX(maxDist)},${top + plotH} L${left},${top + plotH} Z`;
+
+  // Y-axis ticks
+  const yTicks = 5;
+  const yTickValues = Array.from({ length: yTicks }, (_, i) =>
+    Math.round(minAlt + (altRange * i) / (yTicks - 1))
+  );
+
+  // X-axis ticks
+  const xTicks = 5;
+  const xTickValues = Array.from({ length: xTicks }, (_, i) =>
+    Math.round((maxDist * i) / (xTicks - 1))
+  );
+
+  return (
+    <div className="elev-chart-wrapper">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="elev-chart-svg"
+        onMouseMove={(e) => {
+          const svg = e.currentTarget;
+          const rect = svg.getBoundingClientRect();
+          const mx = ((e.clientX - rect.left) / rect.width) * w;
+          const dist = ((mx - left) / plotW) * maxDist;
+          // Find closest point
+          let closest = profile[0];
+          let minD = Infinity;
+          for (const p of profile) {
+            const d = Math.abs(p.dist - dist);
+            if (d < minD) { minD = d; closest = p; }
+          }
+          setHovered({
+            alt: closest.alt,
+            dist: closest.dist,
+            x: e.clientX,
+            y: e.clientY,
+          });
+        }}
+        onMouseLeave={() => setHovered(null)}
+      >
+        {/* Grid lines */}
+        {yTickValues.map(v => (
+          <line key={`yg-${v}`} x1={left} x2={w - right} y1={toY(v)} y2={toY(v)} stroke="var(--outline-variant)" strokeWidth="0.5" opacity="0.3" />
+        ))}
+        {/* Filled area */}
+        <path d={areaD} fill="url(#elevGrad)" />
+        {/* Line */}
+        <path d={pathD} fill="none" stroke="var(--secondary)" strokeWidth="2" />
+        {/* Gradient def */}
+        <defs>
+          <linearGradient id="elevGrad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--secondary)" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="var(--secondary)" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {/* Y-axis labels */}
+        {yTickValues.map(v => (
+          <text key={`yl-${v}`} x={left - 6} y={toY(v) + 3} textAnchor="end" className="elev-chart-label">{v}m</text>
+        ))}
+        {/* X-axis labels */}
+        {xTickValues.map(v => (
+          <text key={`xl-${v}`} x={toX(v)} y={h - 6} textAnchor="middle" className="elev-chart-label">{v}km</text>
+        ))}
+        {/* Hover crosshair */}
+        {hovered && (
+          <>
+            <line x1={toX(hovered.dist)} x2={toX(hovered.dist)} y1={top} y2={top + plotH} stroke="var(--secondary)" strokeWidth="1" strokeDasharray="4,3" opacity="0.6" />
+            <circle cx={toX(hovered.dist)} cy={toY(hovered.alt)} r="4" fill="var(--secondary)" />
+          </>
+        )}
+      </svg>
+      {hovered && (
+        <div
+          className="heatmap-tooltip"
+          style={{
+            position: 'fixed',
+            left: hovered.x,
+            top: hovered.y - 12,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <strong>{Math.round(hovered.alt)}m</strong>
+          <span>{hovered.dist.toFixed(1)} km</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElevationGain, onClose }: StatsPageProps) {
@@ -319,6 +464,12 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
               </div>
             )}
           </div>
+        </section>
+
+        {/* Elevation profile */}
+        <section className="stats-section">
+          <h3 className="stats-section-title">ELEVATION_PROFILE</h3>
+          <ElevationChart points={points} />
         </section>
 
         {/* Recent events */}
