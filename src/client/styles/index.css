@@ -1274,10 +1274,11 @@ button.primary:hover { opacity: 0.9; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(11, 22, 13, 0.88);
+  /* background: rgba(11, 22, 13, 0.88) */
+  background-color: var(--secondary);
   border: var(--ghost-border);
   backdrop-filter: blur(16px);
-  color: var(--primary);
+  color: rgba(11, 22, 13, 0.88);
   padding: 0;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -1352,15 +1353,15 @@ button.primary:hover { opacity: 0.9; }
     height: 100%;
   }
 
-  .weather {
-    bottom: 16vh;
-  }
-
-  .locate-btn {
-    bottom: 16vh;
-  }
-
   .lastpos-btn {
-    bottom: calc(16vh + 50px);
+    bottom: calc( 50px + 16px);
+  }
+
+  .app {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
   }
 }
