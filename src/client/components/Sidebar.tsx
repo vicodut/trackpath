@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { Drawer } from 'vaul';
 import { TrackingPoint, StravaActivity } from '../types';
 import { AddPointForm } from './AddPointForm';
 import { PointCard } from './PointCard';
@@ -16,72 +17,10 @@ interface SidebarProps {
   isAdmin: boolean;
 }
 
-export function Sidebar({
-  points,
-  totalDistanceKm,
-  totalElevationGain,
-  stravaActivities,
-  onSelectPoint,
-  onDeletePoint,
-  onAddPoint,
-  onFormToggle,
-  pickedCoords,
-  isAdmin,
+function SidebarContent({
+  points, totalDistanceKm, totalElevationGain, stravaActivities,
+  onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, pickedCoords, isAdmin,
 }: SidebarProps) {
-  const [sheetHeight, setSheetHeight] = useState(25); // percentage of viewport
-  const dragging = useRef(false);
-  const startY = useRef(0);
-  const startHeight = useRef(0);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
-  const onDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    dragging.current = true;
-    startY.current = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    startHeight.current = sheetHeight;
-    document.body.style.userSelect = 'none';
-  }, [sheetHeight]);
-
-  const onDragMove = useCallback((e: TouchEvent | MouseEvent) => {
-    if (!dragging.current) return;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    const deltaY = startY.current - clientY;
-    const deltaPercent = (deltaY / window.innerHeight) * 100;
-    const newHeight = Math.min(85, Math.max(10, startHeight.current + deltaPercent));
-    setSheetHeight(newHeight);
-  }, []);
-
-  const onDragEnd = useCallback(() => {
-    if (!dragging.current) return;
-    dragging.current = false;
-    document.body.style.userSelect = '';
-    // Snap to positions
-    setSheetHeight((h) => {
-      if (h < 20) return 10;
-      if (h < 50) return 40;
-      return 85;
-    });
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('touchmove', onDragMove, { passive: false });
-    window.addEventListener('mousemove', onDragMove);
-    window.addEventListener('touchend', onDragEnd);
-    window.addEventListener('mouseup', onDragEnd);
-    return () => {
-      window.removeEventListener('touchmove', onDragMove);
-      window.removeEventListener('mousemove', onDragMove);
-      window.removeEventListener('touchend', onDragEnd);
-      window.removeEventListener('mouseup', onDragEnd);
-    };
-  }, [onDragMove, onDragEnd]);
-
   const stravaElevation = useMemo(() =>
     stravaActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0),
   [stravaActivities]);
@@ -89,15 +28,7 @@ export function Sidebar({
   const totalElev = totalElevationGain + stravaElevation;
 
   return (
-    <div
-      className={`sidebar ${isMobile ? 'bottom-sheet' : ''}`}
-      style={isMobile ? { height: `${sheetHeight}vh` } : undefined}
-    >
-      {isMobile && (
-        <div className="sheet-handle" onTouchStart={onDragStart} onMouseDown={onDragStart}>
-          <div className="sheet-handle-bar" />
-        </div>
-      )}
+    <>
       <div className="sidebar-header">
         <h2>Tracking Points</h2>
         <div className="stats">
@@ -123,6 +54,45 @@ export function Sidebar({
           />
         ))}
       </div>
-    </div>
+    </>
+  );
+}
+
+export function Sidebar(props: SidebarProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  if (!isMobile) {
+    return (
+      <div className="sidebar">
+        <SidebarContent {...props} />
+      </div>
+    );
+  }
+
+  return (
+    <Drawer.Root
+      open
+      modal={false}
+      snapPoints={[0.15, 0.4, 0.85]}
+      defaultSnap={0.15}
+    >
+      <Drawer.Portal>
+        <Drawer.Content className="drawer-content">
+          <div className="drawer-handle">
+            <div className="drawer-handle-bar" />
+          </div>
+          <div className="drawer-inner">
+            <SidebarContent {...props} />
+          </div>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 }
