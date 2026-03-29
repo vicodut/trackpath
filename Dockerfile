@@ -1,5 +1,5 @@
 # Stage 1: build
-FROM node:22-slim AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: production
-FROM node:22-slim
+FROM node:20-slim
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
