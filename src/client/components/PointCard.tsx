@@ -1,5 +1,15 @@
 import { TrackingPoint } from '../types';
 
+const TAG_EMOJIS: Record<string, string> = {
+  poop: '💩',
+  resupply: '🛒',
+  hostel: '🏠',
+  camp: '⛺',
+  shelter: '🛖',
+  water: '💧',
+  viewpoint: '👀',
+};
+
 interface PointCardProps {
   point: TrackingPoint;
   onSelect: (point: TrackingPoint) => void;
@@ -8,10 +18,11 @@ interface PointCardProps {
 
 export function PointCard({ point, onSelect, onDelete }: PointCardProps) {
   const time = new Date(point.timestamp).toLocaleString();
+  const emoji = point.eventType ? TAG_EMOJIS[point.eventType] : null;
 
   return (
     <div className="point-card" onClick={() => onSelect(point)}>
-      <div className="point-time">{time}</div>
+      <div className="point-time">{emoji && `${emoji} `}{time}</div>
       <div className="point-coords">
         {point.latitude.toFixed(5)}, {point.longitude.toFixed(5)}
       </div>
