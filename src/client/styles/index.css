@@ -194,6 +194,7 @@ button.primary:hover { opacity: 0.9; }
 .main-container {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -1315,10 +1316,15 @@ button.primary:hover { opacity: 0.9; }
   .main-container {
     flex-direction: column;
     position: relative;
+    overflow: hidden;
+  }
+
+  .map-wrapper {
+    flex: 1;
+    min-height: 0;
   }
 
   #map {
-    flex: 1;
     height: 100%;
   }
 
