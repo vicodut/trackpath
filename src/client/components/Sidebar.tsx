@@ -4,6 +4,17 @@ import { TrackingPoint, StravaActivity } from '../types';
 import { AddPointForm } from './AddPointForm';
 import { PointCard } from './PointCard';
 
+const TAG_FILTERS = [
+  { key: 'all', label: 'ALL', emoji: '' },
+  { key: 'resupply', label: 'RESUPPLY', emoji: '🛒' },
+  { key: 'poop', label: 'POOP', emoji: '💩' },
+  { key: 'hostel', label: 'HOSTEL', emoji: '🏠' },
+  { key: 'camp', label: 'CAMP', emoji: '⛺' },
+  { key: 'shelter', label: 'SHELTER', emoji: '🛖' },
+  { key: 'water', label: 'WATER', emoji: '💧' },
+  { key: 'viewpoint', label: 'VIEW', emoji: '👀' },
+] as const;
+
 interface SidebarProps {
   points: TrackingPoint[];
   totalDistanceKm: number;
@@ -22,21 +33,39 @@ function SidebarContent({
   points, totalDistanceKm, totalElevationGain, stravaActivities,
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, pickedCoords, isAdmin, forceFormOpen,
 }: SidebarProps) {
+  const [activeFilter, setActiveFilter] = useState('all');
+
   const stravaElevation = useMemo(() =>
     stravaActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0),
   [stravaActivities]);
 
   const totalElev = totalElevationGain + stravaElevation;
 
+  const filteredPoints = useMemo(() => {
+    if (activeFilter === 'all') return points;
+    return points.filter(pt => pt.eventType === activeFilter);
+  }, [points, activeFilter]);
+
   return (
     <>
       <div className="sidebar-header">
         <h2>TRAIL_LOG</h2>
         <div className="stats">
-          <span>PTS: <strong>{points.length}</strong></span>
+          <span>PTS: <strong>{filteredPoints.length}</strong></span>
           <span>DIST: <strong>{totalDistanceKm.toFixed(1)}</strong> km</span>
           <span>ELEV: <strong>{Math.round(totalElev)}</strong> m</span>
         </div>
+      </div>
+      <div className="tag-filters">
+        {TAG_FILTERS.map(({ key, emoji }) => (
+          <button
+            key={key}
+            className={`tag-filter-btn ${activeFilter === key ? 'active' : ''}`}
+            onClick={() => setActiveFilter(key)}
+          >
+            {key === 'all' ? 'ALL' : emoji}
+          </button>
+        ))}
       </div>
       {isAdmin && (
         <AddPointForm
@@ -47,7 +76,7 @@ function SidebarContent({
         />
       )}
       <div className="points-list">
-        {[...points].reverse().map((pt) => (
+        {[...filteredPoints].reverse().map((pt) => (
           <PointCard
             key={pt.id}
             point={pt}

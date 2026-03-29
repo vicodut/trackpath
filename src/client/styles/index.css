@@ -171,6 +171,38 @@ button.primary:hover { opacity: 0.9; }
   font-weight: 800;
 }
 
+/* Tag filters */
+.tag-filters {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: var(--ghost-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.tag-filter-btn {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  background: var(--surface-container);
+  border: var(--ghost-border);
+  color: var(--outline);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tag-filter-btn:hover {
+  background: var(--surface-container-high);
+}
+
+.tag-filter-btn.active {
+  background: var(--secondary);
+  color: var(--surface);
+  border-color: var(--secondary);
+}
+
 /* Points list */
 .points-list {
   flex: 1;
