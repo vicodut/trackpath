@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { TrackingPoint, StravaActivity } from '../types';
@@ -7,14 +7,14 @@ import { LayerVisibility } from './LayerToggle';
 
 const pointIcon = L.divIcon({
   className: '',
-  html: '<div style="width:12px;height:12px;background:#e94560;border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(233,69,96,0.6);"></div>',
+  html: '<div style="width:12px;height:12px;background:#fe6b00;border:2px solid #d9e6d7;border-radius:50%;box-shadow:0 0 6px rgba(254,107,0,0.6);"></div>',
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
 
 const latestIcon = L.divIcon({
   className: '',
-  html: '<div style="width:18px;height:18px;background:#e94560;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px rgba(233,69,96,0.8);animation:pulse 2s infinite;"></div>',
+  html: '<div style="width:18px;height:18px;background:#fe6b00;border:3px solid #d9e6d7;border-radius:50%;box-shadow:0 0 12px rgba(254,107,0,0.8);animation:pulse 2s infinite;"></div>',
   iconSize: [18, 18],
   iconAnchor: [9, 9],
 });
@@ -53,6 +53,7 @@ interface MapProps {
   selectedPoint: TrackingPoint | null;
   pickingFromMap: boolean;
   onMapClick: (lat: number, lng: number) => void;
+  onLongPress: (lat: number, lng: number) => void;
   sidebarVisible: boolean;
   layers: LayerVisibility;
 }
@@ -69,15 +70,78 @@ function ATTrailLayer() {
 
   if (trailCoords.length === 0) return null;
 
-  return <Polyline positions={trailCoords} pathOptions={{ color: '#e94560', weight: 3, opacity: 0.6 }} />;
+  return <Polyline positions={trailCoords} pathOptions={{ color: '#fe6b00', weight: 3, opacity: 0.6 }} />;
 }
 
-function MapClickHandler({ picking, onClick }: { picking: boolean; onClick: (lat: number, lng: number) => void }) {
+function MapClickHandler({
+  picking,
+  onClick,
+  onLongPress,
+}: {
+  picking: boolean;
+  onClick: (lat: number, lng: number) => void;
+  onLongPress: (lat: number, lng: number) => void;
+}) {
   const map = useMap();
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     map.getContainer().style.cursor = picking ? 'crosshair' : '';
   }, [picking, map]);
+
+  useEffect(() => {
+    const container = map.getContainer();
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      touchStart.current = { x: touch.clientX, y: touch.clientY };
+      longPressTimer.current = setTimeout(() => {
+        if (!touchStart.current) return;
+        const point = map.containerPointToLatLng(
+          L.point(touch.clientX - container.getBoundingClientRect().left,
+                  touch.clientY - container.getBoundingClientRect().top)
+        );
+        onLongPress(point.lat, point.lng);
+        touchStart.current = null;
+      }, 600);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchStart.current || e.touches.length !== 1) {
+        cancel();
+        return;
+      }
+      const touch = e.touches[0];
+      const dx = touch.clientX - touchStart.current.x;
+      const dy = touch.clientY - touchStart.current.y;
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        cancel();
+      }
+    };
+
+    const cancel = () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+      touchStart.current = null;
+    };
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
+    container.addEventListener('touchend', cancel);
+    container.addEventListener('touchcancel', cancel);
+
+    return () => {
+      cancel();
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', cancel);
+      container.removeEventListener('touchcancel', cancel);
+    };
+  }, [map, onLongPress]);
 
   useMapEvents({
     click(e) {
@@ -88,6 +152,57 @@ function MapClickHandler({ picking, onClick }: { picking: boolean; onClick: (lat
   });
 
   return null;
+}
+
+function LocateButton() {
+  const map = useMap();
+  const [locating, setLocating] = useState(false);
+  const markerRef = useRef<L.CircleMarker | null>(null);
+
+  const handleLocate = useCallback(() => {
+    if (locating) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        map.setView([latitude, longitude], 14);
+        if (markerRef.current) {
+          markerRef.current.setLatLng([latitude, longitude]);
+        } else {
+          markerRef.current = L.circleMarker([latitude, longitude], {
+            radius: 8,
+            color: '#b8ccb8',
+            fillColor: '#fe6b00',
+            fillOpacity: 1,
+            weight: 3,
+          }).addTo(map);
+        }
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, [map, locating]);
+
+  return (
+    <button
+      className="locate-btn"
+      onClick={handleLocate}
+      title="LOCATE_ME"
+      disabled={locating}
+    >
+      {locating ? (
+        <span className="spinner" style={{ margin: 0, width: 16, height: 16 }} />
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+        </svg>
+      )}
+    </button>
+  );
 }
 
 function FlyToPoint({ point }: { point: TrackingPoint | null }) {
@@ -118,7 +233,7 @@ function formatDuration(seconds: number): string {
   return h > 0 ? `${h}h${m}m` : `${m}m`;
 }
 
-export function Map({ points, stravaActivities, selectedPoint, pickingFromMap, onMapClick, sidebarVisible, layers }: MapProps) {
+export function Map({ points, stravaActivities, selectedPoint, pickingFromMap, onMapClick, onLongPress, sidebarVisible, layers }: MapProps) {
   const pathCoords: [number, number][] = points
     .filter((p) => !p.garminId?.startsWith('manual-'))
     .map((p) => [p.latitude, p.longitude]);
@@ -146,7 +261,7 @@ export function Map({ points, stravaActivities, selectedPoint, pickingFromMap, o
 
       {/* User path */}
       {layers.garminPath && pathCoords.length > 1 && (
-        <Polyline positions={pathCoords} pathOptions={{ color: '#e94560', weight: 3, opacity: 0.9, dashArray: '6,4' }} />
+        <Polyline positions={pathCoords} pathOptions={{ color: '#fe6b00', weight: 3, opacity: 0.9, dashArray: '6,4' }} />
       )}
 
       {/* Point markers */}
@@ -198,9 +313,10 @@ export function Map({ points, stravaActivities, selectedPoint, pickingFromMap, o
         );
       })}
 
-      <MapClickHandler picking={pickingFromMap} onClick={onMapClick} />
+      <MapClickHandler picking={pickingFromMap} onClick={onMapClick} onLongPress={onLongPress} />
       <FlyToPoint point={selectedPoint} />
       <InvalidateOnResize sidebarVisible={sidebarVisible} />
+      <LocateButton />
     </MapContainer>
   );
 }

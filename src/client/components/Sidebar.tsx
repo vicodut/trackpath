@@ -15,11 +15,12 @@ interface SidebarProps {
   onFormToggle: (open: boolean) => void;
   pickedCoords: { lat: number; lng: number } | null;
   isAdmin: boolean;
+  forceFormOpen?: boolean;
 }
 
 function SidebarContent({
   points, totalDistanceKm, totalElevationGain, stravaActivities,
-  onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, pickedCoords, isAdmin,
+  onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, pickedCoords, isAdmin, forceFormOpen,
 }: SidebarProps) {
   const stravaElevation = useMemo(() =>
     stravaActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0),
@@ -30,11 +31,11 @@ function SidebarContent({
   return (
     <>
       <div className="sidebar-header">
-        <h2>Tracking Points</h2>
+        <h2>TRAIL_LOG</h2>
         <div className="stats">
-          <span>Points: <strong>{points.length}</strong></span>
-          <span>Distance: <strong>{totalDistanceKm.toFixed(1)}</strong> km</span>
-          <span>Elev: <strong>{Math.round(totalElev)}</strong> m</span>
+          <span>PTS: <strong>{points.length}</strong></span>
+          <span>DIST: <strong>{totalDistanceKm.toFixed(1)}</strong> km</span>
+          <span>ELEV: <strong>{Math.round(totalElev)}</strong> m</span>
         </div>
       </div>
       {isAdmin && (
@@ -42,6 +43,7 @@ function SidebarContent({
           onSubmit={onAddPoint}
           onFormToggle={onFormToggle}
           pickedCoords={pickedCoords}
+          forceOpen={forceFormOpen}
         />
       )}
       <div className="points-list">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const TAGS = ['resupply', 'poop', 'hostel', 'camp', 'shelter', 'water', 'viewpoint'] as const;
 
@@ -6,10 +6,18 @@ interface AddPointFormProps {
   onSubmit: (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null; tag?: string | null }) => Promise<boolean>;
   onFormToggle: (open: boolean) => void;
   pickedCoords: { lat: number; lng: number } | null;
+  forceOpen?: boolean;
 }
 
-export function AddPointForm({ onSubmit, onFormToggle, pickedCoords }: AddPointFormProps) {
+export function AddPointForm({ onSubmit, onFormToggle, pickedCoords, forceOpen }: AddPointFormProps) {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (forceOpen && !open) {
+      setOpen(true);
+      onFormToggle(true);
+    }
+  }, [forceOpen]);
 
   const toggleOpen = () => {
     const next = !open;
@@ -53,7 +61,7 @@ export function AddPointForm({ onSubmit, onFormToggle, pickedCoords }: AddPointF
   return (
     <div className="add-form">
       <button className="add-form-toggle" onClick={toggleOpen}>
-        + Add a tracking point
+        + ADD_TRACKING_POINT
       </button>
       {open && (
         <div className="add-form-fields open">
@@ -100,9 +108,9 @@ export function AddPointForm({ onSubmit, onFormToggle, pickedCoords }: AddPointF
             value={msg}
             onChange={(e) => setMsg(e.target.value)}
           />
-          <p className="pick-hint active">Tap on the map to set coordinates</p>
+          <p className="pick-hint active">TAP_MAP_TO_SET_COORDINATES</p>
           <div className="add-form-actions">
-            <button className="primary" onClick={handleSubmit}>Add point</button>
+            <button className="primary" onClick={handleSubmit}>SUBMIT_POINT</button>
           </div>
         </div>
       )}

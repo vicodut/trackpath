@@ -73,6 +73,13 @@ export function App() {
     }
   }, [addFormOpen]);
 
+  const handleLongPress = useCallback((lat: number, lng: number) => {
+    if (!isAdmin) return;
+    setPickedCoords({ lat, lng });
+    setAddFormOpen(true);
+    setSidebarVisible(true);
+  }, [isAdmin]);
+
   const handleAddPoint = useCallback(async (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null; tag?: string | null }) => {
     const ok = await addPoint(data);
     if (ok) {
@@ -97,6 +104,7 @@ export function App() {
             selectedPoint={selectedPoint}
             pickingFromMap={addFormOpen}
             onMapClick={handleMapClick}
+            onLongPress={handleLongPress}
             sidebarVisible={sidebarVisible}
             layers={layers}
           />
@@ -121,6 +129,7 @@ export function App() {
             onFormToggle={setAddFormOpen}
             pickedCoords={pickedCoords}
             isAdmin={isAdmin}
+            forceFormOpen={addFormOpen}
           />
         )}
       </div>
