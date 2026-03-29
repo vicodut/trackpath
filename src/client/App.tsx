@@ -6,6 +6,7 @@ import { StatusBar } from './components/StatusBar';
 import { Weather } from './components/Weather';
 import { Stats } from './components/Stats';
 import { AdminPage } from './components/AdminPage';
+import { StatsPage } from './components/StatsPage';
 import { LayerToggle, LayerVisibility } from './components/LayerToggle';
 import { usePoints } from './hooks/usePoints';
 import { useSession } from './lib/auth-client';
@@ -31,6 +32,7 @@ export function App() {
   const [addFormOpen, setAddFormOpen] = useState(false);
   const [pickedCoords, setPickedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [layers, setLayers] = useState<LayerVisibility>({
     garminPath: true,
     garminPoints: true,
@@ -95,6 +97,7 @@ export function App() {
         onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
         isAdmin={isAdmin}
         onAdmin={() => setShowAdmin(true)}
+        onStats={() => setShowStats(true)}
       />
       <div className="main-container">
         <div className="map-wrapper">
@@ -134,6 +137,15 @@ export function App() {
         )}
       </div>
       <StatusBar message={status.message} type={status.type} />
+      {showStats && (
+        <StatsPage
+          points={points}
+          stravaActivities={stravaActivities}
+          totalDistanceKm={totalDistanceKm}
+          totalElevationGain={totalElevationGain}
+          onClose={() => setShowStats(false)}
+        />
+      )}
       {showAdmin && (
         <AdminPage
           onClose={() => setShowAdmin(false)}

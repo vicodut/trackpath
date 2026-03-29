@@ -783,6 +783,327 @@ button.primary:hover { opacity: 0.9; }
   flex-direction: column;
 }
 
+/* ============================================
+   Stats Page
+   ============================================ */
+.stats-page {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.stats-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.stats-page-header h2 {
+  font-family: var(--font-headline);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+.stats-page-content {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stats-section {
+  background: var(--surface-container-low);
+  border: var(--ghost-border);
+  padding: 24px;
+}
+
+.stats-section-title {
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-bottom: 16px;
+}
+
+.stats-label {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--outline);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* Progress */
+.stats-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.stats-hero-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.stats-hero-number {
+  font-family: var(--font-headline);
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.stats-hero-unit {
+  font-family: var(--font-headline);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--outline);
+}
+
+.stats-progress-pct {
+  text-align: right;
+}
+
+.stats-big-value {
+  display: block;
+  font-family: var(--font-headline);
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin-top: 4px;
+}
+
+.stats-progress-bar {
+  height: 12px;
+  background: var(--surface-container-highest);
+  width: 100%;
+  position: relative;
+}
+
+.stats-progress-fill {
+  height: 100%;
+  background: var(--secondary);
+  position: relative;
+}
+
+.stats-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+}
+
+/* Bento grid */
+.stats-bento {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.stats-bento-card {
+  background: var(--surface-container);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: var(--ghost-border);
+}
+
+.stats-bento-card.stats-bento-accent {
+  border-left: 3px solid var(--secondary);
+}
+
+.stats-bento-number {
+  font-family: var(--font-headline);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.stats-bento-unit {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--outline);
+  margin-left: 4px;
+}
+
+/* Heatmap */
+.stats-heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.stats-heatmap-header h3 {
+  font-family: var(--font-headline);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.heatmap-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heatmap-months {
+  display: grid;
+  font-family: var(--font-headline);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--outline);
+  letter-spacing: 0.1em;
+  margin-bottom: 2px;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-flow: column;
+  gap: 2px;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 10px;
+}
+
+.heatmap-cell-empty { background: transparent; }
+.heatmap-cell-0 { background: var(--surface-container-highest); }
+.heatmap-cell-1 { background: rgba(254, 107, 0, 0.25); }
+.heatmap-cell-2 { background: rgba(254, 107, 0, 0.45); }
+.heatmap-cell-3 { background: rgba(254, 107, 0, 0.7); }
+.heatmap-cell-4 { background: var(--secondary); }
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.heatmap-legend .heatmap-cell {
+  width: 12px;
+  height: 12px;
+  min-height: 12px;
+  aspect-ratio: auto;
+}
+
+/* Events list */
+.stats-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stats-event {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--surface-container);
+  border: var(--ghost-border);
+  transition: background 0.15s;
+}
+
+.stats-event:hover {
+  background: var(--surface-container-high);
+}
+
+.stats-event-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stats-event-type {
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.stats-event-coords {
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  color: var(--outline);
+  letter-spacing: 0.05em;
+}
+
+.stats-event-msg {
+  font-size: 0.8rem;
+  color: var(--primary);
+  font-style: italic;
+}
+
+.stats-event-time {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.stats-empty {
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  color: var(--outline);
+  text-align: center;
+  padding: 32px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+@media (min-width: 640px) {
+  .stats-bento {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-page {
+    padding: 16px;
+  }
+
+  .stats-hero-number {
+    font-size: 2.5rem;
+  }
+
+  .stats-bento-number {
+    font-size: 1.6rem;
+  }
+
+  .stats-bento-card {
+    padding: 14px;
+  }
+}
+
 /* Locate button */
 .locate-btn {
   position: absolute;

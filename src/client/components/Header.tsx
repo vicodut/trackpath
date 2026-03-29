@@ -5,15 +5,17 @@ interface HeaderProps {
   onToggleSidebar: () => void;
   isAdmin: boolean;
   onAdmin: () => void;
+  onStats: () => void;
 }
 
-export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin }: HeaderProps) {
+export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onStats }: HeaderProps) {
   const { data: session, isPending } = useSession();
 
   return (
     <header className="header">
       <h1>AT_TRACKER</h1>
       <div className="header-actions">
+        <button onClick={onStats}>STATS</button>
         {isAdmin && (
           <button onClick={onAdmin}>ADMIN</button>
         )}
