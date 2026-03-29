@@ -1433,9 +1433,6 @@ button.primary:hover { opacity: 0.9; }
     min-height: 0;
   }
 
-  #map {
-    height: 100%;
-  }
 
   .lastpos-btn {
     bottom: calc( 50px + 16px);

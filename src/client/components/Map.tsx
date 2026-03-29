@@ -22,8 +22,8 @@ const pointIcon = L.divIcon({
 const latestIcon = L.divIcon({
   className: "",
   html: '<img src="/sasquatch.gif" style="width:40px;height:40px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />',
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
+  iconSize: [60, 60],
+  iconAnchor: [30, 60],
 });
 
 const flagIcon = L.divIcon({
