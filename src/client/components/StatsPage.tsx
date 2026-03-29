@@ -238,37 +238,30 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
           </div>
           <div className="heatmap-wrapper" style={{ position: 'relative' }}>
             {/* Month labels */}
-            <div
-              className="heatmap-months"
-              style={{ gridTemplateColumns: `16px repeat(${weeks.length}, 1fr)` }}
-            >
-              <span />
+            <div className="heatmap-months-row" style={{ position: 'relative', height: 16, marginLeft: 20, marginBottom: 2 }}>
               {months.map((m, i) => (
                 <span
                   key={i}
                   className="heatmap-month-label"
-                  style={{ gridColumnStart: m.weekIndex + 2 }}
+                  style={{ position: 'absolute', left: m.weekIndex * 13 }}
                 >
                   {m.label}
                 </span>
               ))}
             </div>
             {/* Grid with day labels */}
-            <div style={{ display: 'grid', gridTemplateColumns: `16px 1fr`, gap: 0 }}>
+            <div style={{ display: 'flex', gap: 0 }}>
               {/* Day of week labels */}
-              <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 1fr)', gap: 1 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {DAY_LABELS.map((label, i) => (
-                  <span key={i} className="heatmap-day-label">{i % 2 === 1 ? label : ''}</span>
+                  <span key={i} className="heatmap-day-label">{i % 2 === 0 ? label : ''}</span>
                 ))}
               </div>
-              {/* The grid */}
-              <div
-                className="heatmap-grid"
-                style={{ gridTemplateColumns: `repeat(${weeks.length}, 1fr)` }}
-              >
-                {Array.from({ length: 7 }).map((_, row) => (
-                  weeks.map((week, col) => {
-                    const cell = week.find(d => d?.row === row);
+              {/* The grid — iterate column-first (week by week) */}
+              <div className="heatmap-grid">
+                {weeks.map((week, col) => (
+                  Array.from({ length: 7 }).map((_, row) => {
+                    const cell = week[row];
                     if (!cell) return <div key={`${col}-${row}`} className="heatmap-cell heatmap-cell-empty" />;
                     return (
                       <div

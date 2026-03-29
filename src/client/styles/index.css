@@ -967,29 +967,30 @@ button.primary:hover { opacity: 0.9; }
   gap: 8px;
 }
 
-.heatmap-months {
-  display: grid;
+.heatmap-months-row {
   font-family: var(--font-headline);
   font-size: 0.55rem;
   font-weight: 700;
   color: var(--outline);
   letter-spacing: 0.1em;
-  margin-bottom: 2px;
+}
+
+.heatmap-month-label {
+  white-space: nowrap;
 }
 
 .heatmap-grid {
   display: grid;
-  grid-template-rows: repeat(7, 1fr);
+  grid-template-rows: repeat(7, 11px);
   grid-auto-flow: column;
-  gap: 1px;
+  grid-auto-columns: 11px;
+  gap: 2px;
 }
 
 .heatmap-cell {
-  width: 100%;
-  aspect-ratio: 1;
-  min-width: 0;
-  max-height: 14px;
-  border-radius: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
 }
 
 .heatmap-cell-empty { background: transparent; pointer-events: none; }
@@ -1001,7 +1002,7 @@ button.primary:hover { opacity: 0.9; }
 
 .heatmap-day-label {
   font-family: var(--font-headline);
-  font-size: 0.45rem;
+  font-size: 0.5rem;
   font-weight: 600;
   color: var(--outline);
   display: flex;
@@ -1009,7 +1010,8 @@ button.primary:hover { opacity: 0.9; }
   justify-content: flex-end;
   padding-right: 4px;
   line-height: 1;
-  max-height: 14px;
+  height: 11px;
+  margin-bottom: 2px;
 }
 
 .heatmap-legend {
