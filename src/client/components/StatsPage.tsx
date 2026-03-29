@@ -65,7 +65,7 @@ function getFixedWeeksGrid(dailyKm: Record<string, number>) {
   const gridEnd = new Date(end);
   gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
 
-  const weeks: { date: string; km: number; dayOfWeek: number; inRange: boolean }[][] = [];
+  const weeks: ({ date: string; km: number; dayOfWeek: number } | null)[][] = [];
   const months: { label: string; weekIndex: number }[] = [];
   let currentWeek: typeof weeks[0] = [];
   let lastMonth = -1;
@@ -75,9 +75,14 @@ function getFixedWeeksGrid(dailyKm: Record<string, number>) {
     const dateStr = cursor.toISOString().slice(0, 10);
     const dayOfWeek = cursor.getDay();
     const inRange = cursor >= start && cursor <= end;
-    currentWeek.push({ date: dateStr, km: dailyKm[dateStr] || 0, dayOfWeek, inRange });
 
-    if (cursor.getMonth() !== lastMonth) {
+    if (inRange) {
+      currentWeek.push({ date: dateStr, km: dailyKm[dateStr] || 0, dayOfWeek });
+    } else {
+      currentWeek.push(null);
+    }
+
+    if (inRange && cursor.getMonth() !== lastMonth) {
       lastMonth = cursor.getMonth();
       months.push({
         label: cursor.toLocaleString('default', { month: 'short' }).toUpperCase(),
@@ -97,8 +102,7 @@ function getFixedWeeksGrid(dailyKm: Record<string, number>) {
   return { weeks, months };
 }
 
-function intensityClass(km: number, inRange: boolean): string {
-  if (!inRange) return 'heatmap-cell-outside';
+function intensityClass(km: number): string {
   if (km === 0) return 'heatmap-cell-0';
   if (km < 10) return 'heatmap-cell-1';
   if (km < 20) return 'heatmap-cell-2';
@@ -234,7 +238,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
             {/* Month labels */}
             <div
               className="heatmap-months"
-              style={{ gridTemplateColumns: `24px repeat(${weeks.length}, 1fr)` }}
+              style={{ gridTemplateColumns: `16px repeat(${weeks.length}, 1fr)` }}
             >
               <span />
               {months.map((m, i) => (
@@ -248,9 +252,9 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
               ))}
             </div>
             {/* Grid with day labels */}
-            <div style={{ display: 'grid', gridTemplateColumns: `24px 1fr`, gap: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `16px 1fr`, gap: 0 }}>
               {/* Day of week labels */}
-              <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 1fr)', gap: 2 }}>
+              <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 1fr)', gap: 1 }}>
                 {DAY_LABELS.map((label, i) => (
                   <span key={i} className="heatmap-day-label">{i % 2 === 1 ? label : ''}</span>
                 ))}
@@ -262,14 +266,13 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
               >
                 {Array.from({ length: 7 }).map((_, row) => (
                   weeks.map((week, col) => {
-                    const cell = week.find(d => d.dayOfWeek === row);
+                    const cell = week.find(d => d?.dayOfWeek === row);
                     if (!cell) return <div key={`${col}-${row}`} className="heatmap-cell heatmap-cell-empty" />;
                     return (
                       <div
                         key={`${col}-${row}`}
-                        className={`heatmap-cell ${intensityClass(cell.km, cell.inRange)}`}
+                        className={`heatmap-cell ${intensityClass(cell.km)}`}
                         onMouseEnter={(e) => {
-                          if (!cell.inRange) return;
                           const rect = e.currentTarget.getBoundingClientRect();
                           setHoveredCell({
                             date: cell.date,
@@ -280,7 +283,6 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
                         }}
                         onMouseLeave={() => setHoveredCell(null)}
                         onTouchStart={(e) => {
-                          if (!cell.inRange) return;
                           const rect = e.currentTarget.getBoundingClientRect();
                           setHoveredCell({
                             date: cell.date,
