@@ -63,6 +63,7 @@ interface MapProps {
   onLongPress: (lat: number, lng: number) => void;
   sidebarVisible: boolean;
   layers: LayerVisibility;
+  isAdmin: boolean;
 }
 
 function ATTrailLayer() {
@@ -287,6 +288,7 @@ export function Map({
   onLongPress,
   sidebarVisible,
   layers,
+  isAdmin,
 }: MapProps) {
   const pathCoords: [number, number][] = points
     .filter((p) => !p.garminId?.startsWith("manual-"))
@@ -425,7 +427,7 @@ export function Map({
       />
       <FlyToPoint point={selectedPoint} />
       <InvalidateOnResize sidebarVisible={sidebarVisible} />
-      <LocateButton />
+      {isAdmin && <LocateButton />}
       <LastPositionButton points={points} />
     </MapContainer>
   );

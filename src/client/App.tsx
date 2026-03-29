@@ -155,6 +155,7 @@ export function App() {
             onLongPress={handleLongPress}
             sidebarVisible={sidebarVisible}
             layers={layers}
+            isAdmin={isAdmin}
           />
           {layers.weather && <Weather />}
           <LayerToggle layers={layers} onChange={setLayers} />
