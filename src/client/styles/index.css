@@ -1189,6 +1189,89 @@ button.primary:hover { opacity: 0.9; }
   fill: var(--outline);
 }
 
+/* Beer calculator */
+.beer-calc-counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.beer-calc-btn {
+  width: 44px;
+  height: 44px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-container-highest);
+  border: var(--ghost-border);
+  color: var(--on-surface);
+  padding: 0;
+}
+
+.beer-calc-btn:hover {
+  background: var(--secondary);
+  color: var(--surface);
+}
+
+.beer-calc-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 100px;
+}
+
+.beer-calc-beers {
+  font-family: var(--font-headline);
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1;
+}
+
+.beer-calc-emoji {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.beer-calc-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.beer-calc-stat {
+  background: var(--surface-container);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: var(--ghost-border);
+}
+
+.beer-calc-stat.beer-calc-hike {
+  border-left: 3px solid var(--secondary);
+}
+
+.beer-calc-value {
+  font-family: var(--font-headline);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1;
+}
+
+.beer-calc-unit {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--outline);
+  margin-left: 4px;
+}
+
 /* Events list */
 .stats-events {
   display: flex;

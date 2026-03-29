@@ -10,6 +10,11 @@ interface StatsPageProps {
 }
 
 const AT_TOTAL_KM = 1300;
+const BEER_CAL = 153; // regular beer 12 fl oz, ~5% alc
+const BEER_CARBS = 12.6;
+const BEER_PROTEIN = 1.6;
+const BEER_ALCOHOL_G = 13.8;
+const CAL_PER_KM = 90; // approx cal burned hiking with pack on AT
 const ELEV_CHART_HEIGHT = 200;
 const ELEV_CHART_PADDING = { top: 20, right: 16, bottom: 30, left: 46 };
 const HIKE_START = '2026-04-15';
@@ -257,6 +262,65 @@ function ElevationChart({ points }: { points: TrackingPoint[] }) {
   );
 }
 
+function BeerCalculator() {
+  const [beers, setBeers] = useState(0);
+
+  const totalCal = beers * BEER_CAL;
+  const kmToHike = totalCal / CAL_PER_KM;
+  const totalCarbs = beers * BEER_CARBS;
+  const totalAlcohol = beers * BEER_ALCOHOL_G;
+
+  return (
+    <div className="beer-calc">
+      <div className="beer-calc-counter">
+        <button
+          className="beer-calc-btn"
+          onClick={() => setBeers(Math.max(0, beers - 1))}
+          disabled={beers === 0}
+        >
+          -
+        </button>
+        <div className="beer-calc-display">
+          <span className="beer-calc-beers">{beers}</span>
+          <span className="beer-calc-emoji">
+            {Array.from({ length: Math.min(beers, 10) }).map((_, i) => (
+              <span key={i}>🍺</span>
+            ))}
+            {beers > 10 && <span>...</span>}
+            {beers === 0 && <span style={{ opacity: 0.3 }}>🍺</span>}
+          </span>
+        </div>
+        <button
+          className="beer-calc-btn"
+          onClick={() => setBeers(beers + 1)}
+        >
+          +
+        </button>
+      </div>
+      {beers > 0 && (
+        <div className="beer-calc-stats">
+          <div className="beer-calc-stat">
+            <span className="stats-label">CALORIES</span>
+            <span className="beer-calc-value">{totalCal}<span className="beer-calc-unit">KCAL</span></span>
+          </div>
+          <div className="beer-calc-stat">
+            <span className="stats-label">CARBS</span>
+            <span className="beer-calc-value">{totalCarbs.toFixed(1)}<span className="beer-calc-unit">G</span></span>
+          </div>
+          <div className="beer-calc-stat">
+            <span className="stats-label">ALCOHOL</span>
+            <span className="beer-calc-value">{totalAlcohol.toFixed(0)}<span className="beer-calc-unit">G</span></span>
+          </div>
+          <div className="beer-calc-stat beer-calc-hike">
+            <span className="stats-label">HIKE_TO_BURN</span>
+            <span className="beer-calc-value">{kmToHike.toFixed(1)}<span className="beer-calc-unit">KM</span></span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElevationGain, onClose }: StatsPageProps) {
   const [hoveredCell, setHoveredCell] = useState<{ date: string; km: number; x: number; y: number } | null>(null);
 
@@ -470,6 +534,12 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         <section className="stats-section">
           <h3 className="stats-section-title">ELEVATION_PROFILE</h3>
           <ElevationChart points={points} />
+        </section>
+
+        {/* Beer calculator */}
+        <section className="stats-section">
+          <h3 className="stats-section-title">BEER_CALCULATOR</h3>
+          <BeerCalculator />
         </section>
 
         {/* Recent events */}
