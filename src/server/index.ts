@@ -153,12 +153,14 @@ async function fetchGarminPoints(mapshareId: string): Promise<NewTrackingPoint[]
     if (!coords) continue;
 
     const [lng, lat, alt] = coords.split(',').map(Number);
+    const elevation = extData['Elevation'] ? parseFloat(extData['Elevation']) : null;
+    const finalAlt = (alt != null && !isNaN(alt)) ? alt : elevation;
 
     points.push({
       garminId: extData['Id'] || `${lat}-${lng}-${extData['Time UTC'] || ''}`,
       latitude: lat,
       longitude: lng,
-      altitude: alt || null,
+      altitude: finalAlt,
       timestamp: extData['Time UTC'] || new Date().toISOString(),
       velocity: extData['Velocity'] ? parseFloat(extData['Velocity']) : null,
       course: extData['Course'] ? parseFloat(extData['Course']) : null,
@@ -265,7 +267,7 @@ app.post('/api/points', requireAuth, async (req: Request, res: Response) => {
     garminId: `manual-${Date.now()}`,
     latitude,
     longitude,
-    altitude: altitude || null,
+    altitude: altitude != null ? altitude : null,
     timestamp: new Date().toISOString(),
     velocity: null,
     course: null,
