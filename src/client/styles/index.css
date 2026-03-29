@@ -1293,6 +1293,28 @@ button.primary:hover { opacity: 0.9; }
   cursor: wait;
 }
 
+.lastpos-btn {
+  position: absolute;
+  bottom: 62px;
+  right: 12px;
+  z-index: 1000;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 22, 13, 0.88);
+  border: var(--ghost-border);
+  backdrop-filter: blur(16px);
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lastpos-btn:hover {
+  background: var(--surface-container-high);
+}
+
 /* Mobile */
 @media (max-width: 768px) {
   .header {
@@ -1327,6 +1349,18 @@ button.primary:hover { opacity: 0.9; }
   }
 
   #map {
-    /* height: 100%; */
+    height: 100%;
+  }
+
+  .weather {
+    bottom: 16vh;
+  }
+
+  .locate-btn {
+    bottom: 16vh;
+  }
+
+  .lastpos-btn {
+    bottom: calc(16vh + 50px);
   }
 }
