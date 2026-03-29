@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { useSession, authClient } from '../lib/auth-client';
 
 interface HeaderProps {
@@ -10,29 +11,77 @@ interface HeaderProps {
 
 export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onStats }: HeaderProps) {
   const { data: session, isPending } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuOpen]);
+
+  const closeAndDo = (fn: () => void) => {
+    setMenuOpen(false);
+    fn();
+  };
+
+  const actions = (
+    <>
+      <button onClick={() => closeAndDo(onStats)}>STATS</button>
+      {isAdmin && <button onClick={() => closeAndDo(onAdmin)}>ADMIN</button>}
+      <button onClick={() => closeAndDo(onToggleSidebar)}>
+        {sidebarVisible ? 'HIDE_LIST' : 'SHOW_LIST'}
+      </button>
+      {isPending ? null : session?.user ? (
+        <>
+          <span className="auth-user">{session.user.name || session.user.email}</span>
+          <button onClick={() => closeAndDo(() => authClient.signOut())}>LOGOUT</button>
+        </>
+      ) : (
+        <button onClick={() => closeAndDo(() => authClient.signIn.social({ provider: "github", callbackURL: "/" }))}>
+          LOGIN_GITHUB
+        </button>
+      )}
+    </>
+  );
 
   return (
     <header className="header">
-      <h1><img src="/sasquatch-icon.gif" alt="" style={{ width: 28, height: 28, imageRendering: 'pixelated', verticalAlign: 'middle', marginRight: 8 }} />AT_TRACKER</h1>
-      <div className="header-actions">
-        <button onClick={onStats}>STATS</button>
-        {isAdmin && (
-          <button onClick={onAdmin}>ADMIN</button>
-        )}
-        <button onClick={onToggleSidebar}>
-          {sidebarVisible ? 'HIDE_LIST' : 'SHOW_LIST'}
-        </button>
-        {isPending ? null : session?.user ? (
-          <>
-            <span className="auth-user">{session.user.name || session.user.email}</span>
-            <button onClick={() => authClient.signOut()}>LOGOUT</button>
-          </>
-        ) : (
-          <button onClick={() => authClient.signIn.social({ provider: "github", callbackURL: "/" })}>
-            LOGIN_GITHUB
+      <h1>
+        <img src="/sasquatch-icon.gif" alt="" style={{ width: 28, height: 28, imageRendering: 'pixelated', verticalAlign: 'middle', marginRight: 8 }} />
+        AT_TRACKER
+      </h1>
+      {isMobile ? (
+        <div className="header-menu" ref={menuRef}>
+          <button className="hamburger-btn" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">
+            <span className={`hamburger-icon ${menuOpen ? 'open' : ''}`}>
+              <span /><span /><span />
+            </span>
           </button>
-        )}
-      </div>
+          {menuOpen && (
+            <div className="header-dropdown">
+              {actions}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="header-actions">
+          {actions}
+        </div>
+      )}
     </header>
   );
 }
