@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { TrackingPoint, StravaActivity } from '../types';
 
 interface StatsPageProps {
@@ -10,30 +10,52 @@ interface StatsPageProps {
 }
 
 const AT_TOTAL_KM = 3500;
+const HIKE_START = '2026-04-15';
+const HIKE_END = '2026-07-13';
 
-function buildHeatmapData(points: TrackingPoint[], stravaActivities: StravaActivity[]) {
-  const counts: Record<string, number> = {};
-
-  for (const pt of points) {
-    const day = pt.timestamp.slice(0, 10);
-    counts[day] = (counts[day] || 0) + 1;
-  }
-
-  for (const act of stravaActivities) {
-    if (!act.startDate) continue;
-    const day = act.startDate.slice(0, 10);
-    counts[day] = (counts[day] || 0) + 1;
-  }
-
-  return counts;
+function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function getWeeksGrid(counts: Record<string, number>) {
-  const allDates = Object.keys(counts).sort();
-  if (allDates.length === 0) return { weeks: [], months: [] };
+function buildDailyKm(points: TrackingPoint[], stravaActivities: StravaActivity[]): Record<string, number> {
+  const dailyKm: Record<string, number> = {};
 
-  const start = new Date(allDates[0] + 'T00:00:00');
-  const end = new Date(allDates[allDates.length - 1] + 'T00:00:00');
+  // Sort points by timestamp
+  const sorted = [...points].sort((a, b) =>
+    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  // Compute distance between consecutive points, assign to the day of the second point
+  for (let i = 1; i < sorted.length; i++) {
+    const dist = haversine(
+      sorted[i - 1].latitude, sorted[i - 1].longitude,
+      sorted[i].latitude, sorted[i].longitude,
+    );
+    // Skip unrealistic jumps (> 100km between two consecutive points)
+    if (dist > 100) continue;
+    const day = sorted[i].timestamp.slice(0, 10);
+    dailyKm[day] = (dailyKm[day] || 0) + dist;
+  }
+
+  // Add Strava activity distances
+  for (const act of stravaActivities) {
+    if (!act.startDate || !act.distance) continue;
+    const day = act.startDate.slice(0, 10);
+    dailyKm[day] = (dailyKm[day] || 0) + act.distance / 1000;
+  }
+
+  return dailyKm;
+}
+
+function getFixedWeeksGrid(dailyKm: Record<string, number>) {
+  const start = new Date(HIKE_START + 'T00:00:00');
+  const end = new Date(HIKE_END + 'T00:00:00');
 
   // Align start to Sunday
   const gridStart = new Date(start);
@@ -43,16 +65,17 @@ function getWeeksGrid(counts: Record<string, number>) {
   const gridEnd = new Date(end);
   gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
 
-  const weeks: { date: string; count: number; dayOfWeek: number }[][] = [];
+  const weeks: { date: string; km: number; dayOfWeek: number; inRange: boolean }[][] = [];
   const months: { label: string; weekIndex: number }[] = [];
-  let currentWeek: { date: string; count: number; dayOfWeek: number }[] = [];
+  let currentWeek: typeof weeks[0] = [];
   let lastMonth = -1;
 
   const cursor = new Date(gridStart);
   while (cursor <= gridEnd) {
     const dateStr = cursor.toISOString().slice(0, 10);
     const dayOfWeek = cursor.getDay();
-    currentWeek.push({ date: dateStr, count: counts[dateStr] || 0, dayOfWeek });
+    const inRange = cursor >= start && cursor <= end;
+    currentWeek.push({ date: dateStr, km: dailyKm[dateStr] || 0, dayOfWeek, inRange });
 
     if (cursor.getMonth() !== lastMonth) {
       lastMonth = cursor.getMonth();
@@ -74,15 +97,18 @@ function getWeeksGrid(counts: Record<string, number>) {
   return { weeks, months };
 }
 
-function intensityClass(count: number): string {
-  if (count === 0) return 'heatmap-cell-0';
-  if (count <= 2) return 'heatmap-cell-1';
-  if (count <= 5) return 'heatmap-cell-2';
-  if (count <= 10) return 'heatmap-cell-3';
+function intensityClass(km: number, inRange: boolean): string {
+  if (!inRange) return 'heatmap-cell-outside';
+  if (km === 0) return 'heatmap-cell-0';
+  if (km < 10) return 'heatmap-cell-1';
+  if (km < 20) return 'heatmap-cell-2';
+  if (km < 30) return 'heatmap-cell-3';
   return 'heatmap-cell-4';
 }
 
 export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElevationGain, onClose }: StatsPageProps) {
+  const [hoveredCell, setHoveredCell] = useState<{ date: string; km: number; x: number; y: number } | null>(null);
+
   const stats = useMemo(() => {
     const stravaDistanceKm = stravaActivities.reduce((sum, a) => sum + ((a.distance || 0) / 1000), 0);
     const stravaElevation = stravaActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0);
@@ -122,9 +148,13 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
     };
   }, [points, stravaActivities, totalDistanceKm, totalElevationGain]);
 
-  const heatmapCounts = useMemo(() => buildHeatmapData(points, stravaActivities), [points, stravaActivities]);
-  const { weeks, months } = useMemo(() => getWeeksGrid(heatmapCounts), [heatmapCounts]);
-  const totalActiveDays = Object.values(heatmapCounts).filter(c => c > 0).length;
+  const dailyKm = useMemo(() => buildDailyKm(points, stravaActivities), [points, stravaActivities]);
+  const { weeks, months } = useMemo(() => getFixedWeeksGrid(dailyKm), [dailyKm]);
+  const activeDays = Object.entries(dailyKm).filter(([date, km]) => {
+    return km > 0 && date >= HIKE_START && date <= HIKE_END;
+  }).length;
+
+  const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   const recentPoints = useMemo(() => {
     return [...points]
@@ -198,48 +228,100 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         <section className="stats-section">
           <div className="stats-heatmap-header">
             <h3>ACTIVITY_LOG</h3>
-            <span className="stats-label">{totalActiveDays} ACTIVE_DAYS</span>
+            <span className="stats-label">{activeDays} / 90 ACTIVE_DAYS</span>
           </div>
-          {weeks.length > 0 ? (
-            <div className="heatmap-wrapper">
-              <div className="heatmap-months">
-                {months.map((m, i) => (
-                  <span
-                    key={i}
-                    className="heatmap-month-label"
-                    style={{ gridColumnStart: m.weekIndex + 1 }}
-                  >
-                    {m.label}
-                  </span>
+          <div className="heatmap-wrapper" style={{ position: 'relative' }}>
+            {/* Month labels */}
+            <div
+              className="heatmap-months"
+              style={{ gridTemplateColumns: `24px repeat(${weeks.length}, 1fr)` }}
+            >
+              <span />
+              {months.map((m, i) => (
+                <span
+                  key={i}
+                  className="heatmap-month-label"
+                  style={{ gridColumnStart: m.weekIndex + 2 }}
+                >
+                  {m.label}
+                </span>
+              ))}
+            </div>
+            {/* Grid with day labels */}
+            <div style={{ display: 'grid', gridTemplateColumns: `24px 1fr`, gap: 0 }}>
+              {/* Day of week labels */}
+              <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 1fr)', gap: 2 }}>
+                {DAY_LABELS.map((label, i) => (
+                  <span key={i} className="heatmap-day-label">{i % 2 === 1 ? label : ''}</span>
                 ))}
               </div>
-              <div className="heatmap-grid" style={{ gridTemplateColumns: `repeat(${weeks.length}, 1fr)` }}>
+              {/* The grid */}
+              <div
+                className="heatmap-grid"
+                style={{ gridTemplateColumns: `repeat(${weeks.length}, 1fr)` }}
+              >
                 {Array.from({ length: 7 }).map((_, row) => (
                   weeks.map((week, col) => {
                     const cell = week.find(d => d.dayOfWeek === row);
+                    if (!cell) return <div key={`${col}-${row}`} className="heatmap-cell heatmap-cell-empty" />;
                     return (
                       <div
                         key={`${col}-${row}`}
-                        className={`heatmap-cell ${cell ? intensityClass(cell.count) : 'heatmap-cell-empty'}`}
-                        title={cell ? `${cell.date}: ${cell.count} events` : ''}
+                        className={`heatmap-cell ${intensityClass(cell.km, cell.inRange)}`}
+                        onMouseEnter={(e) => {
+                          if (!cell.inRange) return;
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setHoveredCell({
+                            date: cell.date,
+                            km: cell.km,
+                            x: rect.left + rect.width / 2,
+                            y: rect.top,
+                          });
+                        }}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        onTouchStart={(e) => {
+                          if (!cell.inRange) return;
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setHoveredCell({
+                            date: cell.date,
+                            km: cell.km,
+                            x: rect.left + rect.width / 2,
+                            y: rect.top,
+                          });
+                        }}
+                        onTouchEnd={() => setHoveredCell(null)}
                       />
                     );
                   })
                 ))}
               </div>
-              <div className="heatmap-legend">
-                <span className="stats-label">LESS</span>
-                <div className="heatmap-cell heatmap-cell-0" />
-                <div className="heatmap-cell heatmap-cell-1" />
-                <div className="heatmap-cell heatmap-cell-2" />
-                <div className="heatmap-cell heatmap-cell-3" />
-                <div className="heatmap-cell heatmap-cell-4" />
-                <span className="stats-label">MORE</span>
-              </div>
             </div>
-          ) : (
-            <div className="stats-empty">NO_DATA_AVAILABLE</div>
-          )}
+            {/* Legend */}
+            <div className="heatmap-legend">
+              <span className="stats-label">0 KM</span>
+              <div className="heatmap-cell heatmap-cell-0" />
+              <div className="heatmap-cell heatmap-cell-1" />
+              <div className="heatmap-cell heatmap-cell-2" />
+              <div className="heatmap-cell heatmap-cell-3" />
+              <div className="heatmap-cell heatmap-cell-4" />
+              <span className="stats-label">30+ KM</span>
+            </div>
+            {/* Tooltip */}
+            {hoveredCell && (
+              <div
+                className="heatmap-tooltip"
+                style={{
+                  position: 'fixed',
+                  left: hoveredCell.x,
+                  top: hoveredCell.y - 8,
+                  transform: 'translate(-50%, -100%)',
+                }}
+              >
+                <strong>{hoveredCell.km.toFixed(1)} km</strong>
+                <span>{hoveredCell.date}</span>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Recent events */}
