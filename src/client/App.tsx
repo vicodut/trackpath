@@ -103,9 +103,13 @@ export function App() {
     (lat: number, lng: number) => {
       if (addFormOpen) {
         setPickedCoords({ lat, lng });
+      } else if (isAdmin && window.innerWidth <= 768) {
+        setPickedCoords({ lat, lng });
+        setAddFormOpen(true);
+        setSidebarVisible(true);
       }
     },
-    [addFormOpen],
+    [addFormOpen, isAdmin],
   );
 
   const handleLongPress = useCallback(
