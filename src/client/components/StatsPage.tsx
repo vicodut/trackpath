@@ -262,61 +262,46 @@ function ElevationChart({ points }: { points: TrackingPoint[] }) {
   );
 }
 
-function BeerCalculator() {
-  const [beers, setBeers] = useState(0);
-
-  const totalCal = beers * BEER_CAL;
-  const kmToHike = totalCal / CAL_PER_KM;
-  const totalCarbs = beers * BEER_CARBS;
-  const totalAlcohol = beers * BEER_ALCOHOL_G;
+function BeerCalculator({ distanceKm }: { distanceKm: number }) {
+  const calBurned = distanceKm * CAL_PER_KM;
+  const beersEarned = Math.floor(calBurned / BEER_CAL);
+  const totalCal = beersEarned * BEER_CAL;
+  const totalCarbs = beersEarned * BEER_CARBS;
+  const totalAlcohol = beersEarned * BEER_ALCOHOL_G;
 
   return (
     <div className="beer-calc">
-      <div className="beer-calc-counter">
-        <button
-          className="beer-calc-btn"
-          onClick={() => setBeers(Math.max(0, beers - 1))}
-          disabled={beers === 0}
-        >
-          -
-        </button>
-        <div className="beer-calc-display">
-          <span className="beer-calc-beers">{beers}</span>
-          <span className="beer-calc-emoji">
-            {Array.from({ length: Math.min(beers, 10) }).map((_, i) => (
-              <span key={i}>🍺</span>
-            ))}
-            {beers > 10 && <span>...</span>}
-            {beers === 0 && <span style={{ opacity: 0.3 }}>🍺</span>}
-          </span>
-        </div>
-        <button
-          className="beer-calc-btn"
-          onClick={() => setBeers(beers + 1)}
-        >
-          +
-        </button>
+      <div className="beer-calc-hero">
+        <span className="beer-calc-beers">{beersEarned}</span>
+        <span className="stats-label">BEERS_EARNED</span>
+        <span className="beer-calc-emoji">
+          {Array.from({ length: Math.min(beersEarned, 15) }).map((_, i) => (
+            <span key={i}>🍺</span>
+          ))}
+          {beersEarned > 15 && <span>...</span>}
+        </span>
       </div>
-      {beers > 0 && (
-        <div className="beer-calc-stats">
-          <div className="beer-calc-stat">
-            <span className="stats-label">CALORIES</span>
-            <span className="beer-calc-value">{totalCal}<span className="beer-calc-unit">KCAL</span></span>
-          </div>
-          <div className="beer-calc-stat">
-            <span className="stats-label">CARBS</span>
-            <span className="beer-calc-value">{totalCarbs.toFixed(1)}<span className="beer-calc-unit">G</span></span>
-          </div>
-          <div className="beer-calc-stat">
-            <span className="stats-label">ALCOHOL</span>
-            <span className="beer-calc-value">{totalAlcohol.toFixed(0)}<span className="beer-calc-unit">G</span></span>
-          </div>
-          <div className="beer-calc-stat beer-calc-hike">
-            <span className="stats-label">HIKE_TO_BURN</span>
-            <span className="beer-calc-value">{kmToHike.toFixed(1)}<span className="beer-calc-unit">KM</span></span>
-          </div>
+      <div className="beer-calc-stats">
+        <div className="beer-calc-stat">
+          <span className="stats-label">CAL_BURNED</span>
+          <span className="beer-calc-value">{Math.round(calBurned)}<span className="beer-calc-unit">KCAL</span></span>
         </div>
-      )}
+        <div className="beer-calc-stat">
+          <span className="stats-label">BEER_CAL</span>
+          <span className="beer-calc-value">{totalCal}<span className="beer-calc-unit">KCAL</span></span>
+        </div>
+        <div className="beer-calc-stat">
+          <span className="stats-label">CARBS</span>
+          <span className="beer-calc-value">{totalCarbs.toFixed(0)}<span className="beer-calc-unit">G</span></span>
+        </div>
+        <div className="beer-calc-stat">
+          <span className="stats-label">ALCOHOL</span>
+          <span className="beer-calc-value">{totalAlcohol.toFixed(0)}<span className="beer-calc-unit">G</span></span>
+        </div>
+      </div>
+      <div className="beer-calc-footnote">
+        {distanceKm.toFixed(0)} km hiked × {CAL_PER_KM} cal/km = {Math.round(calBurned)} kcal ÷ {BEER_CAL} cal/beer
+      </div>
     </div>
   );
 }
@@ -539,7 +524,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         {/* Beer calculator */}
         <section className="stats-section">
           <h3 className="stats-section-title">BEER_CALCULATOR</h3>
-          <BeerCalculator />
+          <BeerCalculator distanceKm={stats.combinedDist} />
         </section>
 
         {/* Recent events */}

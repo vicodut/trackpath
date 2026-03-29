@@ -1190,39 +1190,12 @@ button.primary:hover { opacity: 0.9; }
 }
 
 /* Beer calculator */
-.beer-calc-counter {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.beer-calc-btn {
-  width: 44px;
-  height: 44px;
-  font-size: 1.4rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface-container-highest);
-  border: var(--ghost-border);
-  color: var(--on-surface);
-  padding: 0;
-}
-
-.beer-calc-btn:hover {
-  background: var(--secondary);
-  color: var(--surface);
-}
-
-.beer-calc-display {
+.beer-calc-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  min-width: 100px;
+  gap: 4px;
+  margin-bottom: 20px;
 }
 
 .beer-calc-beers {
@@ -1270,6 +1243,16 @@ button.primary:hover { opacity: 0.9; }
   font-weight: 700;
   color: var(--outline);
   margin-left: 4px;
+}
+
+.beer-calc-footnote {
+  font-family: var(--font-headline);
+  font-size: 0.55rem;
+  color: var(--outline);
+  text-align: center;
+  margin-top: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 /* Events list */
