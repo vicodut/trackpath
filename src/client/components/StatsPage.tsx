@@ -53,19 +53,24 @@ function buildDailyKm(points: TrackingPoint[], stravaActivities: StravaActivity[
   return dailyKm;
 }
 
+// Monday=0 .. Sunday=6
+function mondayIndex(date: Date): number {
+  return (date.getDay() + 6) % 7;
+}
+
 function getFixedWeeksGrid(dailyKm: Record<string, number>) {
   const start = new Date(HIKE_START + 'T00:00:00');
   const end = new Date(HIKE_END + 'T00:00:00');
 
-  // Align start to Sunday
+  // Align start to Monday
   const gridStart = new Date(start);
-  gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+  gridStart.setDate(gridStart.getDate() - mondayIndex(gridStart));
 
-  // Align end to Saturday
+  // Align end to Sunday
   const gridEnd = new Date(end);
-  gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+  gridEnd.setDate(gridEnd.getDate() + (6 - mondayIndex(gridEnd)));
 
-  const weeks: ({ date: string; km: number; dayOfWeek: number } | null)[][] = [];
+  const weeks: ({ date: string; km: number; row: number } | null)[][] = [];
   const months: { label: string; weekIndex: number }[] = [];
   let currentWeek: typeof weeks[0] = [];
   let lastMonth = -1;
@@ -73,14 +78,10 @@ function getFixedWeeksGrid(dailyKm: Record<string, number>) {
   const cursor = new Date(gridStart);
   while (cursor <= gridEnd) {
     const dateStr = cursor.toISOString().slice(0, 10);
-    const dayOfWeek = cursor.getDay();
+    const row = mondayIndex(cursor); // 0=Mon, 6=Sun
     const inRange = cursor >= start && cursor <= end;
 
-    if (inRange) {
-      currentWeek.push({ date: dateStr, km: dailyKm[dateStr] || 0, dayOfWeek });
-    } else {
-      currentWeek.push(null);
-    }
+    currentWeek.push(inRange ? { date: dateStr, km: dailyKm[dateStr] || 0, row } : null);
 
     if (inRange && cursor.getMonth() !== lastMonth) {
       lastMonth = cursor.getMonth();
@@ -90,7 +91,8 @@ function getFixedWeeksGrid(dailyKm: Record<string, number>) {
       });
     }
 
-    if (dayOfWeek === 6) {
+    // Sunday = end of week
+    if (row === 6) {
       weeks.push(currentWeek);
       currentWeek = [];
     }
@@ -158,7 +160,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
     return km > 0 && date >= HIKE_START && date <= HIKE_END;
   }).length;
 
-  const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   const recentPoints = useMemo(() => {
     return [...points]
@@ -266,7 +268,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
               >
                 {Array.from({ length: 7 }).map((_, row) => (
                   weeks.map((week, col) => {
-                    const cell = week.find(d => d?.dayOfWeek === row);
+                    const cell = week.find(d => d?.row === row);
                     if (!cell) return <div key={`${col}-${row}`} className="heatmap-cell heatmap-cell-empty" />;
                     return (
                       <div
