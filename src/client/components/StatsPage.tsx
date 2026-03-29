@@ -9,7 +9,7 @@ interface StatsPageProps {
   onClose: () => void;
 }
 
-const AT_TOTAL_KM = 3500;
+const AT_TOTAL_KM = 1300;
 const HIKE_START = '2026-04-15';
 const HIKE_END = '2026-07-13';
 
