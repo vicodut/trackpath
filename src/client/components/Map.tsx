@@ -159,9 +159,7 @@ function MapClickHandler({
 
   useMapEvents({
     click(e) {
-      if (picking) {
-        onClick(e.latlng.lat, e.latlng.lng);
-      }
+      onClick(e.latlng.lat, e.latlng.lng);
     },
   });
 
