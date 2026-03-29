@@ -55,6 +55,8 @@ body {
   justify-content: space-between;
   border-bottom: var(--ghost-border);
   flex-shrink: 0;
+  position: relative;
+  z-index: 1100;
 }
 
 .header h1 {
@@ -1325,14 +1327,6 @@ button.primary:hover { opacity: 0.9; }
   }
 
   #map {
-    height: 100%;
-  }
-
-  .weather {
-    bottom: 16vh;
-  }
-
-  .locate-btn {
-    bottom: 16vh;
+    /* height: 100%; */
   }
 }
