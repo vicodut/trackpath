@@ -61,6 +61,7 @@ interface MapProps {
   pickingFromMap: boolean;
   onMapClick: (lat: number, lng: number) => void;
   onLongPress: (lat: number, lng: number) => void;
+  onPointTap?: (point: TrackingPoint) => void;
   sidebarVisible: boolean;
   layers: LayerVisibility;
   isAdmin: boolean;
@@ -322,11 +323,13 @@ export function Map({
   pickingFromMap,
   onMapClick,
   onLongPress,
+  onPointTap,
   sidebarVisible,
   layers,
   isAdmin,
   elevationCursor,
 }: MapProps) {
+  const isMobile = window.innerWidth <= 768;
   const pathCoords: [number, number][] = points
     .filter((p) => !p.garminId?.startsWith("manual-"))
     .map((p) => [p.latitude, p.longitude]);
@@ -396,35 +399,43 @@ export function Map({
               (isLatest ? latestIcon : pointIcon)
             }
             zIndexOffset={isLatest ? 1000 : 0}
+            eventHandlers={isMobile && onPointTap ? {
+              click: (e) => {
+                L.DomEvent.stopPropagation(e.originalEvent);
+                onPointTap(pt);
+              },
+            } : undefined}
           >
-            <Popup>
-              <strong>{time}</strong>
-              <br />
-              {pt.latitude.toFixed(5)}, {pt.longitude.toFixed(5)}
-              {pt.altitude && (
-                <>
-                  <br />
-                  Alt: {pt.altitude.toFixed(0)}m
-                </>
-              )}
-              {pt.velocity ? (
-                <>
-                  <br />
-                  Speed: {pt.velocity} km/h
-                </>
-              ) : pt.calculatedSpeedKmh ? (
-                <>
-                  <br />
-                  Speed: ~{pt.calculatedSpeedKmh.toFixed(1)} km/h
-                </>
-              ) : null}
-              {pt.message && (
-                <>
-                  <br />
-                  <em>{pt.message}</em>
-                </>
-              )}
-            </Popup>
+            {!isMobile && (
+              <Popup>
+                <strong>{time}</strong>
+                <br />
+                {pt.latitude.toFixed(5)}, {pt.longitude.toFixed(5)}
+                {pt.altitude && (
+                  <>
+                    <br />
+                    Alt: {pt.altitude.toFixed(0)}m
+                  </>
+                )}
+                {pt.velocity ? (
+                  <>
+                    <br />
+                    Speed: {pt.velocity} km/h
+                  </>
+                ) : pt.calculatedSpeedKmh ? (
+                  <>
+                    <br />
+                    Speed: ~{pt.calculatedSpeedKmh.toFixed(1)} km/h
+                  </>
+                ) : null}
+                {pt.message && (
+                  <>
+                    <br />
+                    <em>{pt.message}</em>
+                  </>
+                )}
+              </Popup>
+            )}
           </Marker>
         );
       })}

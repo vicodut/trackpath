@@ -269,8 +269,8 @@ interface TrailElevationPoint {
   distanceKm: number;
 }
 
-const TRAIL_CHART_HEIGHT = 220;
-const TRAIL_CHART_PADDING = { top: 20, right: 16, bottom: 30, left: 50 };
+const TRAIL_CHART_HEIGHT = 250;
+const TRAIL_CHART_PADDING = { top: 20, right: 16, bottom: 50, left: 50 };
 
 function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) {
   const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(null);
@@ -373,6 +373,13 @@ function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) 
         <path d={pathD} fill="none" stroke="var(--secondary)" strokeWidth="2" clipPath="url(#hikedClip)" />
         {/* Remaining line */}
         <path d={pathD} fill="none" stroke="var(--outline-variant)" strokeWidth="1.5" clipPath="url(#remainingClip)" />
+        {/* Goal line */}
+        {AT_TOTAL_KM <= maxDist && (
+          <>
+            <line x1={toX(AT_TOTAL_KM)} x2={toX(AT_TOTAL_KM)} y1={top} y2={top + plotH} stroke="var(--error)" strokeWidth="1.5" strokeDasharray="6,4" opacity="0.7" />
+            <text x={toX(AT_TOTAL_KM)} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--error)" style={{ fontSize: '9px', fontWeight: 'bold' }}>GOAL {AT_TOTAL_KM}km</text>
+          </>
+        )}
         {/* Hiker position marker */}
         {hikerDistanceKm > 0 && (
           <>
@@ -397,11 +404,11 @@ function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) 
         ))}
         {/* X-axis labels */}
         {xTickValues.map(v => (
-          <text key={`xl-${v}`} x={toX(v)} y={h - 6} textAnchor="middle" className="elev-chart-label">{v}km</text>
+          <text key={`xl-${v}`} x={toX(v)} y={top + plotH + 16} textAnchor="middle" className="elev-chart-label">{v}km</text>
         ))}
-        {/* Landmark labels */}
+        {/* Landmark labels (below x-axis) */}
         {landmarks.map((lm, i) => (
-          <text key={i} x={toX(lm.distKm)} y={top + plotH + 22} textAnchor={i === 0 ? 'start' : 'end'} className="elev-chart-label" style={{ fontSize: '8px' }}>{lm.name}</text>
+          <text key={i} x={toX(lm.distKm)} y={top + plotH + 30} textAnchor={i === 0 ? 'start' : 'end'} className="elev-chart-label" style={{ fontSize: '8px' }}>{lm.name}</text>
         ))}
         {/* Hover crosshair */}
         {hovered && (
@@ -548,12 +555,19 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
               </div>
             </div>
             <div className="stats-progress-pct">
-              <span className="stats-label">THRU_PCT</span>
+              <span className="stats-label">THRU_AT</span>
               <span className="stats-big-value">{stats.progress.toFixed(1)}%</span>
             </div>
           </div>
-          <div className="stats-progress-bar">
-            <div className="stats-progress-fill" style={{ width: `${stats.progress}%` }} />
+          <div className="stats-progress-bars">
+            <div className="stats-progress-bar stats-progress-bar--full">
+              <div className="stats-progress-fill stats-progress-fill--full" style={{ width: `${(stats.combinedDist / 3500) * 100}%` }} />
+              <span className="stats-progress-label">FULL AT — 3,500 KM ({((stats.combinedDist / 3500) * 100).toFixed(1)}%)</span>
+            </div>
+            <div className="stats-progress-bar">
+              <div className="stats-progress-fill" style={{ width: `${stats.progress}%` }} />
+              <span className="stats-progress-label">GOAL — {AT_TOTAL_KM} KM</span>
+            </div>
           </div>
         </section>
 

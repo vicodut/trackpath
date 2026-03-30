@@ -9,6 +9,7 @@ import { AdminPage } from "./components/AdminPage";
 import { StatsPage } from "./components/StatsPage";
 import { LayerToggle, LayerVisibility } from "./components/LayerToggle";
 import { MapElevationProfile } from "./components/MapElevationProfile";
+import { PointPopup } from "./components/PointPopup";
 import { usePoints } from "./hooks/usePoints";
 import { useSession } from "./lib/auth-client";
 import { TrackingPoint, StravaActivity } from "./types";
@@ -52,6 +53,7 @@ export function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [elevationCursor, setElevationCursor] = useState<{ lat: number; lon: number } | null>(null);
+  const [tappedPoint, setTappedPoint] = useState<TrackingPoint | null>(null);
   const [layers, setLayers] = useState<LayerVisibility>({
     garminPath: true,
     garminPoints: true,
@@ -160,6 +162,7 @@ export function App() {
               pickingFromMap={addFormOpen}
               onMapClick={handleMapClick}
               onLongPress={handleLongPress}
+              onPointTap={setTappedPoint}
               sidebarVisible={sidebarVisible}
               layers={layers}
               isAdmin={isAdmin}
@@ -213,6 +216,9 @@ export function App() {
           onGarminSync={handleSync}
           syncing={syncing}
         />
+      )}
+      {tappedPoint && (
+        <PointPopup point={tappedPoint} onClose={() => setTappedPoint(null)} />
       )}
     </div>
   );

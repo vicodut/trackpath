@@ -1010,11 +1010,22 @@ button.primary:hover { opacity: 0.9; }
   margin-top: 4px;
 }
 
+.stats-progress-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .stats-progress-bar {
-  height: 12px;
+  height: 18px;
   background: var(--surface-container-highest);
   width: 100%;
   position: relative;
+}
+
+.stats-progress-bar--full {
+  height: 14px;
+  opacity: 0.6;
 }
 
 .stats-progress-fill {
@@ -1023,11 +1034,28 @@ button.primary:hover { opacity: 0.9; }
   position: relative;
 }
 
+.stats-progress-fill--full {
+  background: var(--primary);
+}
+
 .stats-progress-fill::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+}
+
+.stats-progress-label {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-headline);
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--outline);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
 }
 
 /* Bento grid */
@@ -1463,6 +1491,90 @@ button.primary:hover { opacity: 0.9; }
   height: 100vh;
 }
 
+/* Mobile point popup */
+.point-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.point-popup {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface-container);
+  border-top: 2px solid var(--secondary);
+  padding: 16px 20px 24px;
+}
+
+.point-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.point-popup-type {
+  font-family: var(--font-headline);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.point-popup-close {
+  background: none;
+  border: 1px solid var(--outline-variant);
+  color: var(--outline);
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+}
+
+.point-popup-time {
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin-bottom: 4px;
+}
+
+.point-popup-coords {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.point-popup-details {
+  display: flex;
+  gap: 16px;
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.point-popup-message {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--on-surface);
+  font-style: italic;
+  padding-top: 8px;
+  border-top: var(--ghost-border);
+}
+
 /* Map elevation profile */
 .map-elev-profile {
   background: var(--surface-container-low);
@@ -1493,14 +1605,12 @@ button.primary:hover { opacity: 0.9; }
 
 .map-elev-chart {
   position: relative;
-  padding: 0 4px 4px;
+  width: 100%;
+  overflow: hidden;
 }
 
 .map-elev-svg {
-  width: 100%;
-  height: auto;
   display: block;
-  max-height: 120px;
 }
 
 .map-elev-label {
@@ -1525,8 +1635,3 @@ button.primary:hover { opacity: 0.9; }
   font-family: var(--font-headline);
 }
 
-@media (max-width: 768px) {
-  .map-elev-svg {
-    max-height: 80px;
-  }
-}

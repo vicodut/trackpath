@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 interface TrailElevationPoint {
   lat: number;
@@ -14,11 +14,14 @@ interface MapElevationProfileProps {
 
 const CHART_HEIGHT = 120;
 const CHART_PADDING = { top: 12, right: 12, bottom: 22, left: 42 };
+const GOAL_KM = 1300;
 
 export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfileProps) {
   const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState<{ elevation: number; dist: number; x: number; y: number } | null>(null);
+  const [svgWidth, setSvgWidth] = useState(800);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/at-trail-elevation.json')
@@ -27,17 +30,28 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
       .catch(() => setTrailData(null));
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (!trailData || trailData.length < 2) return;
+  useEffect(() => {
+    if (collapsed || !containerRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setSvgWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [collapsed]);
+
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const updateHover = useCallback((clientX: number, clientY: number) => {
+    if (!trailData || trailData.length < 2 || !svgRef.current) return;
 
     const maxDist = trailData[trailData.length - 1].distanceKm;
-    const w = 800;
     const { left } = CHART_PADDING;
-    const plotW = w - left - CHART_PADDING.right;
+    const plotW = svgWidth - left - CHART_PADDING.right;
 
-    const svg = e.currentTarget;
-    const rect = svg.getBoundingClientRect();
-    const mx = ((e.clientX - rect.left) / rect.width) * w;
+    const rect = svgRef.current.getBoundingClientRect();
+    const mx = clientX - rect.left;
     const dist = ((mx - left) / plotW) * maxDist;
 
     let closest = trailData[0];
@@ -50,17 +64,53 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
     setHovered({
       elevation: closest.elevation,
       dist: closest.distanceKm,
-      x: e.clientX,
-      y: e.clientY,
+      x: clientX,
+      y: clientY,
     });
 
     onHover?.(closest.lat, closest.lon);
-  }, [trailData, onHover]);
+  }, [trailData, onHover, svgWidth]);
 
-  const handleMouseLeave = useCallback(() => {
+  const clearHover = useCallback(() => {
     setHovered(null);
     onHoverEnd();
   }, [onHoverEnd]);
+
+  // Touch handlers for mobile drag
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || collapsed) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      updateHover(t.clientX, t.clientY);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      updateHover(t.clientX, t.clientY);
+    };
+
+    const onTouchEnd = () => {
+      clearHover();
+    };
+
+    svg.addEventListener('touchstart', onTouchStart, { passive: false });
+    svg.addEventListener('touchmove', onTouchMove, { passive: false });
+    svg.addEventListener('touchend', onTouchEnd);
+    svg.addEventListener('touchcancel', onTouchEnd);
+
+    return () => {
+      svg.removeEventListener('touchstart', onTouchStart);
+      svg.removeEventListener('touchmove', onTouchMove);
+      svg.removeEventListener('touchend', onTouchEnd);
+      svg.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [collapsed, updateHover, clearHover]);
 
   if (!trailData || trailData.length < 2) return null;
 
@@ -70,7 +120,7 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
   const maxElev = Math.max(...elevations);
   const elevRange = maxElev - minElev || 1;
 
-  const w = 800;
+  const w = svgWidth;
   const h = CHART_HEIGHT;
   const { top, right, bottom, left } = CHART_PADDING;
   const plotW = w - left - right;
@@ -113,12 +163,14 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
         <span>ELEVATION</span>
       </button>
       {!collapsed && (
-        <div className="map-elev-chart">
+        <div className="map-elev-chart" ref={containerRef}>
           <svg
+            ref={svgRef}
+            style={{ width: '100%', height: h, touchAction: 'none' }}
             viewBox={`0 0 ${w} ${h}`}
             className="map-elev-svg"
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
+            onMouseMove={(e) => updateHover(e.clientX, e.clientY)}
+            onMouseLeave={clearHover}
           >
             {/* Grid lines */}
             {yTickValues.map(v => (
@@ -143,6 +195,10 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
             {xTickValues.map(v => (
               <text key={`xl-${v}`} x={toX(v)} y={h - 4} textAnchor="middle" className="map-elev-label">{v}km</text>
             ))}
+            {/* Goal line */}
+            {GOAL_KM <= maxDist && (
+              <line x1={toX(GOAL_KM)} x2={toX(GOAL_KM)} y1={top} y2={top + plotH} stroke="var(--error)" strokeWidth="1.5" strokeDasharray="6,4" opacity="0.7" />
+            )}
             {/* Hover crosshair */}
             {hovered && (
               <>
