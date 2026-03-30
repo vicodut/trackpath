@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { TrackingPoint, StravaActivity } from '../types';
 
 interface StatsPageProps {
@@ -262,6 +262,173 @@ function ElevationChart({ points }: { points: TrackingPoint[] }) {
   );
 }
 
+interface TrailElevationPoint {
+  lat: number;
+  lon: number;
+  elevation: number;
+  distanceKm: number;
+}
+
+const TRAIL_CHART_HEIGHT = 220;
+const TRAIL_CHART_PADDING = { top: 20, right: 16, bottom: 30, left: 50 };
+
+function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) {
+  const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(null);
+  const [hovered, setHovered] = useState<{ elevation: number; dist: number; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    fetch('/at-trail-elevation.json')
+      .then(res => res.json())
+      .then(setTrailData)
+      .catch(() => setTrailData(null));
+  }, []);
+
+  if (!trailData || trailData.length < 2) return null;
+
+  const maxDist = trailData[trailData.length - 1].distanceKm;
+  const elevations = trailData.map(p => p.elevation);
+  const minElev = Math.min(...elevations);
+  const maxElev = Math.max(...elevations);
+  const elevRange = maxElev - minElev || 1;
+
+  const w = 800;
+  const h = TRAIL_CHART_HEIGHT;
+  const { top, right, bottom, left } = TRAIL_CHART_PADDING;
+  const plotW = w - left - right;
+  const plotH = h - top - bottom;
+
+  const toX = (dist: number) => left + (dist / maxDist) * plotW;
+  const toY = (elev: number) => top + plotH - ((elev - minElev) / elevRange) * plotH;
+
+  const pathD = trailData.map((p, i) => {
+    const x = toX(p.distanceKm);
+    const y = toY(p.elevation);
+    return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+  }).join(' ');
+
+  const areaD = pathD + ` L${toX(maxDist)},${top + plotH} L${left},${top + plotH} Z`;
+
+  // Hiker progress line
+  const hikerX = toX(Math.min(hikerDistanceKm, maxDist));
+
+  // Y-axis ticks
+  const yTicks = 5;
+  const yTickValues = Array.from({ length: yTicks }, (_, i) =>
+    Math.round(minElev + (elevRange * i) / (yTicks - 1))
+  );
+
+  // X-axis ticks
+  const xTicks = 6;
+  const xTickValues = Array.from({ length: xTicks }, (_, i) =>
+    Math.round((maxDist * i) / (xTicks - 1))
+  );
+
+  // Notable peaks/landmarks on the AT
+  const landmarks = [
+    { name: 'Springer Mtn', distKm: 0 },
+    { name: 'Katahdin', distKm: maxDist },
+  ];
+
+  return (
+    <div className="elev-chart-wrapper">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="elev-chart-svg"
+        onMouseMove={(e) => {
+          const svg = e.currentTarget;
+          const rect = svg.getBoundingClientRect();
+          const mx = ((e.clientX - rect.left) / rect.width) * w;
+          const dist = ((mx - left) / plotW) * maxDist;
+          let closest = trailData[0];
+          let minD = Infinity;
+          for (const p of trailData) {
+            const d = Math.abs(p.distanceKm - dist);
+            if (d < minD) { minD = d; closest = p; }
+          }
+          setHovered({
+            elevation: closest.elevation,
+            dist: closest.distanceKm,
+            x: e.clientX,
+            y: e.clientY,
+          });
+        }}
+        onMouseLeave={() => setHovered(null)}
+      >
+        {/* Grid lines */}
+        {yTickValues.map(v => (
+          <line key={`yg-${v}`} x1={left} x2={w - right} y1={toY(v)} y2={toY(v)} stroke="var(--outline-variant)" strokeWidth="0.5" opacity="0.3" />
+        ))}
+        {/* Filled area — hiked portion */}
+        <clipPath id="hikedClip">
+          <rect x={left} y={0} width={hikerX - left} height={h} />
+        </clipPath>
+        <clipPath id="remainingClip">
+          <rect x={hikerX} y={0} width={w - right - hikerX} height={h} />
+        </clipPath>
+        {/* Hiked area fill */}
+        <path d={areaD} fill="url(#trailGradHiked)" clipPath="url(#hikedClip)" />
+        {/* Remaining area fill */}
+        <path d={areaD} fill="url(#trailGradRemaining)" clipPath="url(#remainingClip)" />
+        {/* Hiked line */}
+        <path d={pathD} fill="none" stroke="var(--secondary)" strokeWidth="2" clipPath="url(#hikedClip)" />
+        {/* Remaining line */}
+        <path d={pathD} fill="none" stroke="var(--outline-variant)" strokeWidth="1.5" clipPath="url(#remainingClip)" />
+        {/* Hiker position marker */}
+        {hikerDistanceKm > 0 && (
+          <>
+            <line x1={hikerX} x2={hikerX} y1={top} y2={top + plotH} stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="4,3" />
+            <text x={hikerX} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--primary)" style={{ fontSize: '10px', fontWeight: 'bold' }}>YOU</text>
+          </>
+        )}
+        {/* Gradient defs */}
+        <defs>
+          <linearGradient id="trailGradHiked" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--secondary)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--secondary)" stopOpacity="0.05" />
+          </linearGradient>
+          <linearGradient id="trailGradRemaining" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--outline-variant)" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="var(--outline-variant)" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {/* Y-axis labels */}
+        {yTickValues.map(v => (
+          <text key={`yl-${v}`} x={left - 6} y={toY(v) + 3} textAnchor="end" className="elev-chart-label">{v}m</text>
+        ))}
+        {/* X-axis labels */}
+        {xTickValues.map(v => (
+          <text key={`xl-${v}`} x={toX(v)} y={h - 6} textAnchor="middle" className="elev-chart-label">{v}km</text>
+        ))}
+        {/* Landmark labels */}
+        {landmarks.map((lm, i) => (
+          <text key={i} x={toX(lm.distKm)} y={top + plotH + 22} textAnchor={i === 0 ? 'start' : 'end'} className="elev-chart-label" style={{ fontSize: '8px' }}>{lm.name}</text>
+        ))}
+        {/* Hover crosshair */}
+        {hovered && (
+          <>
+            <line x1={toX(hovered.dist)} x2={toX(hovered.dist)} y1={top} y2={top + plotH} stroke="var(--secondary)" strokeWidth="1" strokeDasharray="4,3" opacity="0.6" />
+            <circle cx={toX(hovered.dist)} cy={toY(hovered.elevation)} r="4" fill="var(--secondary)" />
+          </>
+        )}
+      </svg>
+      {hovered && (
+        <div
+          className="heatmap-tooltip"
+          style={{
+            position: 'fixed',
+            left: hovered.x,
+            top: hovered.y - 12,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <strong>{Math.round(hovered.elevation)}m</strong>
+          <span>{hovered.dist.toFixed(1)} km</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BeerCalculator({ distanceKm }: { distanceKm: number }) {
   const calBurned = distanceKm * CAL_PER_KM;
   const beersEarned = Math.floor(calBurned / BEER_CAL);
@@ -515,7 +682,13 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
           </div>
         </section>
 
-        {/* Elevation profile */}
+        {/* AT Trail altitude profile */}
+        <section className="stats-section">
+          <h3 className="stats-section-title">AT_TRAIL_PROFILE</h3>
+          <TrailAltitudeProfile hikerDistanceKm={stats.combinedDist} />
+        </section>
+
+        {/* Elevation profile from tracking */}
         <section className="stats-section">
           <h3 className="stats-section-title">ELEVATION_PROFILE</h3>
           <ElevationChart points={points} />

@@ -66,29 +66,36 @@ export function usePoints() {
     });
   }, [points]);
 
+  // Filter out manual points for distance/elevation — they are waypoints, not trail progress
+  const garminPoints = useMemo(() =>
+    points.filter(p => !p.garminId?.startsWith('manual-')),
+  [points]);
+
   const totalElevationGain = useMemo(() => {
-    if (points.length < 2) return 0;
+    if (garminPoints.length < 2) return 0;
     let gain = 0;
-    for (let i = 1; i < points.length; i++) {
-      if (points[i].altitude != null && points[i - 1].altitude != null) {
-        const diff = points[i].altitude! - points[i - 1].altitude!;
+    for (let i = 1; i < garminPoints.length; i++) {
+      if (garminPoints[i].altitude != null && garminPoints[i - 1].altitude != null) {
+        const diff = garminPoints[i].altitude! - garminPoints[i - 1].altitude!;
         if (diff > 0) gain += diff;
       }
     }
     return gain;
-  }, [points]);
+  }, [garminPoints]);
 
   const totalDistanceKm = useMemo(() => {
-    if (points.length < 2) return 0;
+    if (garminPoints.length < 2) return 0;
     let total = 0;
-    for (let i = 1; i < points.length; i++) {
-      total += haversine(
-        points[i - 1].latitude, points[i - 1].longitude,
-        points[i].latitude, points[i].longitude,
+    for (let i = 1; i < garminPoints.length; i++) {
+      const d = haversine(
+        garminPoints[i - 1].latitude, garminPoints[i - 1].longitude,
+        garminPoints[i].latitude, garminPoints[i].longitude,
       );
+      if (d > 100) continue; // skip unrealistic jumps
+      total += d;
     }
     return total;
-  }, [points]);
+  }, [garminPoints]);
 
   // Auto-refresh every 30s
   useEffect(() => {

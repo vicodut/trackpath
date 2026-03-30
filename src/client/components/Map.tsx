@@ -64,6 +64,7 @@ interface MapProps {
   sidebarVisible: boolean;
   layers: LayerVisibility;
   isAdmin: boolean;
+  elevationCursor?: { lat: number; lon: number } | null;
 }
 
 function ATTrailLayer() {
@@ -271,6 +272,43 @@ function InvalidateOnResize({ sidebarVisible }: { sidebarVisible: boolean }) {
   return null;
 }
 
+function ElevationCursor({ cursorPos }: { cursorPos: { lat: number; lon: number } | null }) {
+  const map = useMap();
+  const markerRef = useRef<L.CircleMarker | null>(null);
+
+  useEffect(() => {
+    if (cursorPos) {
+      if (markerRef.current) {
+        markerRef.current.setLatLng([cursorPos.lat, cursorPos.lon]);
+      } else {
+        markerRef.current = L.circleMarker([cursorPos.lat, cursorPos.lon], {
+          radius: 7,
+          color: '#fe6b00',
+          fillColor: '#fe6b00',
+          fillOpacity: 1,
+          weight: 2,
+        }).addTo(map);
+      }
+    } else {
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
+      }
+    }
+  }, [cursorPos, map]);
+
+  useEffect(() => {
+    return () => {
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
+      }
+    };
+  }, []);
+
+  return null;
+}
+
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -287,6 +325,7 @@ export function Map({
   sidebarVisible,
   layers,
   isAdmin,
+  elevationCursor,
 }: MapProps) {
   const pathCoords: [number, number][] = points
     .filter((p) => !p.garminId?.startsWith("manual-"))
@@ -427,6 +466,7 @@ export function Map({
       <InvalidateOnResize sidebarVisible={sidebarVisible} />
       {isAdmin && <LocateButton />}
       <LastPositionButton points={points} />
+      <ElevationCursor cursorPos={elevationCursor ?? null} />
     </MapContainer>
   );
 }

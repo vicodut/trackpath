@@ -202,6 +202,13 @@ button.primary:hover { opacity: 0.9; }
 
 .map-wrapper {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-area {
+  flex: 1;
   position: relative;
   min-height: 0;
 }
@@ -1454,4 +1461,72 @@ button.primary:hover { opacity: 0.9; }
   display: flex;
   flex-direction: column;
   height: 100vh;
+}
+
+/* Map elevation profile */
+.map-elev-profile {
+  background: var(--surface-container-low);
+  border-top: var(--ghost-border);
+  flex-shrink: 0;
+}
+
+.map-elev-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 12px;
+  background: none;
+  border: none;
+  color: var(--outline);
+  font-family: var(--font-headline);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.map-elev-toggle:hover {
+  color: var(--on-surface);
+}
+
+.map-elev-chart {
+  position: relative;
+  padding: 0 4px 4px;
+}
+
+.map-elev-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 120px;
+}
+
+.map-elev-label {
+  font-family: var(--font-headline);
+  font-size: 8px;
+  font-weight: 600;
+  fill: var(--outline);
+}
+
+.map-elev-tooltip {
+  pointer-events: none;
+  z-index: 10000;
+  background: var(--surface-container-highest);
+  border: 1px solid var(--outline-variant);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  display: flex;
+  gap: 8px;
+  color: var(--on-surface);
+  font-family: var(--font-headline);
+}
+
+@media (max-width: 768px) {
+  .map-elev-svg {
+    max-height: 80px;
+  }
 }

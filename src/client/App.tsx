@@ -8,6 +8,7 @@ import { Stats } from "./components/Stats";
 import { AdminPage } from "./components/AdminPage";
 import { StatsPage } from "./components/StatsPage";
 import { LayerToggle, LayerVisibility } from "./components/LayerToggle";
+import { MapElevationProfile } from "./components/MapElevationProfile";
 import { usePoints } from "./hooks/usePoints";
 import { useSession } from "./lib/auth-client";
 import { TrackingPoint, StravaActivity } from "./types";
@@ -50,6 +51,7 @@ export function App() {
   } | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [elevationCursor, setElevationCursor] = useState<{ lat: number; lon: number } | null>(null);
   const [layers, setLayers] = useState<LayerVisibility>({
     garminPath: true,
     garminPoints: true,
@@ -150,24 +152,31 @@ export function App() {
       />
       <div className="main-container">
         <div className="map-wrapper">
-          <Map
-            points={points}
-            stravaActivities={stravaActivities}
-            selectedPoint={selectedPoint}
-            pickingFromMap={addFormOpen}
-            onMapClick={handleMapClick}
-            onLongPress={handleLongPress}
-            sidebarVisible={sidebarVisible}
-            layers={layers}
-            isAdmin={isAdmin}
-          />
-          {layers.weather && <Weather />}
-          <LayerToggle layers={layers} onChange={setLayers} />
-          <Stats
-            points={points}
-            stravaActivities={stravaActivities}
-            totalDistanceKm={totalDistanceKm}
-            totalElevationGain={totalElevationGain}
+          <div className="map-area">
+            <Map
+              points={points}
+              stravaActivities={stravaActivities}
+              selectedPoint={selectedPoint}
+              pickingFromMap={addFormOpen}
+              onMapClick={handleMapClick}
+              onLongPress={handleLongPress}
+              sidebarVisible={sidebarVisible}
+              layers={layers}
+              isAdmin={isAdmin}
+              elevationCursor={elevationCursor}
+            />
+            {layers.weather && <Weather />}
+            <LayerToggle layers={layers} onChange={setLayers} />
+            <Stats
+              points={points}
+              stravaActivities={stravaActivities}
+              totalDistanceKm={totalDistanceKm}
+              totalElevationGain={totalElevationGain}
+            />
+          </div>
+          <MapElevationProfile
+            onHover={(lat, lon) => setElevationCursor({ lat, lon })}
+            onHoverEnd={() => setElevationCursor(null)}
           />
         </div>
         {sidebarVisible && (
