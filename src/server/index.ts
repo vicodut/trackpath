@@ -263,9 +263,22 @@ app.post('/api/sync', requireAuth, async (_req: Request, res: Response) => {
 });
 
 app.post('/api/points', requireAuth, async (req: Request, res: Response) => {
-  const { latitude, longitude, altitude, message, tag } = req.body;
-  if (!latitude || !longitude) {
-    res.status(400).json({ error: 'latitude and longitude are required' });
+  const { latitude, longitude, altitude, message, tag } = req.body as Record<string, unknown>;
+  if (typeof latitude !== 'number' || typeof longitude !== 'number' ||
+      latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    res.status(400).json({ error: 'Invalid latitude/longitude' });
+    return;
+  }
+  if (altitude != null && typeof altitude !== 'number') {
+    res.status(400).json({ error: 'Invalid altitude' });
+    return;
+  }
+  if (message != null && typeof message !== 'string') {
+    res.status(400).json({ error: 'Invalid message' });
+    return;
+  }
+  if (tag != null && typeof tag !== 'string') {
+    res.status(400).json({ error: 'Invalid tag' });
     return;
   }
 
@@ -369,9 +382,9 @@ app.get('/api/strava/connect', requireAuth, (_req: Request, res: Response) => {
 });
 
 app.get('/api/strava/callback', async (req: Request, res: Response) => {
-  const { code } = req.query;
+  const code = typeof req.query.code === 'string' ? req.query.code : null;
   if (!code || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
-    res.status(400).send('Missing code or Strava config');
+    res.status(400).json({ error: 'Missing code or Strava config' });
     return;
   }
 
@@ -389,7 +402,7 @@ app.get('/api/strava/callback', async (req: Request, res: Response) => {
     const data = await tokenRes.json();
 
     if (!data.access_token) {
-      res.status(400).send('Failed to get Strava token');
+      res.status(400).json({ error: 'Failed to get Strava token' });
       return;
     }
 
@@ -408,9 +421,11 @@ app.get('/api/strava/callback', async (req: Request, res: Response) => {
     const appUrl = process.env.NODE_ENV === 'production' ? '/' : 'http://localhost:5173/';
     res.redirect(appUrl);
   } catch (err) {
-    res.status(500).send('Strava OAuth error: ' + (err as Error).message);
+    res.status(500).json({ error: 'Strava OAuth error: ' + (err as Error).message });
   }
 });
+
+let refreshPromise: Promise<string | null> | null = null;
 
 async function getStravaToken(): Promise<string | null> {
   const tokens = await db.select().from(stravaTokens).limit(1);
@@ -421,31 +436,42 @@ async function getStravaToken(): Promise<string | null> {
 
   // Refresh if expired or expiring in 5 min
   if (token.expiresAt < now + 300) {
-    if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) return null;
+    // Coalesce concurrent refresh requests
+    if (refreshPromise) return refreshPromise;
 
-    const refreshRes = await fetch('https://www.strava.com/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: STRAVA_CLIENT_ID,
-        client_secret: STRAVA_CLIENT_SECRET,
-        grant_type: 'refresh_token',
-        refresh_token: token.refreshToken,
-      }),
-    });
-    const data = await refreshRes.json();
+    refreshPromise = (async () => {
+      try {
+        if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) return null;
 
-    if (!data.access_token) return null;
+        const refreshRes = await fetch('https://www.strava.com/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id: STRAVA_CLIENT_ID,
+            client_secret: STRAVA_CLIENT_SECRET,
+            grant_type: 'refresh_token',
+            refresh_token: token.refreshToken,
+          }),
+        });
+        const data = await refreshRes.json() as { access_token?: string; refresh_token?: string; expires_at?: number };
 
-    await db.update(stravaTokens)
-      .set({
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        expiresAt: data.expires_at,
-      })
-      .where(eq(stravaTokens.id, token.id));
+        if (!data.access_token) return null;
 
-    return data.access_token;
+        await db.update(stravaTokens)
+          .set({
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token ?? token.refreshToken,
+            expiresAt: data.expires_at ?? token.expiresAt,
+          })
+          .where(eq(stravaTokens.id, token.id));
+
+        return data.access_token;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+
+    return refreshPromise;
   }
 
   return token.accessToken;
@@ -593,6 +619,17 @@ app.get('/api/admin/status', requireAuth, async (_req: Request, res: Response) =
   });
 });
 
+// --- Health check ---
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', uptime: Math.round(process.uptime()) });
+});
+
+// --- Global error handler ---
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 // --- SPA fallback (production) ---
 if (process.env.NODE_ENV === 'production') {
   app.get('/{*path}', (_req: Request, res: Response) => {
@@ -619,7 +656,7 @@ async function autoSyncStrava() {
 async function startServer() {
   await ensureTables();
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`AT Tracker running at http://localhost:${PORT}`);
     if (process.env.MAPSHARE_ID) {
       console.log(`  Auto-polling every ${POLL_INTERVAL / 60000} min (set POLL_INTERVAL_MIN to change)`);
@@ -634,6 +671,14 @@ async function startServer() {
       setInterval(() => void autoSyncStrava(), STRAVA_SYNC_INTERVAL);
     }
   });
+
+  const shutdown = () => {
+    console.log('Shutting down gracefully...');
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 5000);
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 startServer().catch(err => {
