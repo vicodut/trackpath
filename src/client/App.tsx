@@ -12,6 +12,7 @@ import { LayerToggle } from "./components/LayerToggle";
 import { MapElevationProfile } from "./components/MapElevationProfile";
 import { PointPopup } from "./components/PointPopup";
 import { TrailLogPage } from "./components/TrailLogPage";
+import { Blog } from "./components/Blog";
 import { usePoints } from "./hooks/usePoints";
 import type { TrailSegment } from "./hooks/useTrailDistance";
 import { useTrailDistance } from "./hooks/useTrailDistance";
@@ -57,6 +58,7 @@ export function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showTrailLog, setShowTrailLog] = useState(false);
+  const [showBlog, setShowBlog] = useState(false);
   const [elevationCursor, setElevationCursor] = useState<{ lat: number; lon: number } | null>(null);
   const [tappedPoint, setTappedPoint] = useState<TrackingPoint | null>(null);
   const [trailSegment, setTrailSegment] = useState<TrailSegment | null>(null);
@@ -212,6 +214,7 @@ export function App() {
         onAdmin={() => setShowAdmin(true)}
         onStats={() => setShowStats(true)}
         onTrailLog={() => setShowTrailLog(true)}
+        onBlog={() => setShowBlog(true)}
       />
       <div className="main-container">
         <div className="map-wrapper">
@@ -295,6 +298,9 @@ export function App() {
           isAdmin={isAdmin}
           onClose={() => setShowTrailLog(false)}
         />
+      )}
+      {showBlog && (
+        <Blog onClose={() => setShowBlog(false)} />
       )}
       {tappedPoint && (
         <PointPopup
