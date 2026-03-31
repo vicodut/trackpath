@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { ICONIC_SUMMITS } from '../data/iconic-summits';
+import { ICONIC_SUMMITS } from '../../data/iconic-summits';
+import styles from './MapElevationProfile.module.css';
 
 interface TrailElevationPoint {
   lat: number;
@@ -151,9 +152,9 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
   );
 
   return (
-    <div className={`map-elev-profile ${collapsed ? 'map-elev-profile--collapsed' : ''}`}>
+    <div className={`${styles.mapElevProfile} ${collapsed ? styles.mapElevProfileCollapsed : ''}`}>
       <button
-        className="map-elev-toggle"
+        className={styles.mapElevToggle}
         onClick={() => setCollapsed(c => !c)}
         title={collapsed ? 'Show elevation profile' : 'Hide elevation profile'}
       >
@@ -167,7 +168,7 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
       </button>
       {!collapsed && (
         <div
-          className="map-elev-chart"
+          className={styles.mapElevChart}
           ref={containerRef}
           onMouseMove={(e) => updateHover(e.clientX, e.clientY)}
           onMouseLeave={clearHover}
@@ -177,7 +178,7 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
             ref={svgRef}
             style={{ width: '100%', height: h, pointerEvents: 'none' }}
             viewBox={`0 0 ${w} ${h}`}
-            className="map-elev-svg"
+            className={styles.mapElevSvg}
           >
             {/* Grid lines */}
             {yTickValues.map(v => (
@@ -196,11 +197,11 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
             </defs>
             {/* Y-axis labels */}
             {yTickValues.map(v => (
-              <text key={`yl-${v}`} x={left - 4} y={toY(v) + 3} textAnchor="end" className="map-elev-label">{v}m</text>
+              <text key={`yl-${v}`} x={left - 4} y={toY(v) + 3} textAnchor="end" className={styles.mapElevLabel}>{v}m</text>
             ))}
             {/* X-axis labels */}
             {xTickValues.map(v => (
-              <text key={`xl-${v}`} x={toX(v)} y={h - 4} textAnchor="middle" className="map-elev-label">{v}km</text>
+              <text key={`xl-${v}`} x={toX(v)} y={h - 4} textAnchor="middle" className={styles.mapElevLabel}>{v}km</text>
             ))}
             {/* Iconic summit markers */}
             {ICONIC_SUMMITS.map(s => {
@@ -229,7 +230,7 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
           </svg>
           {hovered && (
             <div
-              className="map-elev-tooltip"
+              className={styles.mapElevTooltip}
               style={{
                 position: 'fixed',
                 left: hovered.x,

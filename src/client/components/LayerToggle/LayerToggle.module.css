@@ -1,0 +1,85 @@
+.layerToggle {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  background: rgba(var(--surface-rgb), 0.88);
+  border: var(--ghost-border);
+  border-radius: 0;
+  backdrop-filter: blur(16px);
+  min-width: 170px;
+}
+
+.layerToggleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.layerToggleTitle {
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.layerToggleIcon {
+  font-size: 0.7rem;
+  color: var(--outline);
+}
+
+.layerToggleBody {
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.layerToggleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--on-surface);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.layerToggleRow input[type="checkbox"] {
+  accent-color: var(--secondary);
+}
+
+.layerToggleGroup {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: var(--ghost-border);
+}
+
+.layerToggleGroupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  cursor: pointer;
+  padding: 2px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.layerToggleGroupBody {
+  margin-top: 6px;
+  padding-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

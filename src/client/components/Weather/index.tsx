@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import styles from './Weather.module.css';
 
 interface DayForecast {
   date: string;
@@ -57,20 +58,20 @@ export function Weather() {
   if (!forecast) return null;
 
   return (
-    <div className="weather">
-      <div className="weather-title">Weather at last position</div>
-      <div className="weather-days">
+    <div className={styles.weather}>
+      <div className={styles.weatherTitle}>Weather at last position</div>
+      <div className={styles.weatherDays}>
         {forecast.map((day) => {
           const label = isToday(day.date) ? 'Today' : isTomorrow(day.date) ? 'Tomorrow' : formatDay(day.date);
           return (
-            <div key={day.date} className="weather-day">
-              <div className="weather-day-label">{label}</div>
-              <div className="weather-day-icon">{weatherIcon(day.code)}</div>
-              <div className="weather-day-temp">
-                <span className="temp-max">{Math.round(day.tempMax)}°</span>
-                <span className="temp-min">{Math.round(day.tempMin)}°</span>
+            <div key={day.date} className={styles.weatherDay}>
+              <div className={styles.weatherDayLabel}>{label}</div>
+              <div className={styles.weatherDayIcon}>{weatherIcon(day.code)}</div>
+              <div className={styles.weatherDayTemp}>
+                <span className={styles.tempMax}>{Math.round(day.tempMax)}°</span>
+                <span className={styles.tempMin}>{Math.round(day.tempMin)}°</span>
               </div>
-              <div className="weather-day-details">
+              <div className={styles.weatherDayDetails}>
                 {day.precipProb > 0 && <span>💧 {day.precipProb}%</span>}
                 <span>💨 {Math.round(day.windMax)} km/h</span>
               </div>

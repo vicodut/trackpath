@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import styles from './LayerToggle.module.css';
 
 export const TAG_LIST = ['resupply', 'poop', 'hostel', 'camp', 'shelter', 'water', 'viewpoint'] as const;
 
@@ -55,15 +56,15 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
   const [highlightsOpen, setHighlightsOpen] = useState(false);
 
   return (
-    <div className="layer-toggle" onClick={(e) => e.stopPropagation()}>
-      <div className="layer-toggle-header" onClick={() => setOpen(!open)}>
-        <span className="layer-toggle-title">Layers</span>
-        <span className="layer-toggle-icon">{open ? '▾' : '▸'}</span>
+    <div className={styles.layerToggle} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.layerToggleHeader} onClick={() => setOpen(!open)}>
+        <span className={styles.layerToggleTitle}>Layers</span>
+        <span className={styles.layerToggleIcon}>{open ? '▾' : '▸'}</span>
       </div>
       {open && (
-        <div className="layer-toggle-body">
+        <div className={styles.layerToggleBody}>
           {LAYER_LABELS.map(({ key, label }) => (
-            <label key={key} className="layer-toggle-row">
+            <label key={key} className={styles.layerToggleRow}>
               <input
                 type="checkbox"
                 checked={layers[key] as boolean}
@@ -72,15 +73,15 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
               <span>{label}</span>
             </label>
           ))}
-          <div className="layer-toggle-group">
-            <div className="layer-toggle-group-header" onClick={() => setTagsOpen(!tagsOpen)}>
+          <div className={styles.layerToggleGroup}>
+            <div className={styles.layerToggleGroupHeader} onClick={() => setTagsOpen(!tagsOpen)}>
               <span>Tags</span>
-              <span className="layer-toggle-icon">{tagsOpen ? '▾' : '▸'}</span>
+              <span className={styles.layerToggleIcon}>{tagsOpen ? '▾' : '▸'}</span>
             </div>
             {tagsOpen && (
-              <div className="layer-toggle-group-body">
+              <div className={styles.layerToggleGroupBody}>
                 {TAG_LIST.map((tag) => (
-                  <label key={tag} className="layer-toggle-row">
+                  <label key={tag} className={styles.layerToggleRow}>
                     <input
                       type="checkbox"
                       checked={layers.tags[tag] !== false}
@@ -95,15 +96,15 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
               </div>
             )}
           </div>
-          <div className="layer-toggle-group">
-            <div className="layer-toggle-group-header" onClick={() => setHighlightsOpen(!highlightsOpen)}>
+          <div className={styles.layerToggleGroup}>
+            <div className={styles.layerToggleGroupHeader} onClick={() => setHighlightsOpen(!highlightsOpen)}>
               <span>Highlights</span>
-              <span className="layer-toggle-icon">{highlightsOpen ? '▾' : '▸'}</span>
+              <span className={styles.layerToggleIcon}>{highlightsOpen ? '▾' : '▸'}</span>
             </div>
             {highlightsOpen && (
-              <div className="layer-toggle-group-body">
+              <div className={styles.layerToggleGroupBody}>
                 {HIGHLIGHT_CATEGORIES.map((cat) => (
-                  <label key={cat} className="layer-toggle-row">
+                  <label key={cat} className={styles.layerToggleRow}>
                     <input
                       type="checkbox"
                       checked={layers.highlights[cat] !== false}

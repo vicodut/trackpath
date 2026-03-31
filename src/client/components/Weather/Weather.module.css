@@ -1,0 +1,74 @@
+.weather {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 1000;
+  padding: 12px 14px;
+  background: rgba(var(--surface-rgb), 0.88);
+  border: var(--ghost-border);
+  border-radius: 0;
+  backdrop-filter: blur(16px);
+}
+
+.weatherTitle {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--tertiary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.weatherDays {
+  display: flex;
+  gap: 8px;
+}
+
+.weatherDay {
+  flex: 1;
+  text-align: center;
+  background: var(--surface-container-low);
+  border: var(--ghost-border);
+  border-radius: 0;
+  padding: 8px 6px;
+}
+
+.weatherDayLabel {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--outline);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.weatherDayIcon {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.weatherDayTemp {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-headline);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.tempMax { color: var(--secondary); }
+.tempMin { color: var(--outline); }
+
+.weatherDayDetails {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  color: var(--outline);
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  letter-spacing: 0.05em;
+}

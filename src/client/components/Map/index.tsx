@@ -9,10 +9,11 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
-import { TrackingPoint, StravaActivity } from "../types";
-import { LayerVisibility } from "./LayerToggle";
-import { HighlightsLayer } from "./HighlightsLayer";
-import { colors } from "../theme";
+import { TrackingPoint, StravaActivity } from "../../types";
+import { LayerVisibility } from "../LayerToggle";
+import { HighlightsLayer } from "../HighlightsLayer";
+import { colors } from "../../theme";
+import styles from "./Map.module.css";
 
 const pointIcon = L.divIcon({
   className: "",
@@ -205,7 +206,7 @@ function LocateButton() {
 
   return (
     <button
-      className="locate-btn"
+      className={styles.locateBtn}
       onClick={handleLocate}
       title="LOCATE_ME"
       disabled={locating}
@@ -244,7 +245,7 @@ function LastPositionButton({ points }: { points: TrackingPoint[] }) {
   if (points.length === 0) return null;
 
   return (
-    <button className="lastpos-btn" onClick={handleClick} title="LAST_POSITION">
+    <button className={styles.lastposBtn} onClick={handleClick} title="LAST_POSITION">
       <img
         src="/sasquatch.gif"
         alt=""
@@ -488,10 +489,10 @@ export function Map({
       />
       <FlyToPoint point={selectedPoint} />
       <InvalidateOnResize sidebarVisible={sidebarVisible} />
-      <div className="map-controls">
+      <div className={styles.mapControls}>
         {isAdmin && onAddPoint && (
           <button
-            className="map-ctrl-btn map-ctrl-add"
+            className={`${styles.mapCtrlBtn} ${styles.mapCtrlAdd}`}
             onClick={onAddPoint}
             title="Add tracking point"
           >
