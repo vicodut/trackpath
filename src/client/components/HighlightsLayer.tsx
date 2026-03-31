@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import MarkerClusterGroup from 'react-leaflet-cluster';
 import { LayerVisibility } from './LayerToggle';
 
 interface Highlight {
@@ -52,21 +51,6 @@ function getHighlightIcon(category: string): L.DivIcon {
   return icon;
 }
 
-function createClusterIcon(cluster: L.MarkerCluster) {
-  const count = cluster.getChildCount();
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      width:32px;height:32px;display:flex;align-items:center;justify-content:center;
-      background:rgba(11,22,13,0.85);border:1px solid var(--outline-variant);
-      border-radius:50%;color:var(--secondary);font-family:var(--font-headline);
-      font-size:11px;font-weight:700;backdrop-filter:blur(8px);
-    ">${count}</div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-  });
-}
-
 interface HighlightsLayerProps {
   layers: LayerVisibility;
 }
@@ -115,14 +99,7 @@ export function HighlightsLayer({ layers }: HighlightsLayerProps) {
   if (visible.length === 0) return null;
 
   return (
-    <MarkerClusterGroup
-      chunkedLoading
-      maxClusterRadius={40}
-      disableClusteringAtZoom={13}
-      iconCreateFunction={createClusterIcon}
-      spiderfyOnMaxZoom={false}
-      showCoverageOnHover={false}
-    >
+    <>
       {visible.map(h => (
         <Marker
           key={h.id}
@@ -146,6 +123,6 @@ export function HighlightsLayer({ layers }: HighlightsLayerProps) {
           </Popup>
         </Marker>
       ))}
-    </MarkerClusterGroup>
+    </>
   );
 }

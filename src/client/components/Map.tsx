@@ -22,7 +22,7 @@ const pointIcon = L.divIcon({
 
 const latestIcon = L.divIcon({
   className: "",
-  html: '<img src="/sasquatch.gif" style="width:40px;height:40px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />',
+  html: '<img src="/sasquatch.gif" style="width:60px;height:60px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />',
   iconSize: [60, 60],
   iconAnchor: [30, 60],
 });
@@ -275,7 +275,11 @@ function InvalidateOnResize({ sidebarVisible }: { sidebarVisible: boolean }) {
   return null;
 }
 
-function ElevationCursor({ cursorPos }: { cursorPos: { lat: number; lon: number } | null }) {
+function ElevationCursor({
+  cursorPos,
+}: {
+  cursorPos: { lat: number; lon: number } | null;
+}) {
   const map = useMap();
   const markerRef = useRef<L.CircleMarker | null>(null);
 
@@ -286,8 +290,8 @@ function ElevationCursor({ cursorPos }: { cursorPos: { lat: number; lon: number 
       } else {
         markerRef.current = L.circleMarker([cursorPos.lat, cursorPos.lon], {
           radius: 7,
-          color: '#fe6b00',
-          fillColor: '#fe6b00',
+          color: "#fe6b00",
+          fillColor: "#fe6b00",
           fillOpacity: 1,
           weight: 2,
         }).addTo(map);
@@ -403,12 +407,16 @@ export function Map({
               (isLatest ? latestIcon : pointIcon)
             }
             zIndexOffset={isLatest ? 1000 : 0}
-            eventHandlers={isMobile && onPointTap ? {
-              click: (e) => {
-                L.DomEvent.stopPropagation(e.originalEvent);
-                onPointTap(pt);
-              },
-            } : undefined}
+            eventHandlers={
+              isMobile && onPointTap
+                ? {
+                    click: (e) => {
+                      L.DomEvent.stopPropagation(e.originalEvent);
+                      onPointTap(pt);
+                    },
+                  }
+                : undefined
+            }
           >
             {!isMobile && (
               <Popup>
@@ -481,7 +489,13 @@ export function Map({
       <InvalidateOnResize sidebarVisible={sidebarVisible} />
       <div className="map-controls">
         {isAdmin && onAddPoint && (
-          <button className="map-ctrl-btn map-ctrl-add" onClick={onAddPoint} title="Add tracking point">+</button>
+          <button
+            className="map-ctrl-btn map-ctrl-add"
+            onClick={onAddPoint}
+            title="Add tracking point"
+          >
+            +
+          </button>
         )}
         <LastPositionButton points={points} />
         {isAdmin && <LocateButton />}

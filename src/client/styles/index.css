@@ -1737,6 +1737,7 @@ button.primary:hover { opacity: 0.9; }
   background: var(--surface-container-low);
   border-top: var(--ghost-border);
   flex-shrink: 0;
+  width: 100%;
 }
 
 .map-elev-toggle {

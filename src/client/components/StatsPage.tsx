@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { TrackingPoint, StravaActivity } from '../types';
+import { ICONIC_SUMMITS } from '../data/iconic-summits';
 
 interface StatsPageProps {
   points: TrackingPoint[];
   stravaActivities: StravaActivity[];
   totalDistanceKm: number;
   totalElevationGain: number;
+  isAdmin: boolean;
   onClose: () => void;
 }
 
-const AT_TOTAL_KM = 1300;
+const AT_TOTAL_KM = 1500;
 const BEER_CAL = 153; // regular beer 12 fl oz, ~5% alc
 const BEER_CARBS = 12.6;
 const BEER_PROTEIN = 1.6;
@@ -272,9 +274,9 @@ interface TrailElevationPoint {
 const TRAIL_CHART_HEIGHT = 320;
 const TRAIL_CHART_PADDING = { top: 24, right: 16, bottom: 56, left: 54 };
 
-function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) {
+function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: number; isAdmin: boolean }) {
   const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(null);
-  const [hovered, setHovered] = useState<{ elevation: number; dist: number; x: number; y: number } | null>(null);
+  const [hovered, setHovered] = useState<{ elevation: number; dist: number; x: number; y: number; summitName?: string } | null>(null);
 
   useEffect(() => {
     fetch('/at-trail-elevation.json')
@@ -345,11 +347,14 @@ function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) 
             const d = Math.abs(p.distanceKm - dist);
             if (d < minD) { minD = d; closest = p; }
           }
+          // Check if near an iconic summit
+          const nearSummit = ICONIC_SUMMITS.find(s => Math.abs(s.distanceKm - closest.distanceKm) < maxDist * 0.015);
           setHovered({
             elevation: closest.elevation,
             dist: closest.distanceKm,
             x: e.clientX,
             y: e.clientY,
+            summitName: nearSummit?.name,
           });
         }}
         onMouseLeave={() => setHovered(null)}
@@ -384,7 +389,7 @@ function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) 
         {hikerDistanceKm > 0 && (
           <>
             <line x1={hikerX} x2={hikerX} y1={top} y2={top + plotH} stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="4,3" />
-            <text x={hikerX} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--primary)" style={{ fontSize: '12px', fontWeight: 'bold' }}>YOU</text>
+            <text x={hikerX} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--primary)" style={{ fontSize: '12px', fontWeight: 'bold' }}>{isAdmin ? 'YOU' : 'VICO'}</text>
           </>
         )}
         {/* Gradient defs */}
@@ -410,6 +415,19 @@ function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) 
         {landmarks.map((lm, i) => (
           <text key={i} x={toX(lm.distKm)} y={top + plotH + 30} textAnchor={i === 0 ? 'start' : 'end'} className="elev-chart-label" style={{ fontSize: '10px' }}>{lm.name}</text>
         ))}
+        {/* Iconic summit markers */}
+        {ICONIC_SUMMITS.map(s => {
+          if (s.distanceKm > maxDist) return null;
+          const sx = toX(s.distanceKm);
+          const sy = toY(s.elevation);
+          const active = hovered?.summitName === s.name;
+          return (
+            <g key={s.name} style={{ pointerEvents: 'none' }}>
+              <line x1={sx} x2={sx} y1={sy} y2={top + plotH} stroke={active ? 'var(--secondary)' : 'var(--on-surface-variant)'} strokeWidth="0.5" opacity={active ? 0.6 : 0.3} strokeDasharray="2,3" />
+              <polygon points={`${sx},${sy - 8} ${sx - 4},${sy} ${sx + 4},${sy}`} fill={active ? 'var(--secondary)' : 'var(--on-surface-variant)'} opacity={active ? 1 : 0.6} />
+            </g>
+          );
+        })}
         {/* Hover crosshair */}
         {hovered && (
           <>
@@ -428,6 +446,7 @@ function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) 
             transform: 'translate(-50%, -100%)',
           }}
         >
+          {hovered.summitName && <span style={{ color: 'var(--secondary)' }}>{hovered.summitName}</span>}
           <strong>{Math.round(hovered.elevation)}m</strong>
           <span>{hovered.dist.toFixed(1)} km</span>
         </div>
@@ -480,7 +499,7 @@ function BeerCalculator({ distanceKm }: { distanceKm: number }) {
   );
 }
 
-export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElevationGain, onClose }: StatsPageProps) {
+export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElevationGain, isAdmin, onClose }: StatsPageProps) {
   const [hoveredCell, setHoveredCell] = useState<{ date: string; km: number; x: number; y: number } | null>(null);
 
   const stats = useMemo(() => {
@@ -699,7 +718,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         {/* AT Trail altitude profile */}
         <section className="stats-section">
           <h3 className="stats-section-title">AT_TRAIL_PROFILE</h3>
-          <TrailAltitudeProfile hikerDistanceKm={stats.combinedDist} />
+          <TrailAltitudeProfile hikerDistanceKm={stats.combinedDist} isAdmin={isAdmin} />
         </section>
 
         {/* Elevation profile from tracking */}

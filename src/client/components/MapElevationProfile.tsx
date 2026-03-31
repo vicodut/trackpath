@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { ICONIC_SUMMITS } from '../data/iconic-summits';
 
 interface TrailElevationPoint {
   lat: number;
@@ -14,12 +15,12 @@ interface MapElevationProfileProps {
 
 const CHART_HEIGHT = 160;
 const CHART_PADDING = { top: 14, right: 14, bottom: 26, left: 48 };
-const GOAL_KM = 1300;
+const GOAL_KM = 1500;
 
 export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfileProps) {
   const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(null);
   const [collapsed, setCollapsed] = useState(false);
-  const [hovered, setHovered] = useState<{ elevation: number; dist: number; x: number; y: number } | null>(null);
+  const [hovered, setHovered] = useState<{ elevation: number; dist: number; x: number; y: number; summitName?: string } | null>(null);
   const [svgWidth, setSvgWidth] = useState(800);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -44,13 +45,13 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
   const svgRef = useRef<SVGSVGElement>(null);
 
   const updateHover = useCallback((clientX: number, clientY: number) => {
-    if (!trailData || trailData.length < 2 || !svgRef.current) return;
+    if (!trailData || trailData.length < 2 || !containerRef.current) return;
 
     const maxDist = trailData[trailData.length - 1].distanceKm;
     const { left } = CHART_PADDING;
     const plotW = svgWidth - left - CHART_PADDING.right;
 
-    const rect = svgRef.current.getBoundingClientRect();
+    const rect = containerRef.current.getBoundingClientRect();
     const mx = clientX - rect.left;
     const dist = ((mx - left) / plotW) * maxDist;
 
@@ -61,11 +62,13 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
       if (d < minD) { minD = d; closest = p; }
     }
 
+    const nearSummit = ICONIC_SUMMITS.find(s => Math.abs(s.distanceKm - closest.distanceKm) < maxDist * 0.015);
     setHovered({
       elevation: closest.elevation,
       dist: closest.distanceKm,
       x: clientX,
       y: clientY,
+      summitName: nearSummit?.name,
     });
 
     onHover?.(closest.lat, closest.lon);
@@ -76,10 +79,10 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
     onHoverEnd();
   }, [onHoverEnd]);
 
-  // Touch handlers for mobile drag
+  // Touch handlers for mobile drag (on container div, not SVG)
   useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg || collapsed) return;
+    const el = containerRef.current;
+    if (!el || collapsed) return;
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
@@ -99,16 +102,16 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
       clearHover();
     };
 
-    svg.addEventListener('touchstart', onTouchStart, { passive: false });
-    svg.addEventListener('touchmove', onTouchMove, { passive: false });
-    svg.addEventListener('touchend', onTouchEnd);
-    svg.addEventListener('touchcancel', onTouchEnd);
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('touchcancel', onTouchEnd);
 
     return () => {
-      svg.removeEventListener('touchstart', onTouchStart);
-      svg.removeEventListener('touchmove', onTouchMove);
-      svg.removeEventListener('touchend', onTouchEnd);
-      svg.removeEventListener('touchcancel', onTouchEnd);
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
     };
   }, [collapsed, updateHover, clearHover]);
 
@@ -163,14 +166,18 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
         <span>ELEVATION</span>
       </button>
       {!collapsed && (
-        <div className="map-elev-chart" ref={containerRef}>
+        <div
+          className="map-elev-chart"
+          ref={containerRef}
+          onMouseMove={(e) => updateHover(e.clientX, e.clientY)}
+          onMouseLeave={clearHover}
+          style={{ touchAction: 'none' }}
+        >
           <svg
             ref={svgRef}
-            style={{ width: '100%', height: h, touchAction: 'none' }}
+            style={{ width: '100%', height: h, pointerEvents: 'none' }}
             viewBox={`0 0 ${w} ${h}`}
             className="map-elev-svg"
-            onMouseMove={(e) => updateHover(e.clientX, e.clientY)}
-            onMouseLeave={clearHover}
           >
             {/* Grid lines */}
             {yTickValues.map(v => (
@@ -195,6 +202,19 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
             {xTickValues.map(v => (
               <text key={`xl-${v}`} x={toX(v)} y={h - 4} textAnchor="middle" className="map-elev-label">{v}km</text>
             ))}
+            {/* Iconic summit markers */}
+            {ICONIC_SUMMITS.map(s => {
+              if (s.distanceKm > maxDist) return null;
+              const sx = toX(s.distanceKm);
+              const sy = toY(s.elevation);
+              const active = hovered?.summitName === s.name;
+              return (
+                <g key={s.name} style={{ pointerEvents: 'none' }}>
+                  <line x1={sx} x2={sx} y1={sy} y2={top + plotH} stroke={active ? 'var(--secondary)' : 'var(--on-surface-variant)'} strokeWidth="0.5" opacity={active ? 0.6 : 0.25} strokeDasharray="2,3" />
+                  <polygon points={`${sx},${sy - 6} ${sx - 3},${sy} ${sx + 3},${sy}`} fill={active ? 'var(--secondary)' : 'var(--on-surface-variant)'} opacity={active ? 1 : 0.5} />
+                </g>
+              );
+            })}
             {/* Goal line */}
             {GOAL_KM <= maxDist && (
               <line x1={toX(GOAL_KM)} x2={toX(GOAL_KM)} y1={top} y2={top + plotH} stroke="var(--error)" strokeWidth="1.5" strokeDasharray="6,4" opacity="0.7" />
@@ -217,6 +237,7 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
                 transform: 'translate(-50%, -100%)',
               }}
             >
+              {hovered.summitName && <span style={{ color: 'var(--secondary)' }}>{hovered.summitName}</span>}
               <strong>{Math.round(hovered.elevation)}m</strong>
               <span>{hovered.dist.toFixed(1)} km</span>
             </div>

@@ -224,6 +224,7 @@ export function App() {
           stravaActivities={stravaActivities}
           totalDistanceKm={totalDistanceKm}
           totalElevationGain={totalElevationGain}
+          isAdmin={isAdmin}
           onClose={() => setShowStats(false)}
         />
       )}
