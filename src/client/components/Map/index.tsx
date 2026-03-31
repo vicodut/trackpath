@@ -489,7 +489,7 @@ export function Map({
       />
       <FlyToPoint point={selectedPoint} />
       <InvalidateOnResize sidebarVisible={sidebarVisible} />
-      <div className={styles.mapControls}>
+      <div className={styles.mapControls} onClick={(e) => e.stopPropagation()}>
         {isAdmin && onAddPoint && (
           <button
             className={`${styles.mapCtrlBtn} ${styles.mapCtrlAdd}`}

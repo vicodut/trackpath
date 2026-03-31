@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { TrackingPoint, StravaActivity } from '../types';
-import { ICONIC_SUMMITS } from '../data/iconic-summits';
+import { TrackingPoint, StravaActivity } from '../../types';
+import { ICONIC_SUMMITS } from '../../data/iconic-summits';
+import styles from './StatsPage.module.css';
 
 interface StatsPageProps {
   points: TrackingPoint[];
@@ -114,11 +115,11 @@ function getFixedWeeksGrid(dailyKm: Record<string, number>) {
 }
 
 function intensityClass(km: number): string {
-  if (km === 0) return 'heatmap-cell-0';
-  if (km < 10) return 'heatmap-cell-1';
-  if (km < 20) return 'heatmap-cell-2';
-  if (km < 30) return 'heatmap-cell-3';
-  return 'heatmap-cell-4';
+  if (km === 0) return styles.heatmapCell0;
+  if (km < 10) return styles.heatmapCell1;
+  if (km < 20) return styles.heatmapCell2;
+  if (km < 30) return styles.heatmapCell3;
+  return styles.heatmapCell4;
 }
 
 function buildElevationProfile(points: TrackingPoint[]) {
@@ -150,7 +151,7 @@ function ElevationChart({ points }: { points: TrackingPoint[] }) {
   const profile = useMemo(() => buildElevationProfile(points), [points]);
   const [hovered, setHovered] = useState<{ alt: number; dist: number; x: number; y: number } | null>(null);
 
-  if (profile.length < 2) return <div className="stats-empty">NO_ALTITUDE_DATA</div>;
+  if (profile.length < 2) return <div className={styles.statsEmpty}>NO_ALTITUDE_DATA</div>;
 
   const maxDist = profile[profile.length - 1].dist;
   const alts = profile.map(p => p.alt);
@@ -190,10 +191,10 @@ function ElevationChart({ points }: { points: TrackingPoint[] }) {
   );
 
   return (
-    <div className="elev-chart-wrapper">
+    <div className={styles.elevChartWrapper}>
       <svg
         viewBox={`0 0 ${w} ${h}`}
-        className="elev-chart-svg"
+        className={styles.elevChartSvg}
         onMouseMove={(e) => {
           const svg = e.currentTarget;
           const rect = svg.getBoundingClientRect();
@@ -232,11 +233,11 @@ function ElevationChart({ points }: { points: TrackingPoint[] }) {
         </defs>
         {/* Y-axis labels */}
         {yTickValues.map(v => (
-          <text key={`yl-${v}`} x={left - 6} y={toY(v) + 3} textAnchor="end" className="elev-chart-label">{v}m</text>
+          <text key={`yl-${v}`} x={left - 6} y={toY(v) + 3} textAnchor="end" className={styles.elevChartLabel}>{v}m</text>
         ))}
         {/* X-axis labels */}
         {xTickValues.map(v => (
-          <text key={`xl-${v}`} x={toX(v)} y={h - 6} textAnchor="middle" className="elev-chart-label">{v}km</text>
+          <text key={`xl-${v}`} x={toX(v)} y={h - 6} textAnchor="middle" className={styles.elevChartLabel}>{v}km</text>
         ))}
         {/* Hover crosshair */}
         {hovered && (
@@ -248,7 +249,7 @@ function ElevationChart({ points }: { points: TrackingPoint[] }) {
       </svg>
       {hovered && (
         <div
-          className="heatmap-tooltip"
+          className={styles.heatmapTooltip}
           style={{
             position: 'fixed',
             left: hovered.x,
@@ -332,10 +333,10 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
   ];
 
   return (
-    <div className="elev-chart-wrapper">
+    <div className={styles.elevChartWrapper}>
       <svg
         viewBox={`0 0 ${w} ${h}`}
-        className="elev-chart-svg"
+        className={styles.elevChartSvg}
         onMouseMove={(e) => {
           const svg = e.currentTarget;
           const rect = svg.getBoundingClientRect();
@@ -382,14 +383,14 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
         {AT_TOTAL_KM <= maxDist && (
           <>
             <line x1={toX(AT_TOTAL_KM)} x2={toX(AT_TOTAL_KM)} y1={top} y2={top + plotH} stroke="var(--error)" strokeWidth="1.5" strokeDasharray="6,4" opacity="0.7" />
-            <text x={toX(AT_TOTAL_KM)} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--error)" style={{ fontSize: '11px', fontWeight: 'bold' }}>GOAL {AT_TOTAL_KM}km</text>
+            <text x={toX(AT_TOTAL_KM)} y={top - 4} textAnchor="middle" className={styles.elevChartLabel} fill="var(--error)" style={{ fontSize: '11px', fontWeight: 'bold' }}>GOAL {AT_TOTAL_KM}km</text>
           </>
         )}
         {/* Hiker position marker */}
         {hikerDistanceKm > 0 && (
           <>
             <line x1={hikerX} x2={hikerX} y1={top} y2={top + plotH} stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="4,3" />
-            <text x={hikerX} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--primary)" style={{ fontSize: '12px', fontWeight: 'bold' }}>{isAdmin ? 'YOU' : 'VICO'}</text>
+            <text x={hikerX} y={top - 4} textAnchor="middle" className={styles.elevChartLabel} fill="var(--primary)" style={{ fontSize: '12px', fontWeight: 'bold' }}>{isAdmin ? 'YOU' : 'VICO'}</text>
           </>
         )}
         {/* Gradient defs */}
@@ -405,15 +406,15 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
         </defs>
         {/* Y-axis labels */}
         {yTickValues.map(v => (
-          <text key={`yl-${v}`} x={left - 6} y={toY(v) + 3} textAnchor="end" className="elev-chart-label">{v}m</text>
+          <text key={`yl-${v}`} x={left - 6} y={toY(v) + 3} textAnchor="end" className={styles.elevChartLabel}>{v}m</text>
         ))}
         {/* X-axis labels */}
         {xTickValues.map(v => (
-          <text key={`xl-${v}`} x={toX(v)} y={top + plotH + 16} textAnchor="middle" className="elev-chart-label">{v}km</text>
+          <text key={`xl-${v}`} x={toX(v)} y={top + plotH + 16} textAnchor="middle" className={styles.elevChartLabel}>{v}km</text>
         ))}
         {/* Landmark labels (below x-axis) */}
         {landmarks.map((lm, i) => (
-          <text key={i} x={toX(lm.distKm)} y={top + plotH + 30} textAnchor={i === 0 ? 'start' : 'end'} className="elev-chart-label" style={{ fontSize: '10px' }}>{lm.name}</text>
+          <text key={i} x={toX(lm.distKm)} y={top + plotH + 30} textAnchor={i === 0 ? 'start' : 'end'} className={styles.elevChartLabel} style={{ fontSize: '10px' }}>{lm.name}</text>
         ))}
         {/* Iconic summit markers */}
         {ICONIC_SUMMITS.map(s => {
@@ -438,7 +439,7 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
       </svg>
       {hovered && (
         <div
-          className="heatmap-tooltip"
+          className={styles.heatmapTooltip}
           style={{
             position: 'fixed',
             left: hovered.x,
@@ -463,36 +464,36 @@ function BeerCalculator({ distanceKm }: { distanceKm: number }) {
   const totalAlcohol = beersEarned * BEER_ALCOHOL_G;
 
   return (
-    <div className="beer-calc">
-      <div className="beer-calc-hero">
-        <span className="beer-calc-beers">{beersEarned}</span>
-        <span className="stats-label">BEERS_EARNED</span>
-        <span className="beer-calc-emoji">
+    <div className={styles.beerCalc}>
+      <div className={styles.beerCalcHero}>
+        <span className={styles.beerCalcBeers}>{beersEarned}</span>
+        <span className={styles.statsLabel}>BEERS_EARNED</span>
+        <span className={styles.beerCalcEmoji}>
           {Array.from({ length: Math.min(beersEarned, 15) }).map((_, i) => (
             <span key={i}>🍺</span>
           ))}
           {beersEarned > 15 && <span>...</span>}
         </span>
       </div>
-      <div className="beer-calc-stats">
-        <div className="beer-calc-stat">
-          <span className="stats-label">CAL_BURNED</span>
-          <span className="beer-calc-value">{Math.round(calBurned)}<span className="beer-calc-unit">KCAL</span></span>
+      <div className={styles.beerCalcStats}>
+        <div className={styles.beerCalcStat}>
+          <span className={styles.statsLabel}>CAL_BURNED</span>
+          <span className={styles.beerCalcValue}>{Math.round(calBurned)}<span className={styles.beerCalcUnit}>KCAL</span></span>
         </div>
-        <div className="beer-calc-stat">
-          <span className="stats-label">BEER_CAL</span>
-          <span className="beer-calc-value">{totalCal}<span className="beer-calc-unit">KCAL</span></span>
+        <div className={styles.beerCalcStat}>
+          <span className={styles.statsLabel}>BEER_CAL</span>
+          <span className={styles.beerCalcValue}>{totalCal}<span className={styles.beerCalcUnit}>KCAL</span></span>
         </div>
-        <div className="beer-calc-stat">
-          <span className="stats-label">CARBS</span>
-          <span className="beer-calc-value">{totalCarbs.toFixed(0)}<span className="beer-calc-unit">G</span></span>
+        <div className={styles.beerCalcStat}>
+          <span className={styles.statsLabel}>CARBS</span>
+          <span className={styles.beerCalcValue}>{totalCarbs.toFixed(0)}<span className={styles.beerCalcUnit}>G</span></span>
         </div>
-        <div className="beer-calc-stat">
-          <span className="stats-label">ALCOHOL</span>
-          <span className="beer-calc-value">{totalAlcohol.toFixed(0)}<span className="beer-calc-unit">G</span></span>
+        <div className={styles.beerCalcStat}>
+          <span className={styles.statsLabel}>ALCOHOL</span>
+          <span className={styles.beerCalcValue}>{totalAlcohol.toFixed(0)}<span className={styles.beerCalcUnit}>G</span></span>
         </div>
       </div>
-      <div className="beer-calc-footnote">
+      <div className={styles.beerCalcFootnote}>
         {distanceKm.toFixed(0)} km hiked × {CAL_PER_KM} cal/km = {Math.round(calBurned)} kcal ÷ {BEER_CAL} cal/beer
       </div>
     </div>
@@ -556,87 +557,87 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
   }, [points]);
 
   return (
-    <div className="stats-page">
-      <div className="stats-page-header">
+    <div className={styles.statsPage}>
+      <div className={styles.statsPageHeader}>
         <h2>TRAIL_PERFORMANCE</h2>
         <button onClick={onClose}>CLOSE</button>
       </div>
 
-      <div className="stats-page-content">
+      <div className={styles.statsPageContent}>
         {/* Progress section */}
-        <section className="stats-section">
-          <div className="stats-progress-header">
+        <section className={styles.statsSection}>
+          <div className={styles.statsProgressHeader}>
             <div>
-              <span className="stats-label">TOTAL_DISTANCE</span>
-              <div className="stats-hero-value">
-                <span className="stats-hero-number">{stats.combinedDist.toFixed(0)}</span>
-                <span className="stats-hero-unit">/ {AT_TOTAL_KM} KM</span>
+              <span className={styles.statsLabel}>TOTAL_DISTANCE</span>
+              <div className={styles.statsHeroValue}>
+                <span className={styles.statsHeroNumber}>{stats.combinedDist.toFixed(0)}</span>
+                <span className={styles.statsHeroUnit}>/ {AT_TOTAL_KM} KM</span>
               </div>
             </div>
-            <div className="stats-progress-pct">
-              <span className="stats-label">THRU_AT</span>
-              <span className="stats-big-value">{stats.progress.toFixed(1)}%</span>
+            <div className={styles.statsProgressPct}>
+              <span className={styles.statsLabel}>THRU_AT</span>
+              <span className={styles.statsBigValue}>{stats.progress.toFixed(1)}%</span>
             </div>
           </div>
-          <div className="stats-progress-bars">
-            <div className="stats-progress-bar stats-progress-bar--full">
-              <div className="stats-progress-fill stats-progress-fill--full" style={{ width: `${(stats.combinedDist / 3500) * 100}%` }} />
-              <span className="stats-progress-label">FULL AT — 3,500 KM ({((stats.combinedDist / 3500) * 100).toFixed(1)}%)</span>
+          <div className={styles.statsProgressBars}>
+            <div className={`${styles.statsProgressBar} ${styles.statsProgressBarFull}`}>
+              <div className={`${styles.statsProgressFill} ${styles.statsProgressFillFull}`} style={{ width: `${(stats.combinedDist / 3500) * 100}%` }} />
+              <span className={styles.statsProgressLabel}>FULL AT — 3,500 KM ({((stats.combinedDist / 3500) * 100).toFixed(1)}%)</span>
             </div>
-            <div className="stats-progress-bar">
-              <div className="stats-progress-fill" style={{ width: `${stats.progress}%` }} />
-              <span className="stats-progress-label">GOAL — {AT_TOTAL_KM} KM</span>
+            <div className={styles.statsProgressBar}>
+              <div className={styles.statsProgressFill} style={{ width: `${stats.progress}%` }} />
+              <span className={styles.statsProgressLabel}>GOAL — {AT_TOTAL_KM} KM</span>
             </div>
           </div>
         </section>
 
         {/* Bento grid */}
-        <section className="stats-bento">
-          <div className="stats-bento-card stats-bento-accent">
-            <span className="stats-label">DAYS_ON_TRAIL</span>
-            <span className="stats-bento-number">{stats.daysOnTrail}</span>
+        <section className={styles.statsBento}>
+          <div className={`${styles.statsBentoCard} ${styles.statsBentoAccent}`}>
+            <span className={styles.statsLabel}>DAYS_ON_TRAIL</span>
+            <span className={styles.statsBentoNumber}>{stats.daysOnTrail}</span>
           </div>
-          <div className="stats-bento-card">
-            <span className="stats-label">TOTAL_ASCENT</span>
-            <div className="stats-bento-number">{Math.round(stats.combinedElev)}<span className="stats-bento-unit">M</span></div>
+          <div className={styles.statsBentoCard}>
+            <span className={styles.statsLabel}>TOTAL_ASCENT</span>
+            <div className={styles.statsBentoNumber}>{Math.round(stats.combinedElev)}<span className={styles.statsBentoUnit}>M</span></div>
           </div>
-          <div className="stats-bento-card">
-            <span className="stats-label">TRACKING_PTS</span>
-            <span className="stats-bento-number">{stats.trackingPoints}</span>
+          <div className={styles.statsBentoCard}>
+            <span className={styles.statsLabel}>TRACKING_PTS</span>
+            <span className={styles.statsBentoNumber}>{stats.trackingPoints}</span>
           </div>
-          <div className="stats-bento-card">
-            <span className="stats-label">STRAVA_ACTIVITIES</span>
-            <span className="stats-bento-number">{stats.stravaCount}</span>
+          <div className={styles.statsBentoCard}>
+            <span className={styles.statsLabel}>STRAVA_ACTIVITIES</span>
+            <span className={styles.statsBentoNumber}>{stats.stravaCount}</span>
           </div>
           {stats.avgSpeed > 0 && (
-            <div className="stats-bento-card">
-              <span className="stats-label">AVG_SPEED</span>
-              <div className="stats-bento-number">{stats.avgSpeed.toFixed(1)}<span className="stats-bento-unit">KM/H</span></div>
+            <div className={styles.statsBentoCard}>
+              <span className={styles.statsLabel}>AVG_SPEED</span>
+              <div className={styles.statsBentoNumber}>{stats.avgSpeed.toFixed(1)}<span className={styles.statsBentoUnit}>KM/H</span></div>
             </div>
           )}
-          <div className="stats-bento-card">
-            <span className="stats-label">GARMIN_DIST</span>
-            <div className="stats-bento-number">{stats.garminDist.toFixed(1)}<span className="stats-bento-unit">KM</span></div>
+          <div className={styles.statsBentoCard}>
+            <span className={styles.statsLabel}>GARMIN_DIST</span>
+            <div className={styles.statsBentoNumber}>{stats.garminDist.toFixed(1)}<span className={styles.statsBentoUnit}>KM</span></div>
           </div>
-          <div className="stats-bento-card">
-            <span className="stats-label">STRAVA_DIST</span>
-            <div className="stats-bento-number">{stats.stravaDist.toFixed(1)}<span className="stats-bento-unit">KM</span></div>
+          <div className={styles.statsBentoCard}>
+            <span className={styles.statsLabel}>STRAVA_DIST</span>
+            <div className={styles.statsBentoNumber}>{stats.stravaDist.toFixed(1)}<span className={styles.statsBentoUnit}>KM</span></div>
           </div>
         </section>
 
         {/* Activity heatmap */}
-        <section className="stats-section">
-          <div className="stats-heatmap-header">
+        <section className={styles.statsSection}>
+          <div className={styles.statsHeatmapHeader}>
             <h3>ACTIVITY_LOG</h3>
-            <span className="stats-label">{activeDays} / 90 ACTIVE_DAYS</span>
+            <span className={styles.statsLabel}>{activeDays} / 90 ACTIVE_DAYS</span>
           </div>
-          <div className="heatmap-wrapper" style={{ position: 'relative' }}>
+          <div className={styles.heatmapWrapper} style={{ position: 'relative' }}>
             {/* Month labels */}
-            <div className="heatmap-months-row" style={{ position: 'relative', height: 16, marginLeft: 20, marginBottom: 2 }}>
+            <div className={styles.heatmapMonthsRow} style={{ position: 'relative', height: 16, marginLeft: 20, marginBottom: 2 }}>
               {months.map((m, i) => (
                 <span
                   key={i}
-                  className="heatmap-month-label"
+                  className={styles.heatmapMonthLabel}
                   style={{ position: 'absolute', left: m.weekIndex * 13 }}
                 >
                   {m.label}
@@ -648,19 +649,19 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
               {/* Day of week labels */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {DAY_LABELS.map((label, i) => (
-                  <span key={i} className="heatmap-day-label">{i % 2 === 0 ? label : ''}</span>
+                  <span key={i} className={styles.heatmapDayLabel}>{i % 2 === 0 ? label : ''}</span>
                 ))}
               </div>
               {/* The grid — iterate column-first (week by week) */}
-              <div className="heatmap-grid">
+              <div className={styles.heatmapGrid}>
                 {weeks.map((week, col) => (
                   Array.from({ length: 7 }).map((_, row) => {
                     const cell = week[row];
-                    if (!cell) return <div key={`${col}-${row}`} className="heatmap-cell heatmap-cell-empty" />;
+                    if (!cell) return <div key={`${col}-${row}`} className={`${styles.heatmapCell} ${styles.heatmapCellEmpty}`} />;
                     return (
                       <div
                         key={`${col}-${row}`}
-                        className={`heatmap-cell ${intensityClass(cell.km)}`}
+                        className={`${styles.heatmapCell} ${intensityClass(cell.km)}`}
                         onMouseEnter={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
                           setHoveredCell({
@@ -688,19 +689,19 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
               </div>
             </div>
             {/* Legend */}
-            <div className="heatmap-legend">
-              <span className="stats-label">0 KM</span>
-              <div className="heatmap-cell heatmap-cell-0" />
-              <div className="heatmap-cell heatmap-cell-1" />
-              <div className="heatmap-cell heatmap-cell-2" />
-              <div className="heatmap-cell heatmap-cell-3" />
-              <div className="heatmap-cell heatmap-cell-4" />
-              <span className="stats-label">30+ KM</span>
+            <div className={styles.heatmapLegend}>
+              <span className={styles.statsLabel}>0 KM</span>
+              <div className={`${styles.heatmapCell} ${styles.heatmapCell0}`} />
+              <div className={`${styles.heatmapCell} ${styles.heatmapCell1}`} />
+              <div className={`${styles.heatmapCell} ${styles.heatmapCell2}`} />
+              <div className={`${styles.heatmapCell} ${styles.heatmapCell3}`} />
+              <div className={`${styles.heatmapCell} ${styles.heatmapCell4}`} />
+              <span className={styles.statsLabel}>30+ KM</span>
             </div>
             {/* Tooltip */}
             {hoveredCell && (
               <div
-                className="heatmap-tooltip"
+                className={styles.heatmapTooltip}
                 style={{
                   position: 'fixed',
                   left: hoveredCell.x,
@@ -716,41 +717,41 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         </section>
 
         {/* AT Trail altitude profile */}
-        <section className="stats-section">
-          <h3 className="stats-section-title">AT_TRAIL_PROFILE</h3>
+        <section className={styles.statsSection}>
+          <h3 className={styles.statsSectionTitle}>AT_TRAIL_PROFILE</h3>
           <TrailAltitudeProfile hikerDistanceKm={stats.combinedDist} isAdmin={isAdmin} />
         </section>
 
         {/* Elevation profile from tracking */}
-        <section className="stats-section">
-          <h3 className="stats-section-title">ELEVATION_PROFILE</h3>
+        <section className={styles.statsSection}>
+          <h3 className={styles.statsSectionTitle}>ELEVATION_PROFILE</h3>
           <ElevationChart points={points} />
         </section>
 
         {/* Beer calculator */}
-        <section className="stats-section">
-          <h3 className="stats-section-title">BEER_CALCULATOR</h3>
+        <section className={styles.statsSection}>
+          <h3 className={styles.statsSectionTitle}>BEER_CALCULATOR</h3>
           <BeerCalculator distanceKm={stats.combinedDist} />
         </section>
 
         {/* Recent events */}
-        <section className="stats-section">
-          <h3 className="stats-section-title">RECENT_EVENTS</h3>
-          <div className="stats-events">
+        <section className={styles.statsSection}>
+          <h3 className={styles.statsSectionTitle}>RECENT_EVENTS</h3>
+          <div className={styles.statsEvents}>
             {recentPoints.map((pt) => {
               const time = new Date(pt.timestamp);
               return (
-                <div key={pt.id} className="stats-event">
-                  <div className="stats-event-info">
-                    <span className="stats-event-type">
+                <div key={pt.id} className={styles.statsEvent}>
+                  <div className={styles.statsEventInfo}>
+                    <span className={styles.statsEventType}>
                       {pt.eventType || 'TRACKING'}
                     </span>
-                    <span className="stats-event-coords">
+                    <span className={styles.statsEventCoords}>
                       {pt.latitude.toFixed(4)}, {pt.longitude.toFixed(4)}
                     </span>
-                    {pt.message && <span className="stats-event-msg">{pt.message}</span>}
+                    {pt.message && <span className={styles.statsEventMsg}>{pt.message}</span>}
                   </div>
-                  <span className="stats-event-time">
+                  <span className={styles.statsEventTime}>
                     {time.toLocaleDateString()} {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>

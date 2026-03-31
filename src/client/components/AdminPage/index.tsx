@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import styles from './AdminPage.module.css';
 
 interface AdminStatus {
   garmin: {
@@ -44,40 +45,40 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
     return () => clearInterval(interval);
   }, [loadStatus]);
 
-  if (!status) return <div className="admin-page"><div className="admin-loading">Loading...</div></div>;
+  if (!status) return <div className={styles.adminPage}><div className={styles.adminLoading}>Loading...</div></div>;
 
   return (
-    <div className="admin-page">
-      <div className="admin-header">
+    <div className={styles.adminPage}>
+      <div className={styles.adminHeader}>
         <h2>Admin</h2>
         <button onClick={onClose}>Close</button>
       </div>
 
-      <div className="admin-sections">
-        <div className="admin-section">
+      <div className={styles.adminSections}>
+        <div className={styles.adminSection}>
           <h3>Garmin inReach</h3>
-          <div className="admin-info">
-            <div className="admin-row">
+          <div className={styles.adminInfo}>
+            <div className={styles.adminRow}>
               <span>Status</span>
-              <span className={status.garmin.configured ? 'status-ok' : 'status-off'}>
+              <span className={status.garmin.configured ? styles.statusOk : styles.statusOff}>
                 {status.garmin.configured ? 'Configured' : 'Not configured'}
               </span>
             </div>
             {status.garmin.mapshareId && (
-              <div className="admin-row">
+              <div className={styles.adminRow}>
                 <span>MapShare ID</span>
                 <span>{status.garmin.mapshareId}</span>
               </div>
             )}
-            <div className="admin-row">
+            <div className={styles.adminRow}>
               <span>Total points</span>
               <span>{status.garmin.totalPoints}</span>
             </div>
-            <div className="admin-row">
+            <div className={styles.adminRow}>
               <span>Last point</span>
               <span>{status.garmin.lastPointTime ? new Date(status.garmin.lastPointTime).toLocaleString() : 'None'}</span>
             </div>
-            <div className="admin-row">
+            <div className={styles.adminRow}>
               <span>Auto-poll interval</span>
               <span>{status.garmin.pollIntervalMin} min</span>
             </div>
@@ -87,26 +88,26 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
           </button>
         </div>
 
-        <div className="admin-section">
+        <div className={styles.adminSection}>
           <h3>Strava</h3>
-          <div className="admin-info">
-            <div className="admin-row">
+          <div className={styles.adminInfo}>
+            <div className={styles.adminRow}>
               <span>Status</span>
-              <span className={status.strava.connected ? 'status-ok' : 'status-off'}>
+              <span className={status.strava.connected ? styles.statusOk : styles.statusOff}>
                 {status.strava.connected ? 'Connected' : 'Not connected'}
               </span>
             </div>
             {status.strava.athleteId && (
-              <div className="admin-row">
+              <div className={styles.adminRow}>
                 <span>Athlete ID</span>
                 <span>{status.strava.athleteId}</span>
               </div>
             )}
-            <div className="admin-row">
+            <div className={styles.adminRow}>
               <span>Total activities</span>
               <span>{status.strava.totalActivities}</span>
             </div>
-            <div className="admin-row">
+            <div className={styles.adminRow}>
               <span>Last activity</span>
               <span>
                 {status.strava.lastActivityDate
@@ -114,7 +115,7 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
                   : 'None'}
               </span>
             </div>
-            <div className="admin-row">
+            <div className={styles.adminRow}>
               <span>Auto-sync</span>
               <span>Every 24h</span>
             </div>
@@ -130,17 +131,17 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
           )}
         </div>
 
-        <div className="admin-section">
+        <div className={styles.adminSection}>
           <h3>Sync Logs</h3>
-          <div className="admin-logs">
+          <div className={styles.adminLogs}>
             {status.logs.length === 0 ? (
-              <div className="admin-log-empty">No logs yet</div>
+              <div className={styles.adminLogEmpty}>No logs yet</div>
             ) : (
               status.logs.map((log, i) => (
-                <div key={i} className="admin-log">
-                  <span className={`log-source log-${log.source}`}>{log.source}</span>
-                  <span className="log-time">{new Date(log.time).toLocaleString()}</span>
-                  <span className="log-message">{log.message}</span>
+                <div key={i} className={styles.adminLog}>
+                  <span className={`${styles.logSource} ${log.source === 'garmin' ? styles.logGarmin : styles.logStrava}`}>{log.source}</span>
+                  <span className={styles.logTime}>{new Date(log.time).toLocaleString()}</span>
+                  <span className={styles.logMessage}>{log.message}</span>
                 </div>
               ))
             )}

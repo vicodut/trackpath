@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { TrackingPoint, StravaActivity } from '../types';
-import { PointCard } from './PointCard';
+import { TrackingPoint, StravaActivity } from '../../types';
+import { PointCard } from '../PointCard';
+import styles from './TrailLogPage.module.css';
 
 const TAG_FILTERS = [
   { key: 'inreach', emoji: '📡' },
@@ -57,8 +58,8 @@ export function TrailLogPage({
   }, [points, activeFilters]);
 
   return (
-    <div className="trail-log-page">
-      <div className="trail-log-header">
+    <div className={styles.trailLogPage}>
+      <div className={styles.trailLogHeader}>
         <div>
           <h2>TRAIL_LOG</h2>
           <div className="stats">
@@ -69,7 +70,7 @@ export function TrailLogPage({
         </div>
         <button onClick={onClose}>CLOSE</button>
       </div>
-      <div className="tag-filters">
+      <div className={styles.tagFilters}>
         {TAG_FILTERS.map(({ key, emoji }) => (
           <button
             key={key}
@@ -80,7 +81,7 @@ export function TrailLogPage({
           </button>
         ))}
       </div>
-      <div className="points-list">
+      <div className={styles.pointsList}>
         {[...filteredPoints].reverse().map((pt) => (
           <PointCard
             key={pt.id}

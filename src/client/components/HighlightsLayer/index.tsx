@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import { LayerVisibility } from './LayerToggle';
+import { LayerVisibility } from '../LayerToggle';
 
 interface Highlight {
   id: string;
