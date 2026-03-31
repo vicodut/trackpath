@@ -5,6 +5,7 @@ import { haversine } from '../lib/geo';
 
 export function usePoints() {
   const [points, setPoints] = useState<TrackingPoint[]>([]);
+  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<{ message: string; type: '' | 'syncing' | 'success' }>({
     message: 'Ready',
     type: '',
@@ -20,6 +21,8 @@ export function usePoints() {
       setStatus({ message: `Ready${lastTime ? ` — last: ${lastTime}` : ''}`, type: '' });
     } catch (err) {
       console.error('Failed to load points:', err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -105,5 +108,5 @@ export function usePoints() {
     return () => clearInterval(interval);
   }, [loadPoints]);
 
-  return { points: pointsWithSpeed, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain, loadPoints };
+  return { points: pointsWithSpeed, loading, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain, loadPoints };
 }

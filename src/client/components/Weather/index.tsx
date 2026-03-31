@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import styles from './Weather.module.css';
 
 interface DayForecast {
@@ -27,7 +27,7 @@ function weatherIcon(code: number): string {
   return WEATHER_ICONS[code] || '🌡️';
 }
 
-export function Weather() {
+export const Weather = memo(function Weather() {
   const [forecast, setForecast] = useState<DayForecast[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,7 +81,7 @@ export function Weather() {
       </div>
     </div>
   );
-}
+});
 
 function isToday(date: string) {
   return date === new Date().toISOString().split('T')[0];

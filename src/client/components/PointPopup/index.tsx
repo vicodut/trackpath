@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { TrackingPoint } from '../../types';
 import { TAG_EMOJIS } from '../../lib/constants';
 import styles from './PointPopup.module.css';
@@ -9,7 +10,7 @@ interface PointPopupProps {
   onClose: () => void;
 }
 
-export function PointPopup({ point, trailDistanceKm, trailElevationGain, onClose }: PointPopupProps) {
+export const PointPopup = memo(function PointPopup({ point, trailDistanceKm, trailElevationGain, onClose }: PointPopupProps) {
   const time = new Date(point.timestamp);
   const emoji = point.eventType ? TAG_EMOJIS[point.eventType] : null;
 
@@ -50,4 +51,4 @@ export function PointPopup({ point, trailDistanceKm, trailElevationGain, onClose
       </div>
     </div>
   );
-}
+});

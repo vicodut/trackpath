@@ -13,23 +13,31 @@ export function useStrava() {
     fetch('/api/strava/activities')
       .then((r) => r.json())
       .then(setActivities)
-      .catch(() => {});
+      .catch((err: unknown) => console.error('Failed to load Strava activities:', err));
   }, []);
 
   const connect = useCallback(async () => {
-    const res = await fetch('/api/strava/connect', { credentials: 'include' });
-    const data = await res.json() as { url?: string };
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      console.error('Strava connect error:', data);
+    try {
+      const res = await fetch('/api/strava/connect', { credentials: 'include' });
+      const data = await res.json() as { url?: string };
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('Strava connect error:', data);
+      }
+    } catch (err) {
+      console.error('Strava connect failed:', err);
     }
   }, []);
 
   const syncActivities = useCallback(async () => {
-    const res = await fetch('/api/strava/sync', { method: 'POST' });
-    const data = await res.json() as { activities?: StravaActivity[] };
-    if (data.activities) setActivities(data.activities);
+    try {
+      const res = await fetch('/api/strava/sync', { method: 'POST' });
+      const data = await res.json() as { activities?: StravaActivity[] };
+      if (data.activities) setActivities(data.activities);
+    } catch (err) {
+      console.error('Strava sync failed:', err);
+    }
   }, []);
 
   return { activities, connected, connect, syncActivities };

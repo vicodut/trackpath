@@ -23,7 +23,7 @@ import { useTrailDistance } from "./hooks/useTrailDistance";
 import type { TrackingPoint } from "./types";
 
 export function App() {
-  const { points, status, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain } = usePoints();
+  const { points, loading, status, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain } = usePoints();
   const { isAdmin } = useAdmin();
   const { activities: stravaActivities, connect: stravaConnect, syncActivities: stravaSync } = useStrava();
   const { showAdmin, showStats, showTrailLog, showBlog, openAdmin, openStats, openTrailLog, openBlog, closeModal } = useModals();
@@ -97,6 +97,14 @@ export function App() {
     if (fromKm == null || toKm == null) return null;
     return { fromDistKm: fromKm, toDistKm: toKm };
   }, [tappedPoint, highlightTarget, lastGarminPoint, getTrailKm]);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--surface)' }}>
+        <span className="spinner" style={{ width: 24, height: 24 }} />
+      </div>
+    );
+  }
 
   return (
     <div className="app">

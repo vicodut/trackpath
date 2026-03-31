@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { TrackingPoint } from '../../types';
 import { TAG_EMOJIS } from '../../lib/constants';
 import styles from './PointCard.module.css';
@@ -8,7 +9,7 @@ interface PointCardProps {
   onDelete?: (id: number) => void;
 }
 
-export function PointCard({ point, onSelect, onDelete }: PointCardProps) {
+export const PointCard = memo(function PointCard({ point, onSelect, onDelete }: PointCardProps) {
   const time = new Date(point.timestamp).toLocaleString();
   const emoji = point.eventType ? TAG_EMOJIS[point.eventType] : null;
 
@@ -38,4 +39,4 @@ export function PointCard({ point, onSelect, onDelete }: PointCardProps) {
       </div>
     </div>
   );
-}
+});

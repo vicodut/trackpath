@@ -54,7 +54,8 @@ export function MapElevationProfile({
     if (collapsed || !containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setSvgWidth(entry.contentRect.width);
+        const newWidth = entry.contentRect.width;
+        setSvgWidth(prev => prev === newWidth ? prev : newWidth);
       }
     });
     observer.observe(containerRef.current);

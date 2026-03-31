@@ -151,7 +151,7 @@ function MobileAddDrawer({ snap, setSnap, onAddPoint, onAddSuccess, onFormToggle
     <Drawer.Root
       open
       modal={false}
-      snapPoints={[0.45, 0.8]}
+      snapPoints={[0.45, 0.85]}
       activeSnapPoint={snap}
       setActiveSnapPoint={setSnap}
     >
