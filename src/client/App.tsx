@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Header } from "./components/Header";
 import { Map } from "./components/Map";
 import { Sidebar } from "./components/Sidebar";
@@ -14,55 +14,29 @@ import { PointPopup } from "./components/PointPopup";
 import { TrailLogPage } from "./components/TrailLogPage";
 import { Blog } from "./components/Blog";
 import { usePoints } from "./hooks/usePoints";
+import { useAdmin } from "./hooks/useAdmin";
+import { useStrava } from "./hooks/useStrava";
+import { useModals } from "./hooks/useModals";
+import { useAddPoint } from "./hooks/useAddPoint";
 import type { TrailSegment } from "./hooks/useTrailDistance";
 import { useTrailDistance } from "./hooks/useTrailDistance";
-import { useSession } from "./lib/auth-client";
-import type { TrackingPoint, StravaActivity } from "./types";
+import type { TrackingPoint } from "./types";
 
 export function App() {
-  const {
-    points,
-    status,
-    sync,
-    addPoint,
-    removePoint,
-    totalDistanceKm,
-    totalElevationGain,
-  } = usePoints();
-  const { data: session } = useSession();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { points, status, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain } = usePoints();
+  const { isAdmin } = useAdmin();
+  const { activities: stravaActivities, connect: stravaConnect, syncActivities: stravaSync } = useStrava();
+  const { showAdmin, showStats, showTrailLog, showBlog, openAdmin, openStats, openTrailLog, openBlog, closeModal } = useModals();
+  const { formOpen, setFormOpen, pickedCoords, sidebarVisible, setSidebarVisible, handleMapClick, handleLongPress, handleSubmit, handleSuccess, openForm } = useAddPoint(addPoint, isAdmin);
 
-  useEffect(() => {
-    if (session?.user) {
-      fetch("/api/me")
-        .then((r) => r.json())
-        .then((d) => setIsAdmin(d.isAdmin));
-    } else {
-      setIsAdmin(false);
-    }
-  }, [session]);
-  const [stravaActivities, setStravaActivities] = useState<StravaActivity[]>(
-    [],
-  );
-  const [_stravaConnected, setStravaConnected] = useState(false);
-  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(
-    null,
-  );
-  const [addFormOpen, setAddFormOpen] = useState(false);
-  const [pickedCoords, setPickedCoords] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showStats, setShowStats] = useState(false);
-  const [showTrailLog, setShowTrailLog] = useState(false);
-  const [showBlog, setShowBlog] = useState(false);
   const [elevationCursor, setElevationCursor] = useState<{ lat: number; lon: number } | null>(null);
   const [tappedPoint, setTappedPoint] = useState<TrackingPoint | null>(null);
   const [trailSegment, setTrailSegment] = useState<TrailSegment | null>(null);
+  const [highlightTarget, setHighlightTarget] = useState<{ lat: number; lon: number } | null>(null);
   const { getSegment, getTrailKm } = useTrailDistance();
+
   const [layers, setLayers] = useState<LayerVisibility>({
     garminPath: true,
     garminPoints: true,
@@ -70,13 +44,8 @@ export function App() {
     atTrail: true,
     weather: true,
     tags: {
-      resupply: true,
-      poop: true,
-      hostel: true,
-      camp: true,
-      shelter: true,
-      water: true,
-      viewpoint: true,
+      resupply: true, poop: true, hostel: true, camp: true,
+      shelter: true, water: true, viewpoint: true,
     },
     highlights: {
       shelter: window.innerWidth > 768,
@@ -89,91 +58,19 @@ export function App() {
     },
   });
 
-  useEffect(() => {
-    fetch("/api/strava/status")
-      .then((r) => r.json())
-      .then((d) => setStravaConnected(d.connected));
-    fetch("/api/strava/activities")
-      .then((r) => r.json())
-      .then(setStravaActivities)
-      .catch(() => {});
-  }, []);
-
-  const handleStravaConnect = useCallback(async () => {
-    const res = await fetch("/api/strava/connect", { credentials: "include" });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      console.error("Strava connect error:", data);
-    }
-  }, []);
-
-  const handleStravaSync = useCallback(async () => {
-    const res = await fetch("/api/strava/sync", { method: "POST" });
-    const data = await res.json();
-    if (data.activities) setStravaActivities(data.activities);
-  }, []);
-
   const handleSync = useCallback(async () => {
     setSyncing(true);
     await sync();
     setSyncing(false);
   }, [sync]);
 
-  const handleMapClick = useCallback(
-    (lat: number, lng: number) => {
-      if (addFormOpen) {
-        setPickedCoords({ lat, lng });
-      } else if (isAdmin && window.innerWidth <= 768) {
-        setPickedCoords({ lat, lng });
-        setAddFormOpen(true);
-        setSidebarVisible(true);
-      }
-    },
-    [addFormOpen, isAdmin],
-  );
-
-  const handleLongPress = useCallback(
-    (lat: number, lng: number) => {
-      if (!isAdmin) return;
-      setPickedCoords({ lat, lng });
-      setAddFormOpen(true);
-      setSidebarVisible(true);
-    },
-    [isAdmin],
-  );
-
-  const handleAddPoint = useCallback(
-    async (data: {
-      latitude: number;
-      longitude: number;
-      altitude?: number | null;
-      message?: string | null;
-      tag?: string | null;
-    }) => {
-      const ok = await addPoint(data);
-      if (ok) {
-        setPickedCoords(null);
-      }
-      return ok;
-    },
-    [addPoint],
-  );
-
-  const handleAddSuccess = useCallback(() => {
-    setAddFormOpen(false);
-    setPickedCoords(null);
-  }, []);
-
-  // Get last Garmin position (not manual)
+  // Trail distance selection
   const lastGarminPoint = points.filter(p => !p.garminId?.startsWith('manual-')).at(-1);
 
   const handlePointSelect = useCallback((pt: TrackingPoint) => {
     setTappedPoint(pt);
     if (lastGarminPoint) {
-      const seg = getSegment(lastGarminPoint.latitude, lastGarminPoint.longitude, pt.latitude, pt.longitude);
-      setTrailSegment(seg);
+      setTrailSegment(getSegment(lastGarminPoint.latitude, lastGarminPoint.longitude, pt.latitude, pt.longitude));
     }
   }, [lastGarminPoint, getSegment]);
 
@@ -183,8 +80,12 @@ export function App() {
     setHighlightTarget(null);
   }, []);
 
-  // Compute elevation profile markers for selected segment
-  const [highlightTarget, setHighlightTarget] = useState<{ lat: number; lon: number } | null>(null);
+  const handleHighlightTap = useCallback((lat: number, lon: number) => {
+    setHighlightTarget({ lat, lon });
+    if (lastGarminPoint) {
+      setTrailSegment(getSegment(lastGarminPoint.latitude, lastGarminPoint.longitude, lat, lon));
+    }
+  }, [lastGarminPoint, getSegment]);
 
   const segmentMarkers = useMemo(() => {
     const target = tappedPoint || highlightTarget;
@@ -197,24 +98,16 @@ export function App() {
     return { fromDistKm: fromKm, toDistKm: toKm };
   }, [tappedPoint, highlightTarget, lastGarminPoint, getTrailKm]);
 
-  const handleHighlightTap = useCallback((lat: number, lon: number) => {
-    setHighlightTarget({ lat, lon });
-    if (lastGarminPoint) {
-      const seg = getSegment(lastGarminPoint.latitude, lastGarminPoint.longitude, lat, lon);
-      setTrailSegment(seg);
-    }
-  }, [lastGarminPoint, getSegment]);
-
   return (
     <div className="app">
       <Header
         sidebarVisible={sidebarVisible}
         onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
         isAdmin={isAdmin}
-        onAdmin={() => setShowAdmin(true)}
-        onStats={() => setShowStats(true)}
-        onTrailLog={() => setShowTrailLog(true)}
-        onBlog={() => setShowBlog(true)}
+        onAdmin={openAdmin}
+        onStats={openStats}
+        onTrailLog={openTrailLog}
+        onBlog={openBlog}
       />
       <div className="main-container">
         <div className="map-wrapper">
@@ -223,13 +116,13 @@ export function App() {
               points={points}
               stravaActivities={stravaActivities}
               selectedPoint={selectedPoint}
-              pickingFromMap={addFormOpen}
+              pickingFromMap={formOpen}
               onMapClick={handleMapClick}
               onLongPress={handleLongPress}
               onPointTap={handlePointSelect}
               onHighlightTap={handleHighlightTap}
               trailSegment={trailSegment}
-              onAddPoint={() => { setAddFormOpen(true); setSidebarVisible(true); }}
+              onAddPoint={openForm}
               sidebarVisible={sidebarVisible}
               layers={layers}
               isAdmin={isAdmin}
@@ -258,12 +151,12 @@ export function App() {
             stravaActivities={stravaActivities}
             onSelectPoint={setSelectedPoint}
             onDeletePoint={removePoint}
-            onAddPoint={handleAddPoint}
-            onFormToggle={setAddFormOpen}
-            onAddSuccess={handleAddSuccess}
+            onAddPoint={handleSubmit}
+            onFormToggle={setFormOpen}
+            onAddSuccess={handleSuccess}
             pickedCoords={pickedCoords}
             isAdmin={isAdmin}
-            forceFormOpen={addFormOpen}
+            forceFormOpen={formOpen}
           />
         )}
       </div>
@@ -275,14 +168,14 @@ export function App() {
           totalDistanceKm={totalDistanceKm}
           totalElevationGain={totalElevationGain}
           isAdmin={isAdmin}
-          onClose={() => setShowStats(false)}
+          onClose={closeModal}
         />
       )}
       {showAdmin && (
         <AdminPage
-          onClose={() => setShowAdmin(false)}
-          onStravaConnect={handleStravaConnect}
-          onStravaSync={handleStravaSync}
+          onClose={closeModal}
+          onStravaConnect={stravaConnect}
+          onStravaSync={stravaSync}
           onGarminSync={handleSync}
           syncing={syncing}
         />
@@ -296,11 +189,11 @@ export function App() {
           onSelectPoint={setSelectedPoint}
           onDeletePoint={removePoint}
           isAdmin={isAdmin}
-          onClose={() => setShowTrailLog(false)}
+          onClose={closeModal}
         />
       )}
       {showBlog && (
-        <Blog onClose={() => setShowBlog(false)} />
+        <Blog onClose={closeModal} />
       )}
       {tappedPoint && (
         <PointPopup
