@@ -1,15 +1,6 @@
 import type { TrackingPoint } from '../../types';
+import { TAG_EMOJIS } from '../../lib/constants';
 import styles from './PointCard.module.css';
-
-const TAG_EMOJIS: Record<string, string> = {
-  poop: '💩',
-  resupply: '🛒',
-  hostel: '🏠',
-  camp: '⛺',
-  shelter: '🛖',
-  water: '💧',
-  viewpoint: '👀',
-};
 
 interface PointCardProps {
   point: TrackingPoint;

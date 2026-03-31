@@ -13,6 +13,9 @@ import type { TrackingPoint, StravaActivity } from "../../types";
 import type { LayerVisibility } from "../LayerToggle";
 import { HighlightsLayer } from "../HighlightsLayer";
 import { colors } from "../../theme";
+import { formatDuration } from "../../lib/format";
+import { useIsMobile } from "../../hooks/useIsMobile";
+import { TAG_EMOJIS } from "../../lib/constants";
 import type { TrailSegment } from "../../hooks/useTrailDistance";
 import styles from "./Map.module.css";
 
@@ -37,15 +40,6 @@ const flagIcon = L.divIcon({
   iconAnchor: [4, 28],
 });
 
-const TAG_EMOJIS: Record<string, string> = {
-  poop: "💩",
-  resupply: "🛒",
-  hostel: "🏠",
-  camp: "⛺",
-  shelter: "🛖",
-  water: "💧",
-  viewpoint: "👀",
-};
 
 function getTagIcon(tag: string) {
   const emoji = TAG_EMOJIS[tag];
@@ -321,12 +315,6 @@ function ElevationCursor({
   return null;
 }
 
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return h > 0 ? `${h}h${m}m` : `${m}m`;
-}
-
 export function Map({
   points,
   stravaActivities,
@@ -343,7 +331,7 @@ export function Map({
   isAdmin,
   elevationCursor,
 }: MapProps) {
-  const isMobile = window.innerWidth <= 768;
+  const isMobile = useIsMobile();
   const pathCoords: [number, number][] = points
     .filter((p) => !p.garminId?.startsWith("manual-"))
     .map((p) => [p.latitude, p.longitude]);

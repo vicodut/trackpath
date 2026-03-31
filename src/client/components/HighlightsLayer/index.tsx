@@ -3,6 +3,7 @@ import L from 'leaflet';
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import type { LayerVisibility } from '../LayerToggle';
 import type { TrailSegment } from '../../hooks/useTrailDistance';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { colors } from '../../theme';
 
 interface Highlight {
@@ -25,18 +26,17 @@ const HIGHLIGHT_EMOJIS: Record<string, string> = {
   'state-border': '🚩',
 };
 
-const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-
-// Stricter zoom thresholds on mobile (+2)
-const ZOOM_THRESHOLDS: Record<string, number> = {
-  landmark: isMobile ? 8 : 6,
-  'state-border': isMobile ? 9 : 7,
-  summit: isMobile ? 11 : 9,
-  town: isMobile ? 11 : 9,
-  shelter: isMobile ? 12 : 10,
-  campsite: isMobile ? 12 : 10,
-  'road-crossing': isMobile ? 13 : 11,
-};
+function getZoomThresholds(isMobile: boolean): Record<string, number> {
+  return {
+    landmark: isMobile ? 8 : 6,
+    'state-border': isMobile ? 9 : 7,
+    summit: isMobile ? 11 : 9,
+    town: isMobile ? 11 : 9,
+    shelter: isMobile ? 12 : 10,
+    campsite: isMobile ? 12 : 10,
+    'road-crossing': isMobile ? 13 : 11,
+  };
+}
 
 const iconCache = new Map<string, L.DivIcon>();
 
@@ -64,6 +64,8 @@ export function HighlightsLayer({ layers, onHighlightTap, trailSegment }: Highli
   const [zoom, setZoom] = useState(6);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const map = useMap();
+  const isMobile = useIsMobile();
+  const zoomThresholds = useMemo(() => getZoomThresholds(isMobile), [isMobile]);
 
   useEffect(() => {
     fetch('/at-highlights.json')
@@ -93,12 +95,12 @@ export function HighlightsLayer({ layers, onHighlightTap, trailSegment }: Highli
     const padded = bounds.pad(0.1);
     return highlights.filter(h => {
       if (!layers.highlights[h.category]) return false;
-      const threshold = ZOOM_THRESHOLDS[h.category] ?? 10;
+      const threshold = zoomThresholds[h.category] ?? 10;
       if (zoom < threshold) return false;
       if (!padded.contains([h.lat, h.lon])) return false;
       return true;
     });
-  }, [highlights, layers.highlights, zoom, bounds]);
+  }, [highlights, layers.highlights, zoom, bounds, zoomThresholds]);
 
   if (visible.length === 0) return null;
 

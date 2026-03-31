@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { TrackingPoint, StravaActivity } from '../../types';
 import { ICONIC_SUMMITS } from '../../data/iconic-summits';
+import { haversine } from '../../lib/geo';
 import styles from './StatsPage.module.css';
 
 interface StatsPageProps {
@@ -21,16 +22,6 @@ const ELEV_CHART_HEIGHT = 280;
 const ELEV_CHART_PADDING = { top: 20, right: 16, bottom: 36, left: 50 };
 const HIKE_START = '2026-04-15';
 const HIKE_END = '2026-07-13';
-
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 function buildDailyKm(points: TrackingPoint[], stravaActivities: StravaActivity[]): Record<string, number> {
   const dailyKm: Record<string, number> = {};

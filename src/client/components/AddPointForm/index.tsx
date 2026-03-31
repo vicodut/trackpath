@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
+import { TAGS, TAG_EMOJIS } from '../../lib/constants';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import styles from './AddPointForm.module.css';
-
-const TAGS = ['resupply', 'poop', 'hostel', 'camp', 'shelter', 'water', 'viewpoint'] as const;
-const TAG_EMOJIS: Record<string, string> = {
-  resupply: '🛒', poop: '💩', hostel: '🏠', camp: '⛺',
-  shelter: '🛖', water: '💧', viewpoint: '👀',
-};
 
 interface AddPointFormProps {
   onSubmit: (data: { latitude: number; longitude: number; altitude?: number | null; message?: string | null; tag?: string | null }) => Promise<boolean>;
@@ -16,7 +12,7 @@ interface AddPointFormProps {
 }
 
 export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, forceOpen }: AddPointFormProps) {
-  const isMobile = window.innerWidth <= 768;
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {

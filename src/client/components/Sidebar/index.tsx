@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Drawer } from 'vaul';
 import type { TrackingPoint, StravaActivity } from '../../types';
+import { TAGS, TAG_EMOJIS } from '../../lib/constants';
 import { AddPointForm } from '../AddPointForm';
 import { PointCard } from '../PointCard';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import styles from './Sidebar.module.css';
 
 const TAG_FILTERS = [
@@ -110,11 +112,6 @@ function SidebarContent({
   );
 }
 
-const TAGS = ['resupply', 'poop', 'hostel', 'camp', 'shelter', 'water', 'viewpoint'] as const;
-const TAG_EMOJIS: Record<string, string> = {
-  resupply: '🛒', poop: '💩', hostel: '🏠', camp: '⛺',
-  shelter: '🛖', water: '💧', viewpoint: '👀',
-};
 
 function MobileAddDrawer({ snap, setSnap, onAddPoint, onAddSuccess, onFormToggle, pickedCoords }: {
   snap: number | string | null;
@@ -210,15 +207,8 @@ function MobileAddDrawer({ snap, setSnap, onAddPoint, onAddSuccess, onFormToggle
 }
 
 export function Sidebar(props: SidebarProps) {
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [snap, setSnap] = useState<number | string | null>(0.85);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   // Auto-expand drawer when form is forced open (map tap)
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSession, authClient } from '../../lib/auth-client';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -15,15 +16,8 @@ interface HeaderProps {
 export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onStats, onTrailLog, onBlog }: HeaderProps) {
   const { data: session, isPending } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { TrackingPoint } from '../types';
 import * as api from '../api/points';
+import { haversine } from '../lib/geo';
 
 export function usePoints() {
   const [points, setPoints] = useState<TrackingPoint[]>([]);
@@ -105,14 +106,4 @@ export function usePoints() {
   }, [loadPoints]);
 
   return { points: pointsWithSpeed, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain, loadPoints };
-}
-
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }

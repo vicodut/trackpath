@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { MOBILE_BREAKPOINT } from '../lib/constants';
 
 interface AddPointData {
   latitude: number;
@@ -20,7 +21,7 @@ export function useAddPoint(
     (lat: number, lng: number) => {
       if (formOpen) {
         setPickedCoords({ lat, lng });
-      } else if (isAdmin && window.innerWidth <= 768) {
+      } else if (isAdmin && window.innerWidth <= MOBILE_BREAKPOINT) {
         setPickedCoords({ lat, lng });
         setFormOpen(true);
         setSidebarVisible(true);

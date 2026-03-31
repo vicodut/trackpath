@@ -1,17 +1,8 @@
 import { useState } from 'react';
+import { TAGS, TAG_EMOJIS } from '../../lib/constants';
 import styles from './LayerToggle.module.css';
 
-export const TAG_LIST = ['resupply', 'poop', 'hostel', 'camp', 'shelter', 'water', 'viewpoint'] as const;
-
-const TAG_EMOJIS: Record<string, string> = {
-  resupply: '🛒',
-  poop: '💩',
-  hostel: '🏠',
-  camp: '⛺',
-  shelter: '🛖',
-  water: '💧',
-  viewpoint: '👀',
-};
+export { TAGS as TAG_LIST } from '../../lib/constants';
 
 export const HIGHLIGHT_CATEGORIES = [
   'shelter', 'summit', 'campsite', 'town', 'road-crossing', 'landmark', 'state-border',
@@ -80,7 +71,7 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
             </div>
             {tagsOpen && (
               <div className={styles.layerToggleGroupBody}>
-                {TAG_LIST.map((tag) => (
+                {TAGS.map((tag) => (
                   <label key={tag} className={styles.layerToggleRow}>
                     <input
                       type="checkbox"

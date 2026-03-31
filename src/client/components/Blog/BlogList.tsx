@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { StravaActivity } from '../../types';
+import { formatDuration } from '../../lib/format';
 import styles from './Blog.module.css';
 
 import { colors } from '../../theme';
@@ -27,12 +28,6 @@ function dayNumber(startDate: string, entryDate: string): number {
   const start = new Date(startDate);
   const entry = new Date(entryDate);
   return Math.max(1, Math.floor((entry.getTime() - start.getTime()) / 86400000) + 1);
-}
-
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return h > 0 ? `${h}h${m}m` : `${m}m`;
 }
 
 function MiniTrace({ coordsJson }: { coordsJson: string | null }) {
