@@ -69,6 +69,15 @@ export function App() {
       water: true,
       viewpoint: true,
     },
+    highlights: {
+      shelter: true,
+      summit: true,
+      campsite: true,
+      town: true,
+      'road-crossing': true,
+      landmark: true,
+      'state-border': true,
+    },
   });
 
   useEffect(() => {

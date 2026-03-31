@@ -12,6 +12,20 @@ const TAG_EMOJIS: Record<string, string> = {
   viewpoint: '👀',
 };
 
+export const HIGHLIGHT_CATEGORIES = [
+  'shelter', 'summit', 'campsite', 'town', 'road-crossing', 'landmark', 'state-border',
+] as const;
+
+const HIGHLIGHT_EMOJIS: Record<string, string> = {
+  shelter: '🛖',
+  summit: '🏔️',
+  campsite: '⛺',
+  town: '🏘️',
+  'road-crossing': '🛣️',
+  landmark: '⭐',
+  'state-border': '🚩',
+};
+
 export interface LayerVisibility {
   garminPath: boolean;
   garminPoints: boolean;
@@ -19,6 +33,7 @@ export interface LayerVisibility {
   atTrail: boolean;
   weather: boolean;
   tags: Record<string, boolean>;
+  highlights: Record<string, boolean>;
 }
 
 interface LayerToggleProps {
@@ -26,7 +41,7 @@ interface LayerToggleProps {
   onChange: (layers: LayerVisibility) => void;
 }
 
-const LAYER_LABELS: { key: keyof Omit<LayerVisibility, 'tags'>; label: string }[] = [
+const LAYER_LABELS: { key: keyof Omit<LayerVisibility, 'tags' | 'highlights'>; label: string }[] = [
   { key: 'atTrail', label: 'AT Trail' },
   { key: 'garminPath', label: 'Garmin path' },
   { key: 'garminPoints', label: 'Garmin points' },
@@ -37,6 +52,7 @@ const LAYER_LABELS: { key: keyof Omit<LayerVisibility, 'tags'>; label: string }[
 export function LayerToggle({ layers, onChange }: LayerToggleProps) {
   const [open, setOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [highlightsOpen, setHighlightsOpen] = useState(false);
 
   return (
     <div className="layer-toggle" onClick={(e) => e.stopPropagation()}>
@@ -74,6 +90,29 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
                       })}
                     />
                     <span>{TAG_EMOJIS[tag]} {tag}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="layer-toggle-group">
+            <div className="layer-toggle-group-header" onClick={() => setHighlightsOpen(!highlightsOpen)}>
+              <span>Highlights</span>
+              <span className="layer-toggle-icon">{highlightsOpen ? '▾' : '▸'}</span>
+            </div>
+            {highlightsOpen && (
+              <div className="layer-toggle-group-body">
+                {HIGHLIGHT_CATEGORIES.map((cat) => (
+                  <label key={cat} className="layer-toggle-row">
+                    <input
+                      type="checkbox"
+                      checked={layers.highlights[cat] !== false}
+                      onChange={() => onChange({
+                        ...layers,
+                        highlights: { ...layers.highlights, [cat]: !layers.highlights[cat] },
+                      })}
+                    />
+                    <span>{HIGHLIGHT_EMOJIS[cat]} {cat}</span>
                   </label>
                 ))}
               </div>

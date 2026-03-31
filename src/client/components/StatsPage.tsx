@@ -15,8 +15,8 @@ const BEER_CARBS = 12.6;
 const BEER_PROTEIN = 1.6;
 const BEER_ALCOHOL_G = 13.8;
 const CAL_PER_KM = 90; // approx cal burned hiking with pack on AT
-const ELEV_CHART_HEIGHT = 200;
-const ELEV_CHART_PADDING = { top: 20, right: 16, bottom: 30, left: 46 };
+const ELEV_CHART_HEIGHT = 280;
+const ELEV_CHART_PADDING = { top: 20, right: 16, bottom: 36, left: 50 };
 const HIKE_START = '2026-04-15';
 const HIKE_END = '2026-07-13';
 
@@ -269,8 +269,8 @@ interface TrailElevationPoint {
   distanceKm: number;
 }
 
-const TRAIL_CHART_HEIGHT = 250;
-const TRAIL_CHART_PADDING = { top: 20, right: 16, bottom: 50, left: 50 };
+const TRAIL_CHART_HEIGHT = 320;
+const TRAIL_CHART_PADDING = { top: 24, right: 16, bottom: 56, left: 54 };
 
 function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) {
   const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(null);
@@ -377,14 +377,14 @@ function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) 
         {AT_TOTAL_KM <= maxDist && (
           <>
             <line x1={toX(AT_TOTAL_KM)} x2={toX(AT_TOTAL_KM)} y1={top} y2={top + plotH} stroke="var(--error)" strokeWidth="1.5" strokeDasharray="6,4" opacity="0.7" />
-            <text x={toX(AT_TOTAL_KM)} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--error)" style={{ fontSize: '9px', fontWeight: 'bold' }}>GOAL {AT_TOTAL_KM}km</text>
+            <text x={toX(AT_TOTAL_KM)} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--error)" style={{ fontSize: '11px', fontWeight: 'bold' }}>GOAL {AT_TOTAL_KM}km</text>
           </>
         )}
         {/* Hiker position marker */}
         {hikerDistanceKm > 0 && (
           <>
             <line x1={hikerX} x2={hikerX} y1={top} y2={top + plotH} stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="4,3" />
-            <text x={hikerX} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--primary)" style={{ fontSize: '10px', fontWeight: 'bold' }}>YOU</text>
+            <text x={hikerX} y={top - 4} textAnchor="middle" className="elev-chart-label" fill="var(--primary)" style={{ fontSize: '12px', fontWeight: 'bold' }}>YOU</text>
           </>
         )}
         {/* Gradient defs */}
@@ -408,7 +408,7 @@ function TrailAltitudeProfile({ hikerDistanceKm }: { hikerDistanceKm: number }) 
         ))}
         {/* Landmark labels (below x-axis) */}
         {landmarks.map((lm, i) => (
-          <text key={i} x={toX(lm.distKm)} y={top + plotH + 30} textAnchor={i === 0 ? 'start' : 'end'} className="elev-chart-label" style={{ fontSize: '8px' }}>{lm.name}</text>
+          <text key={i} x={toX(lm.distKm)} y={top + plotH + 30} textAnchor={i === 0 ? 'start' : 'end'} className="elev-chart-label" style={{ fontSize: '10px' }}>{lm.name}</text>
         ))}
         {/* Hover crosshair */}
         {hovered && (

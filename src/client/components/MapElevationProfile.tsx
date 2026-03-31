@@ -12,8 +12,8 @@ interface MapElevationProfileProps {
   onHoverEnd: () => void;
 }
 
-const CHART_HEIGHT = 120;
-const CHART_PADDING = { top: 12, right: 12, bottom: 22, left: 42 };
+const CHART_HEIGHT = 160;
+const CHART_PADDING = { top: 14, right: 14, bottom: 26, left: 48 };
 const GOAL_KM = 1300;
 
 export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfileProps) {

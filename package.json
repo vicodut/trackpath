@@ -10,7 +10,9 @@
     "start": "NODE_ENV=production tsx src/server/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "fetch:highlights": "tsx scripts/fetch-highlights.ts",
+    "fetch:elevations": "tsx scripts/fetch-elevations.ts"
   },
   "description": "Appalachian Trail hike tracker with Garmin inReach integration",
   "dependencies": {

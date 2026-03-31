@@ -11,6 +11,7 @@ import {
 } from "react-leaflet";
 import { TrackingPoint, StravaActivity } from "../types";
 import { LayerVisibility } from "./LayerToggle";
+import { HighlightsLayer } from "./HighlightsLayer";
 
 const pointIcon = L.divIcon({
   className: "",
@@ -347,6 +348,7 @@ export function Map({
         attribution="&copy; OpenStreetMap contributors"
       />
       {layers.atTrail && <ATTrailLayer />}
+      <HighlightsLayer layers={layers} />
 
       {/* Trail endpoints */}
       {layers.atTrail && (
