@@ -7,9 +7,10 @@ interface HeaderProps {
   isAdmin: boolean;
   onAdmin: () => void;
   onStats: () => void;
+  onTrailLog: () => void;
 }
 
-export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onStats }: HeaderProps) {
+export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onStats, onTrailLog }: HeaderProps) {
   const { data: session, isPending } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -47,9 +48,13 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
     <>
       <button onClick={() => closeAndDo(onStats)}>STATS</button>
       {isAdmin && <button onClick={() => closeAndDo(onAdmin)}>ADMIN</button>}
-      <button onClick={() => closeAndDo(onToggleSidebar)}>
-        {sidebarVisible ? 'HIDE_LIST' : 'SHOW_LIST'}
-      </button>
+      {isMobile ? (
+        <button onClick={() => closeAndDo(onTrailLog)}>TRAIL_LOG</button>
+      ) : (
+        <button onClick={() => closeAndDo(onToggleSidebar)}>
+          {sidebarVisible ? 'HIDE_LIST' : 'SHOW_LIST'}
+        </button>
+      )}
       {isPending ? null : session?.user ? (
         <>
           <span className="auth-user">{session.user.name || session.user.email}</span>

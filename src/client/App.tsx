@@ -10,6 +10,7 @@ import { StatsPage } from "./components/StatsPage";
 import { LayerToggle, LayerVisibility } from "./components/LayerToggle";
 import { MapElevationProfile } from "./components/MapElevationProfile";
 import { PointPopup } from "./components/PointPopup";
+import { TrailLogPage } from "./components/TrailLogPage";
 import { usePoints } from "./hooks/usePoints";
 import { useSession } from "./lib/auth-client";
 import { TrackingPoint, StravaActivity } from "./types";
@@ -52,6 +53,7 @@ export function App() {
   } | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showTrailLog, setShowTrailLog] = useState(false);
   const [elevationCursor, setElevationCursor] = useState<{ lat: number; lon: number } | null>(null);
   const [tappedPoint, setTappedPoint] = useState<TrackingPoint | null>(null);
   const [layers, setLayers] = useState<LayerVisibility>({
@@ -70,11 +72,11 @@ export function App() {
       viewpoint: true,
     },
     highlights: {
-      shelter: true,
-      summit: true,
-      campsite: true,
-      town: true,
-      'road-crossing': true,
+      shelter: window.innerWidth > 768,
+      summit: window.innerWidth > 768,
+      campsite: window.innerWidth > 768,
+      town: window.innerWidth > 768,
+      'road-crossing': window.innerWidth > 768,
       landmark: true,
       'state-border': true,
     },
@@ -152,6 +154,11 @@ export function App() {
     [addPoint],
   );
 
+  const handleAddSuccess = useCallback(() => {
+    setAddFormOpen(false);
+    setPickedCoords(null);
+  }, []);
+
   return (
     <div className="app">
       <Header
@@ -160,6 +167,7 @@ export function App() {
         isAdmin={isAdmin}
         onAdmin={() => setShowAdmin(true)}
         onStats={() => setShowStats(true)}
+        onTrailLog={() => setShowTrailLog(true)}
       />
       <div className="main-container">
         <div className="map-wrapper">
@@ -172,6 +180,7 @@ export function App() {
               onMapClick={handleMapClick}
               onLongPress={handleLongPress}
               onPointTap={setTappedPoint}
+              onAddPoint={() => { setAddFormOpen(true); setSidebarVisible(true); }}
               sidebarVisible={sidebarVisible}
               layers={layers}
               isAdmin={isAdmin}
@@ -201,6 +210,7 @@ export function App() {
             onDeletePoint={removePoint}
             onAddPoint={handleAddPoint}
             onFormToggle={setAddFormOpen}
+            onAddSuccess={handleAddSuccess}
             pickedCoords={pickedCoords}
             isAdmin={isAdmin}
             forceFormOpen={addFormOpen}
@@ -224,6 +234,18 @@ export function App() {
           onStravaSync={handleStravaSync}
           onGarminSync={handleSync}
           syncing={syncing}
+        />
+      )}
+      {showTrailLog && (
+        <TrailLogPage
+          points={points}
+          totalDistanceKm={totalDistanceKm}
+          totalElevationGain={totalElevationGain}
+          stravaActivities={stravaActivities}
+          onSelectPoint={setSelectedPoint}
+          onDeletePoint={removePoint}
+          isAdmin={isAdmin}
+          onClose={() => setShowTrailLog(false)}
         />
       )}
       {tappedPoint && (

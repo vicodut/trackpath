@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
-import { Marker, Popup, useMapEvents } from 'react-leaflet';
+import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import { LayerVisibility } from './LayerToggle';
 
 interface Highlight {
@@ -23,15 +24,17 @@ const HIGHLIGHT_EMOJIS: Record<string, string> = {
   'state-border': '🚩',
 };
 
-// Minimum zoom level to show each category
+const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
+// Stricter zoom thresholds on mobile (+2)
 const ZOOM_THRESHOLDS: Record<string, number> = {
-  landmark: 6,
-  'state-border': 7,
-  summit: 9,
-  town: 9,
-  shelter: 10,
-  campsite: 10,
-  'road-crossing': 11,
+  landmark: isMobile ? 8 : 6,
+  'state-border': isMobile ? 9 : 7,
+  summit: isMobile ? 11 : 9,
+  town: isMobile ? 11 : 9,
+  shelter: isMobile ? 12 : 10,
+  campsite: isMobile ? 12 : 10,
+  'road-crossing': isMobile ? 13 : 11,
 };
 
 const iconCache = new Map<string, L.DivIcon>();
@@ -49,6 +52,21 @@ function getHighlightIcon(category: string): L.DivIcon {
   return icon;
 }
 
+function createClusterIcon(cluster: L.MarkerCluster) {
+  const count = cluster.getChildCount();
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+      background:rgba(11,22,13,0.85);border:1px solid var(--outline-variant);
+      border-radius:50%;color:var(--secondary);font-family:var(--font-headline);
+      font-size:11px;font-weight:700;backdrop-filter:blur(8px);
+    ">${count}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+}
+
 interface HighlightsLayerProps {
   layers: LayerVisibility;
 }
@@ -56,6 +74,8 @@ interface HighlightsLayerProps {
 export function HighlightsLayer({ layers }: HighlightsLayerProps) {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [zoom, setZoom] = useState(6);
+  const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
+  const map = useMap();
 
   useEffect(() => {
     fetch('/at-highlights.json')
@@ -64,45 +84,68 @@ export function HighlightsLayer({ layers }: HighlightsLayerProps) {
       .catch(() => setHighlights([]));
   }, []);
 
+  const updateView = useCallback(() => {
+    setZoom(map.getZoom());
+    setBounds(map.getBounds());
+  }, [map]);
+
+  useEffect(() => {
+    updateView();
+  }, [updateView]);
+
   useMapEvents({
-    zoomend(e) {
-      setZoom(e.target.getZoom());
-    },
+    zoomend: updateView,
+    moveend: updateView,
   });
 
-  if (highlights.length === 0) return null;
+  // Filter by category toggle, zoom threshold, and viewport bounds
+  const visible = useMemo(() => {
+    if (!bounds || highlights.length === 0) return [];
+    // Pad bounds slightly to avoid pop-in at edges
+    const padded = bounds.pad(0.1);
+    return highlights.filter(h => {
+      if (!layers.highlights[h.category]) return false;
+      const threshold = ZOOM_THRESHOLDS[h.category] ?? 10;
+      if (zoom < threshold) return false;
+      if (!padded.contains([h.lat, h.lon])) return false;
+      return true;
+    });
+  }, [highlights, layers.highlights, zoom, bounds]);
+
+  if (visible.length === 0) return null;
 
   return (
-    <>
-      {highlights.map(h => {
-        if (!layers.highlights[h.category]) return null;
-        const threshold = ZOOM_THRESHOLDS[h.category] ?? 10;
-        if (zoom < threshold) return null;
-
-        return (
-          <Marker
-            key={h.id}
-            position={[h.lat, h.lon]}
-            icon={getHighlightIcon(h.category)}
-          >
-            <Popup>
-              <strong>{h.name}</strong>
-              {h.elevation != null && (
-                <>
-                  <br />
-                  {Math.round(h.elevation)}m
-                </>
-              )}
-              {h.description && (
-                <>
-                  <br />
-                  <em>{h.description}</em>
-                </>
-              )}
-            </Popup>
-          </Marker>
-        );
-      })}
-    </>
+    <MarkerClusterGroup
+      chunkedLoading
+      maxClusterRadius={40}
+      disableClusteringAtZoom={13}
+      iconCreateFunction={createClusterIcon}
+      spiderfyOnMaxZoom={false}
+      showCoverageOnHover={false}
+    >
+      {visible.map(h => (
+        <Marker
+          key={h.id}
+          position={[h.lat, h.lon]}
+          icon={getHighlightIcon(h.category)}
+        >
+          <Popup>
+            <strong>{h.name}</strong>
+            {h.elevation != null && (
+              <>
+                <br />
+                {Math.round(h.elevation)}m
+              </>
+            )}
+            {h.description && (
+              <>
+                <br />
+                <em>{h.description}</em>
+              </>
+            )}
+          </Popup>
+        </Marker>
+      ))}
+    </MarkerClusterGroup>
   );
 }

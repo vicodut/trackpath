@@ -63,6 +63,7 @@ interface MapProps {
   onMapClick: (lat: number, lng: number) => void;
   onLongPress: (lat: number, lng: number) => void;
   onPointTap?: (point: TrackingPoint) => void;
+  onAddPoint?: () => void;
   sidebarVisible: boolean;
   layers: LayerVisibility;
   isAdmin: boolean;
@@ -325,6 +326,7 @@ export function Map({
   onMapClick,
   onLongPress,
   onPointTap,
+  onAddPoint,
   sidebarVisible,
   layers,
   isAdmin,
@@ -477,8 +479,13 @@ export function Map({
       />
       <FlyToPoint point={selectedPoint} />
       <InvalidateOnResize sidebarVisible={sidebarVisible} />
-      {isAdmin && <LocateButton />}
-      <LastPositionButton points={points} />
+      <div className="map-controls">
+        {isAdmin && onAddPoint && (
+          <button className="map-ctrl-btn map-ctrl-add" onClick={onAddPoint} title="Add tracking point">+</button>
+        )}
+        <LastPositionButton points={points} />
+        {isAdmin && <LocateButton />}
+      </div>
       <ElevationCursor cursorPos={elevationCursor ?? null} />
     </MapContainer>
   );
