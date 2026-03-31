@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Drawer } from 'vaul';
-import { TrackingPoint, StravaActivity } from '../types';
-import { AddPointForm } from './AddPointForm';
-import { PointCard } from './PointCard';
+import { TrackingPoint, StravaActivity } from '../../types';
+import { AddPointForm } from '../AddPointForm';
+import { PointCard } from '../PointCard';
+import styles from './Sidebar.module.css';
 
 const TAG_FILTERS = [
   { key: 'inreach', label: 'INREACH', emoji: '📡' },
@@ -67,7 +68,7 @@ function SidebarContent({
 
   return (
     <>
-      <div className="sidebar-header">
+      <div className={styles.sidebarHeader}>
         <h2>TRAIL_LOG</h2>
         <div className="stats">
           <span>PTS: <strong>{filteredPoints.length}</strong></span>
@@ -75,11 +76,11 @@ function SidebarContent({
           <span>ELEV: <strong>{Math.round(totalElev)}</strong> m</span>
         </div>
       </div>
-      <div className="tag-filters">
+      <div className={styles.tagFilters}>
         {TAG_FILTERS.map(({ key, emoji }) => (
           <button
             key={key}
-            className={`tag-filter-btn ${activeFilters.has(key) ? 'active' : ''}`}
+            className={`${styles.tagFilterBtn} ${activeFilters.has(key) ? styles.active : ''}`}
             onClick={() => toggleFilter(key)}
           >
             {emoji}
@@ -95,7 +96,7 @@ function SidebarContent({
           forceOpen={forceFormOpen}
         />
       )}
-      <div className="points-list">
+      <div className={styles.pointsList}>
         {[...filteredPoints].reverse().map((pt) => (
           <PointCard
             key={pt.id}
@@ -158,44 +159,44 @@ function MobileAddDrawer({ snap, setSnap, onAddPoint, onAddSuccess, onFormToggle
       setActiveSnapPoint={setSnap}
     >
       <Drawer.Portal>
-        <Drawer.Content className="drawer-content">
-          <div className="drawer-handle">
-            <div className="drawer-handle-bar" />
+        <Drawer.Content className={styles.drawerContent}>
+          <div className={styles.drawerHandle}>
+            <div className={styles.drawerHandleBar} />
           </div>
-          <div className="mobile-add-form">
-            <div className="mobile-add-header">
-              <span className="mobile-add-title">ADD POINT</span>
+          <div className={styles.mobileAddForm}>
+            <div className={styles.mobileAddHeader}>
+              <span className={styles.mobileAddTitle}>ADD POINT</span>
               {pickedCoords && (
-                <span className="mobile-add-coords">
+                <span className={styles.mobileAddCoords}>
                   {pickedCoords.lat.toFixed(4)}, {pickedCoords.lng.toFixed(4)}
                 </span>
               )}
-              <button className="mobile-add-close" onClick={handleClose}>X</button>
+              <button className={styles.mobileAddClose} onClick={handleClose}>X</button>
             </div>
             {!pickedCoords && (
-              <p className="pick-hint active">TAP MAP TO SET COORDINATES</p>
+              <p className={`${styles.pickHint} ${styles.active}`}>TAP MAP TO SET COORDINATES</p>
             )}
-            <div className="add-form-tag-grid">
+            <div className={styles.addFormTagGrid}>
               {TAGS.map((t) => (
                 <button
                   key={t}
-                  className={`add-form-tag-btn ${tag === t ? 'active' : ''}`}
+                  className={`${styles.addFormTagBtn} ${tag === t ? styles.active : ''}`}
                   onClick={() => setTag(tag === t ? '' : t)}
                 >
-                  <span className="add-form-tag-emoji">{TAG_EMOJIS[t]}</span>
-                  <span className="add-form-tag-label">{t}</span>
+                  <span className={styles.addFormTagEmoji}>{TAG_EMOJIS[t]}</span>
+                  <span className={styles.addFormTagLabel}>{t}</span>
                 </button>
               ))}
             </div>
             <textarea
-              className="mobile-add-message"
+              className={styles.mobileAddMessage}
               placeholder="Message (optional)"
               value={msg}
               onChange={(e) => setMsg(e.target.value)}
               rows={2}
             />
             <button
-              className="mobile-add-submit"
+              className={styles.mobileAddSubmit}
               onClick={handleSubmit}
               disabled={!pickedCoords}
             >
@@ -228,7 +229,7 @@ export function Sidebar(props: SidebarProps) {
 
   if (!isMobile) {
     return (
-      <div className="sidebar">
+      <div className={styles.sidebar}>
         <SidebarContent {...props} />
       </div>
     );

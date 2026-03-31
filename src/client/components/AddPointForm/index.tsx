@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import styles from './AddPointForm.module.css';
 
 const TAGS = ['resupply', 'poop', 'hostel', 'camp', 'shelter', 'water', 'viewpoint'] as const;
 const TAG_EMOJIS: Record<string, string> = {
@@ -68,30 +69,30 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
   }
 
   return (
-    <div className="add-form">
-      <button className="add-form-toggle" onClick={toggleOpen}>
+    <div className={styles.addForm}>
+      <button className={styles.addFormToggle} onClick={toggleOpen}>
         + ADD_TRACKING_POINT
       </button>
       {open && (
-        <div className="add-form-fields open">
+        <div className={styles.addFormFields}>
           {isMobile ? (
             <>
               {lat && lng ? (
-                <div className="add-form-coords-label">
+                <div className={styles.addFormCoordsLabel}>
                   {parseFloat(lat).toFixed(4)}, {parseFloat(lng).toFixed(4)}
                 </div>
               ) : (
-                <p className="pick-hint active">TAP_MAP_TO_SET_COORDINATES</p>
+                <p className={`${styles.pickHint} ${styles.pickHintActive}`}>TAP_MAP_TO_SET_COORDINATES</p>
               )}
-              <div className="add-form-tag-grid">
+              <div className={styles.addFormTagGrid}>
                 {TAGS.map((t) => (
                   <button
                     key={t}
-                    className={`add-form-tag-btn ${tag === t ? 'active' : ''}`}
+                    className={`${styles.addFormTagBtn} ${tag === t ? styles.addFormTagBtnActive : ''}`}
                     onClick={() => setTag(tag === t ? '' : t)}
                   >
-                    <span className="add-form-tag-emoji">{TAG_EMOJIS[t]}</span>
-                    <span className="add-form-tag-label">{t}</span>
+                    <span className={styles.addFormTagEmoji}>{TAG_EMOJIS[t]}</span>
+                    <span className={styles.addFormTagLabel}>{t}</span>
                   </button>
                 ))}
               </div>
@@ -101,13 +102,13 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
                 onChange={(e) => setMsg(e.target.value)}
                 rows={2}
               />
-              <div className="add-form-actions">
+              <div className={styles.addFormActions}>
                 <button className="primary" onClick={handleSubmit} disabled={!lat || !lng}>SUBMIT_POINT</button>
               </div>
             </>
           ) : (
             <>
-              <div className="coord-row">
+              <div className={styles.coordRow}>
                 <div>
                   <label>Latitude</label>
                   <input
@@ -150,8 +151,8 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
                 value={msg}
                 onChange={(e) => setMsg(e.target.value)}
               />
-              <p className="pick-hint active">TAP_MAP_TO_SET_COORDINATES</p>
-              <div className="add-form-actions">
+              <p className={`${styles.pickHint} ${styles.pickHintActive}`}>TAP_MAP_TO_SET_COORDINATES</p>
+              <div className={styles.addFormActions}>
                 <button className="primary" onClick={handleSubmit}>SUBMIT_POINT</button>
               </div>
             </>

@@ -1,0 +1,64 @@
+.pointCard {
+  background: var(--surface-container);
+  border: var(--ghost-border);
+  border-radius: 0;
+  padding: 12px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.pointCard:hover {
+  background: var(--surface-container-high);
+  border-color: rgba(var(--secondary-rgb), 0.4);
+}
+
+.pointTime {
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.pointCoords {
+  font-size: 0.72rem;
+  color: var(--outline);
+  font-family: var(--font-headline);
+  letter-spacing: 0.05em;
+}
+
+.pointMessage {
+  font-size: 0.8rem;
+  color: var(--primary);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.pointMeta {
+  font-size: 0.65rem;
+  font-family: var(--font-headline);
+  color: var(--outline);
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  color: var(--outline);
+  cursor: pointer;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.deleteBtn:hover {
+  color: var(--error);
+}

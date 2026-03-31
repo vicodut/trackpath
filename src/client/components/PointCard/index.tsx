@@ -1,4 +1,5 @@
-import { TrackingPoint } from '../types';
+import { TrackingPoint } from '../../types';
+import styles from './PointCard.module.css';
 
 const TAG_EMOJIS: Record<string, string> = {
   poop: '💩',
@@ -21,15 +22,15 @@ export function PointCard({ point, onSelect, onDelete }: PointCardProps) {
   const emoji = point.eventType ? TAG_EMOJIS[point.eventType] : null;
 
   return (
-    <div className="point-card" onClick={() => onSelect(point)}>
-      <div className="point-time">{emoji && <>{emoji} · </>}{time}</div>
-      <div className="point-coords">
+    <div className={styles.pointCard} onClick={() => onSelect(point)}>
+      <div className={styles.pointTime}>{emoji && <>{emoji} · </>}{time}</div>
+      <div className={styles.pointCoords}>
         {point.latitude.toFixed(5)}, {point.longitude.toFixed(5)}
       </div>
       {point.message && (
-        <div className="point-message">"{point.message}"</div>
+        <div className={styles.pointMessage}>"{point.message}"</div>
       )}
-      <div className="point-meta">
+      <div className={styles.pointMeta}>
         <span>
           {point.altitude ? `Alt: ${point.altitude.toFixed(0)}m` : ''}
           {point.velocity ? ` | ${point.velocity} km/h` : point.calculatedSpeedKmh ? ` | ~${point.calculatedSpeedKmh.toFixed(1)} km/h` : ''}
@@ -37,7 +38,7 @@ export function PointCard({ point, onSelect, onDelete }: PointCardProps) {
         </span>
         {onDelete && (
           <button
-            className="delete-btn"
+            className={styles.deleteBtn}
             onClick={(e) => { e.stopPropagation(); onDelete(point.id); }}
           >
             remove

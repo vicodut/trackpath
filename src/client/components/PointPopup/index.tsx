@@ -1,4 +1,5 @@
-import { TrackingPoint } from '../types';
+import { TrackingPoint } from '../../types';
+import styles from './PointPopup.module.css';
 
 const TAG_EMOJIS: Record<string, string> = {
   poop: '💩',
@@ -20,22 +21,22 @@ export function PointPopup({ point, onClose }: PointPopupProps) {
   const emoji = point.eventType ? TAG_EMOJIS[point.eventType] : null;
 
   return (
-    <div className="point-popup-overlay" onClick={onClose}>
-      <div className="point-popup" onClick={(e) => e.stopPropagation()}>
-        <div className="point-popup-header">
-          <span className="point-popup-type">
+    <div className={styles.pointPopupOverlay} onClick={onClose}>
+      <div className={styles.pointPopup} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.pointPopupHeader}>
+          <span className={styles.pointPopupType}>
             {emoji && <>{emoji} </>}
             {point.eventType || 'TRACKING'}
           </span>
-          <button className="point-popup-close" onClick={onClose}>X</button>
+          <button className={styles.pointPopupClose} onClick={onClose}>X</button>
         </div>
-        <div className="point-popup-time">
+        <div className={styles.pointPopupTime}>
           {time.toLocaleDateString()} {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
-        <div className="point-popup-coords">
+        <div className={styles.pointPopupCoords}>
           {point.latitude.toFixed(5)}, {point.longitude.toFixed(5)}
         </div>
-        <div className="point-popup-details">
+        <div className={styles.pointPopupDetails}>
           {point.altitude != null && (
             <span>ALT: {point.altitude.toFixed(0)}m</span>
           )}
@@ -46,7 +47,7 @@ export function PointPopup({ point, onClose }: PointPopupProps) {
           ) : null}
         </div>
         {point.message && (
-          <div className="point-popup-message">{point.message}</div>
+          <div className={styles.pointPopupMessage}>{point.message}</div>
         )}
       </div>
     </div>

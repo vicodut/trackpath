@@ -1,0 +1,82 @@
+.pointPopupOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.40);
+}
+
+.pointPopup {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface-container);
+  border-top: 2px solid var(--secondary);
+  padding: 16px 20px 24px;
+}
+
+.pointPopupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.pointPopupType {
+  font-family: var(--font-headline);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.pointPopupClose {
+  background: none;
+  border: 1px solid var(--outline-variant);
+  color: var(--outline);
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+}
+
+.pointPopupTime {
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin-bottom: 4px;
+}
+
+.pointPopupCoords {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.pointPopupDetails {
+  display: flex;
+  gap: 16px;
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.pointPopupMessage {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--on-surface);
+  font-style: italic;
+  padding-top: 8px;
+  border-top: var(--ghost-border);
+}

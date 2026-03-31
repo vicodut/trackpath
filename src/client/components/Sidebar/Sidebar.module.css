@@ -1,0 +1,217 @@
+/* Sidebar */
+.sidebar {
+  width: 360px;
+  background: var(--surface-container-low);
+  border-left: var(--ghost-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebarHeader {
+  padding: 16px;
+  border-bottom: var(--ghost-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebarHeader h2 {
+  font-family: var(--font-headline);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* Tag filters */
+.tagFilters {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: var(--ghost-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.tagFilterBtn {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  background: var(--surface-container);
+  border: var(--ghost-border);
+  color: var(--outline);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tagFilterBtn:hover {
+  background: var(--surface-container-high);
+}
+
+.tagFilterBtn.active {
+  background: var(--secondary);
+  color: var(--surface);
+  border-color: var(--secondary);
+}
+
+/* Points list */
+.pointsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+/* Drawer */
+.drawerContent {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--surface-container-low);
+  border-top: var(--ghost-border);
+  border-radius: 0;
+  outline: none;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawerHandle {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 6px;
+  flex-shrink: 0;
+}
+
+.drawerHandleBar {
+  width: 40px;
+  height: 3px;
+  background: var(--outline-variant);
+  border-radius: 0;
+}
+
+/* Mobile add form */
+.mobileAddForm {
+  padding: 8px 16px 24px;
+  overflow-y: auto;
+}
+
+.mobileAddHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mobileAddTitle {
+  font-family: var(--font-headline);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--secondary);
+  letter-spacing: 0.15em;
+}
+
+.mobileAddCoords {
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  color: var(--outline);
+  letter-spacing: 0.05em;
+}
+
+.mobileAddClose {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--outline-variant);
+  color: var(--outline);
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.mobileAddMessage {
+  width: 100%;
+  margin: 10px 0;
+  padding: 10px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  resize: none;
+}
+
+.mobileAddSubmit {
+  width: 100%;
+  padding: 12px;
+  background: var(--secondary);
+  color: var(--on-secondary);
+  border: none;
+  font-family: var(--font-headline);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+}
+
+.mobileAddSubmit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pickHint {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  margin-top: 8px;
+  letter-spacing: 0.1em;
+}
+
+.pickHint.active {
+  color: var(--secondary);
+}
+
+.addFormTagGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.addFormTagBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--on-surface-variant);
+}
+
+.addFormTagBtn.active {
+  background: var(--primary-container);
+  border-color: var(--secondary);
+  color: var(--on-surface);
+}
+
+.addFormTagEmoji {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.addFormTagLabel {
+  font-family: var(--font-headline);
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

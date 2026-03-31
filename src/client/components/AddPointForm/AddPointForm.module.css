@@ -1,0 +1,144 @@
+.addForm {
+  padding: 12px 16px;
+  border-bottom: var(--ghost-border);
+  background: var(--surface-container-lowest);
+}
+
+.addFormToggle {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: var(--ghost-border);
+  color: var(--secondary);
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.addFormToggle:hover {
+  background: var(--surface-container-high);
+}
+
+.addFormFields {
+  margin-top: 10px;
+}
+
+.addFormFields label {
+  display: block;
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--outline);
+  margin-bottom: 4px;
+  margin-top: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.addFormFields label:first-child {
+  margin-top: 0;
+}
+
+.addFormFields input,
+.addFormFields textarea {
+  width: 100%;
+  background: var(--surface-container-highest);
+  border: var(--ghost-border);
+  color: var(--on-surface);
+  padding: 8px 10px;
+  border-radius: 0;
+  font-size: 0.85rem;
+  font-family: var(--font-body);
+}
+
+.addFormFields input:focus,
+.addFormFields textarea:focus {
+  outline: none;
+  border-color: rgba(var(--secondary-rgb), 0.4);
+}
+
+.addFormFields textarea {
+  resize: vertical;
+  height: 50px;
+}
+
+.coordRow {
+  display: flex;
+  gap: 8px;
+}
+
+.coordRow > div {
+  flex: 1;
+}
+
+.addFormActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.addFormActions button {
+  flex: 1;
+  font-size: 0.75rem;
+  padding: 8px;
+}
+
+.pickHint {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  margin-top: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pickHintActive {
+  color: var(--secondary);
+}
+
+.addFormTagGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.addFormTagBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--on-surface-variant);
+}
+
+.addFormTagBtnActive {
+  background: var(--primary-container);
+  border-color: var(--secondary);
+  color: var(--on-surface);
+}
+
+.addFormTagEmoji {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.addFormTagLabel {
+  font-family: var(--font-headline);
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.addFormCoordsLabel {
+  /* placeholder for coords display on mobile */
+}
