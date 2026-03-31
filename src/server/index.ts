@@ -3,7 +3,11 @@ import type { Request, Response, NextFunction } from 'express';
 import express from 'express';
 import { parseString } from 'xml2js';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { eq, asc } from 'drizzle-orm';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { toNodeHandler, fromNodeHeaders } from 'better-auth/node';
 import { db, sql as pgClient } from '../db/index.js';
 import type { NewTrackingPoint} from '../db/schema.js';
