@@ -80,3 +80,13 @@
   padding-top: 8px;
   border-top: var(--ghost-border);
 }
+
+.pointPopupTrailDist {
+  font-family: var(--font-headline);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--secondary);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: var(--ghost-border);
+}

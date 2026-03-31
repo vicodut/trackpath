@@ -34,6 +34,10 @@ export const colors = {
   error: '#ffb4ab',
   errorContainer: '#93000a',
 
+  // Trail
+  trail: '#8B5E3C',
+  trailHighlight: '#c8a2f8',
+
   // Strava-specific
   strava: '#ff8c00',
 } as const;

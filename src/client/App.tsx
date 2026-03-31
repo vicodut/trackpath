@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Header } from "./components/Header";
 import { Map } from "./components/Map";
 import { Sidebar } from "./components/Sidebar";
@@ -12,6 +12,7 @@ import { MapElevationProfile } from "./components/MapElevationProfile";
 import { PointPopup } from "./components/PointPopup";
 import { TrailLogPage } from "./components/TrailLogPage";
 import { usePoints } from "./hooks/usePoints";
+import { useTrailDistance, TrailSegment } from "./hooks/useTrailDistance";
 import { useSession } from "./lib/auth-client";
 import { TrackingPoint, StravaActivity } from "./types";
 
@@ -56,6 +57,8 @@ export function App() {
   const [showTrailLog, setShowTrailLog] = useState(false);
   const [elevationCursor, setElevationCursor] = useState<{ lat: number; lon: number } | null>(null);
   const [tappedPoint, setTappedPoint] = useState<TrackingPoint | null>(null);
+  const [trailSegment, setTrailSegment] = useState<TrailSegment | null>(null);
+  const { getSegment, getTrailKm } = useTrailDistance();
   const [layers, setLayers] = useState<LayerVisibility>({
     garminPath: true,
     garminPoints: true,
@@ -159,6 +162,45 @@ export function App() {
     setPickedCoords(null);
   }, []);
 
+  // Get last Garmin position (not manual)
+  const lastGarminPoint = points.filter(p => !p.garminId?.startsWith('manual-')).at(-1);
+
+  const handlePointSelect = useCallback((pt: TrackingPoint) => {
+    setTappedPoint(pt);
+    if (lastGarminPoint) {
+      const seg = getSegment(lastGarminPoint.latitude, lastGarminPoint.longitude, pt.latitude, pt.longitude);
+      setTrailSegment(seg);
+    }
+  }, [lastGarminPoint, getSegment]);
+
+  const handlePointClose = useCallback(() => {
+    setTappedPoint(null);
+    setTrailSegment(null);
+    setHighlightTarget(null);
+  }, []);
+
+  // Compute elevation profile markers for selected segment
+  const [highlightTarget, setHighlightTarget] = useState<{ lat: number; lon: number } | null>(null);
+
+  const segmentMarkers = useMemo(() => {
+    const target = tappedPoint || highlightTarget;
+    if (!target || !lastGarminPoint) return null;
+    const fromKm = getTrailKm(lastGarminPoint.latitude, lastGarminPoint.longitude);
+    const toLat = 'latitude' in target ? target.latitude : target.lat;
+    const toLon = 'longitude' in target ? target.longitude : target.lon;
+    const toKm = getTrailKm(toLat, toLon);
+    if (fromKm == null || toKm == null) return null;
+    return { fromDistKm: fromKm, toDistKm: toKm };
+  }, [tappedPoint, highlightTarget, lastGarminPoint, getTrailKm]);
+
+  const handleHighlightTap = useCallback((lat: number, lon: number) => {
+    setHighlightTarget({ lat, lon });
+    if (lastGarminPoint) {
+      const seg = getSegment(lastGarminPoint.latitude, lastGarminPoint.longitude, lat, lon);
+      setTrailSegment(seg);
+    }
+  }, [lastGarminPoint, getSegment]);
+
   return (
     <div className="app">
       <Header
@@ -179,7 +221,9 @@ export function App() {
               pickingFromMap={addFormOpen}
               onMapClick={handleMapClick}
               onLongPress={handleLongPress}
-              onPointTap={setTappedPoint}
+              onPointTap={handlePointSelect}
+              onHighlightTap={handleHighlightTap}
+              trailSegment={trailSegment}
               onAddPoint={() => { setAddFormOpen(true); setSidebarVisible(true); }}
               sidebarVisible={sidebarVisible}
               layers={layers}
@@ -198,6 +242,7 @@ export function App() {
           <MapElevationProfile
             onHover={(lat, lon) => setElevationCursor({ lat, lon })}
             onHoverEnd={() => setElevationCursor(null)}
+            segmentMarkers={segmentMarkers}
           />
         </div>
         {sidebarVisible && (
@@ -250,7 +295,12 @@ export function App() {
         />
       )}
       {tappedPoint && (
-        <PointPopup point={tappedPoint} onClose={() => setTappedPoint(null)} />
+        <PointPopup
+          point={tappedPoint}
+          trailDistanceKm={trailSegment?.distanceKm ?? null}
+          trailElevationGain={trailSegment?.elevationGain ?? null}
+          onClose={handlePointClose}
+        />
       )}
     </div>
   );

@@ -13,10 +13,12 @@ const TAG_EMOJIS: Record<string, string> = {
 
 interface PointPopupProps {
   point: TrackingPoint;
+  trailDistanceKm?: number | null;
+  trailElevationGain?: number | null;
   onClose: () => void;
 }
 
-export function PointPopup({ point, onClose }: PointPopupProps) {
+export function PointPopup({ point, trailDistanceKm, trailElevationGain, onClose }: PointPopupProps) {
   const time = new Date(point.timestamp);
   const emoji = point.eventType ? TAG_EMOJIS[point.eventType] : null;
 
@@ -48,6 +50,11 @@ export function PointPopup({ point, onClose }: PointPopupProps) {
         </div>
         {point.message && (
           <div className={styles.pointPopupMessage}>{point.message}</div>
+        )}
+        {trailDistanceKm != null && trailDistanceKm > 0 && (
+          <div className={styles.pointPopupTrailDist}>
+            {trailDistanceKm.toFixed(1)} km · +{Math.round(trailElevationGain ?? 0)}m
+          </div>
         )}
       </div>
     </div>

@@ -13,6 +13,7 @@ import { TrackingPoint, StravaActivity } from "../../types";
 import { LayerVisibility } from "../LayerToggle";
 import { HighlightsLayer } from "../HighlightsLayer";
 import { colors } from "../../theme";
+import { TrailSegment } from "../../hooks/useTrailDistance";
 import styles from "./Map.module.css";
 
 const pointIcon = L.divIcon({
@@ -65,7 +66,9 @@ interface MapProps {
   onMapClick: (lat: number, lng: number) => void;
   onLongPress: (lat: number, lng: number) => void;
   onPointTap?: (point: TrackingPoint) => void;
+  onHighlightTap?: (lat: number, lon: number) => void;
   onAddPoint?: () => void;
+  trailSegment?: TrailSegment | null;
   sidebarVisible: boolean;
   layers: LayerVisibility;
   isAdmin: boolean;
@@ -87,7 +90,7 @@ function ATTrailLayer() {
   return (
     <Polyline
       positions={trailCoords}
-      pathOptions={{ color: colors.secondary, weight: 3, opacity: 0.6 }}
+      pathOptions={{ color: colors.trail, weight: 3, opacity: 0.7 }}
     />
   );
 }
@@ -332,7 +335,9 @@ export function Map({
   onMapClick,
   onLongPress,
   onPointTap,
+  onHighlightTap,
   onAddPoint,
+  trailSegment,
   sidebarVisible,
   layers,
   isAdmin,
@@ -356,7 +361,7 @@ export function Map({
         attribution="&copy; OpenStreetMap contributors"
       />
       {layers.atTrail && <ATTrailLayer />}
-      <HighlightsLayer layers={layers} />
+      <HighlightsLayer layers={layers} onHighlightTap={onHighlightTap} trailSegment={trailSegment} />
 
       {/* Trail endpoints */}
       {layers.atTrail && (
@@ -409,16 +414,12 @@ export function Map({
               (isLatest ? latestIcon : pointIcon)
             }
             zIndexOffset={isLatest ? 1000 : 0}
-            eventHandlers={
-              isMobile && onPointTap
-                ? {
-                    click: (e) => {
-                      L.DomEvent.stopPropagation(e.originalEvent);
-                      onPointTap(pt);
-                    },
-                  }
-                : undefined
-            }
+            eventHandlers={onPointTap ? {
+              click: (e) => {
+                if (isMobile) L.DomEvent.stopPropagation(e.originalEvent);
+                onPointTap(pt);
+              },
+            } : undefined}
           >
             {!isMobile && (
               <Popup>
@@ -446,6 +447,14 @@ export function Map({
                   <>
                     <br />
                     <em>{pt.message}</em>
+                  </>
+                )}
+                {trailSegment && trailSegment.distanceKm > 0 && (
+                  <>
+                    <br />
+                    <strong style={{ color: colors.secondary }}>
+                      {trailSegment.distanceKm.toFixed(1)} km · +{Math.round(trailSegment.elevationGain)}m
+                    </strong>
                   </>
                 )}
               </Popup>
@@ -481,6 +490,14 @@ export function Map({
             </Polyline>
           );
         })}
+
+      {/* Highlighted trail segment between last position and selected point */}
+      {trailSegment && trailSegment.coords.length > 1 && (
+        <Polyline
+          positions={trailSegment.coords}
+          pathOptions={{ color: colors.trailHighlight, weight: 5, opacity: 0.9 }}
+        />
+      )}
 
       <MapClickHandler
         picking={pickingFromMap}

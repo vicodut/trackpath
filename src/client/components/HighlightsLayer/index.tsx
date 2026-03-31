@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { LayerVisibility } from '../LayerToggle';
+import { TrailSegment } from '../../hooks/useTrailDistance';
+import { colors } from '../../theme';
 
 interface Highlight {
   id: string;
@@ -53,9 +55,11 @@ function getHighlightIcon(category: string): L.DivIcon {
 
 interface HighlightsLayerProps {
   layers: LayerVisibility;
+  onHighlightTap?: (lat: number, lon: number) => void;
+  trailSegment?: TrailSegment | null;
 }
 
-export function HighlightsLayer({ layers }: HighlightsLayerProps) {
+export function HighlightsLayer({ layers, onHighlightTap, trailSegment }: HighlightsLayerProps) {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [zoom, setZoom] = useState(6);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
@@ -105,6 +109,9 @@ export function HighlightsLayer({ layers }: HighlightsLayerProps) {
           key={h.id}
           position={[h.lat, h.lon]}
           icon={getHighlightIcon(h.category)}
+          eventHandlers={onHighlightTap ? {
+            click: () => onHighlightTap(h.lat, h.lon),
+          } : undefined}
         >
           <Popup>
             <strong>{h.name}</strong>
@@ -118,6 +125,14 @@ export function HighlightsLayer({ layers }: HighlightsLayerProps) {
               <>
                 <br />
                 <em>{h.description}</em>
+              </>
+            )}
+            {trailSegment && trailSegment.distanceKm > 0 && (
+              <>
+                <br />
+                <strong style={{ color: colors.secondary }}>
+                  {trailSegment.distanceKm.toFixed(1)} km · +{Math.round(trailSegment.elevationGain)}m
+                </strong>
               </>
             )}
           </Popup>

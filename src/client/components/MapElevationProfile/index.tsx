@@ -9,16 +9,22 @@ interface TrailElevationPoint {
   distanceKm: number;
 }
 
+interface SegmentMarkers {
+  fromDistKm: number;
+  toDistKm: number;
+}
+
 interface MapElevationProfileProps {
   onHover: (lat: number, lon: number) => void;
   onHoverEnd: () => void;
+  segmentMarkers?: SegmentMarkers | null;
 }
 
 const CHART_HEIGHT = 160;
 const CHART_PADDING = { top: 14, right: 14, bottom: 26, left: 48 };
 const GOAL_KM = 1500;
 
-export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfileProps) {
+export function MapElevationProfile({ onHover, onHoverEnd, segmentMarkers }: MapElevationProfileProps) {
   const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState<{ elevation: number; dist: number; x: number; y: number; summitName?: string } | null>(null);
@@ -216,6 +222,21 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
                 </g>
               );
             })}
+            {/* Selected segment highlight (fill + line) */}
+            {segmentMarkers && trailData && (() => {
+              const startKm = Math.min(segmentMarkers.fromDistKm, segmentMarkers.toDistKm);
+              const endKm = Math.max(segmentMarkers.fromDistKm, segmentMarkers.toDistKm);
+              const segPoints = trailData.filter(p => p.distanceKm >= startKm && p.distanceKm <= endKm);
+              if (segPoints.length < 2) return null;
+              const segPath = segPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.distanceKm)},${toY(p.elevation)}`).join(' ');
+              const segArea = segPath + ` L${toX(segPoints[segPoints.length - 1].distanceKm)},${top + plotH} L${toX(segPoints[0].distanceKm)},${top + plotH} Z`;
+              return (
+                <g style={{ pointerEvents: 'none' }}>
+                  <path d={segArea} fill="var(--secondary)" opacity="0.15" />
+                  <path d={segPath} fill="none" stroke="var(--secondary)" strokeWidth="2.5" opacity="0.8" />
+                </g>
+              );
+            })()}
             {/* Goal line */}
             {GOAL_KM <= maxDist && (
               <line x1={toX(GOAL_KM)} x2={toX(GOAL_KM)} y1={top} y2={top + plotH} stroke="var(--error)" strokeWidth="1.5" strokeDasharray="6,4" opacity="0.7" />
@@ -227,6 +248,17 @@ export function MapElevationProfile({ onHover, onHoverEnd }: MapElevationProfile
                 <circle cx={toX(hovered.dist)} cy={toY(hovered.elevation)} r="4" fill="var(--secondary)" />
               </>
             )}
+            {/* Segment endpoint markers (rendered last = on top) */}
+            {segmentMarkers && trailData && (() => {
+              const fromPt = trailData.reduce((best, p) => Math.abs(p.distanceKm - segmentMarkers.fromDistKm) < Math.abs(best.distanceKm - segmentMarkers.fromDistKm) ? p : best);
+              const toPt = trailData.reduce((best, p) => Math.abs(p.distanceKm - segmentMarkers.toDistKm) < Math.abs(best.distanceKm - segmentMarkers.toDistKm) ? p : best);
+              return (
+                <g style={{ pointerEvents: 'none' }}>
+                  <circle cx={toX(toPt.distanceKm)} cy={toY(toPt.elevation)} r="5" fill="var(--secondary)" stroke="var(--surface)" strokeWidth="1.5" />
+                  <image href="/sasquatch.gif" x={toX(fromPt.distanceKm) - 10} y={toY(fromPt.elevation) - 20} width="20" height="20" style={{ imageRendering: 'pixelated' }} />
+                </g>
+              );
+            })()}
           </svg>
           {hovered && (
             <div
