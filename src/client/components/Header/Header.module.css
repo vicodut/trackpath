@@ -1,0 +1,137 @@
+.header {
+  background: var(--surface);
+  padding: 0 20px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: var(--ghost-border);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1100;
+}
+
+.header h1 {
+  font-family: var(--font-headline);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--secondary);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.authUser {
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  color: var(--primary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.menu {
+  position: relative;
+}
+
+.hamburgerBtn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hamburgerBtn:hover {
+  background: var(--surface-container-high);
+}
+
+.hamburgerIcon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 20px;
+  transition: all 0.2s;
+}
+
+.hamburgerIcon span {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: var(--primary);
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.hamburgerIconOpen span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.hamburgerIconOpen span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburgerIconOpen span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--surface-container-low);
+  border: var(--ghost-border);
+  z-index: 100;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.dropdown button,
+.dropdown .authUser {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 0;
+}
+
+.dropdown button:hover {
+  background: var(--surface-container-high);
+}
+
+.dropdown .authUser {
+  padding: 8px 16px;
+  border-bottom: var(--ghost-border);
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0 12px;
+    height: 48px;
+  }
+
+  .header h1 {
+    font-size: 1rem;
+  }
+
+  .actions {
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .actions button {
+    padding: 5px 8px;
+    font-size: 0.65rem;
+  }
+}

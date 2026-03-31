@@ -1,0 +1,15 @@
+.statusBar {
+  padding: 6px 16px;
+  background: var(--surface-container-lowest);
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  text-align: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border-top: var(--ghost-border);
+}
+
+.syncing { color: var(--secondary); }
+.success { color: var(--primary); }
