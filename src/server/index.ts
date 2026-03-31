@@ -102,10 +102,10 @@ async function ensureTables() {
   // Add elevation_gain column if missing, re-sync activities to populate it
   await pgClient`
     ALTER TABLE strava_activities ADD COLUMN IF NOT EXISTS elevation_gain DOUBLE PRECISION
-  `.catch(() => {});
+  `.catch((err: unknown) => { console.warn('Could not add elevation_gain column:', err); });
   await pgClient`
     DELETE FROM strava_activities WHERE elevation_gain IS NULL
-  `.catch(() => {});
+  `.catch((err: unknown) => { console.warn('Could not clean strava_activities:', err); });
 
   await pgClient`
     CREATE TABLE IF NOT EXISTS verification (
@@ -118,7 +118,7 @@ async function ensureTables() {
     )
   `;
 }
-ensureTables();
+// ensureTables() is awaited in startServer() below
 
 // --- Garmin inReach MapShare feed ---
 function parseKML(xml: string): Promise<any> {
@@ -286,8 +286,44 @@ app.post('/api/points', requireAuth, async (req: Request, res: Response) => {
 });
 
 app.delete('/api/points/:id', requireAuth, async (req: Request, res: Response) => {
-  await db.delete(trackingPoints).where(eq(trackingPoints.id, Number(req.params.id)));
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: 'Invalid point ID' });
+    return;
+  }
+  await db.delete(trackingPoints).where(eq(trackingPoints.id, id));
   res.json({ ok: true });
+});
+
+// --- Ghost CMS proxy ---
+const GHOST_URL = process.env.GHOST_URL || 'https://ghost-production-1882.up.railway.app';
+const GHOST_KEY = process.env.GHOST_CONTENT_API_KEY || '0d6476834a0eeaa76e910081c9';
+
+app.get('/api/blog/posts', async (req: Request, res: Response) => {
+  try {
+    const order = req.query.order === 'asc' ? 'published_at%20asc' : 'published_at%20desc';
+    const ghostRes = await fetch(
+      `${GHOST_URL}/ghost/api/content/posts/?key=${GHOST_KEY}&fields=id,title,slug,feature_image,excerpt,published_at,reading_time&order=${order}`
+    );
+    const data = await ghostRes.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Ghost API error:', err);
+    res.status(502).json({ error: 'Failed to fetch blog posts' });
+  }
+});
+
+app.get('/api/blog/posts/:slug', async (req: Request, res: Response) => {
+  try {
+    const ghostRes = await fetch(
+      `${GHOST_URL}/ghost/api/content/posts/slug/${req.params.slug}/?key=${GHOST_KEY}&formats=html`
+    );
+    const data = await ghostRes.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Ghost API error:', err);
+    res.status(502).json({ error: 'Failed to fetch blog post' });
+  }
 });
 
 // --- Weather forecast ---
@@ -580,19 +616,27 @@ async function autoSyncStrava() {
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`AT Tracker running at http://localhost:${PORT}`);
-  if (process.env.MAPSHARE_ID) {
-    console.log(`  Auto-polling every ${POLL_INTERVAL / 60000} min (set POLL_INTERVAL_MIN to change)`);
-    autoSync();
-    setInterval(autoSync, POLL_INTERVAL);
-  } else {
-    console.log('  Set MAPSHARE_ID env var to enable Garmin inReach sync');
-    console.log('  Example: MAPSHARE_ID=YourShareName node server.js');
-  }
-  if (STRAVA_CLIENT_ID) {
-    console.log('  Strava auto-sync every 24h');
-    autoSyncStrava();
-    setInterval(autoSyncStrava, STRAVA_SYNC_INTERVAL);
-  }
+async function startServer() {
+  await ensureTables();
+
+  app.listen(PORT, () => {
+    console.log(`AT Tracker running at http://localhost:${PORT}`);
+    if (process.env.MAPSHARE_ID) {
+      console.log(`  Auto-polling every ${POLL_INTERVAL / 60000} min (set POLL_INTERVAL_MIN to change)`);
+      void autoSync();
+      setInterval(() => void autoSync(), POLL_INTERVAL);
+    } else {
+      console.log('  Set MAPSHARE_ID env var to enable Garmin inReach sync');
+    }
+    if (STRAVA_CLIENT_ID) {
+      console.log('  Strava auto-sync every 24h');
+      void autoSyncStrava();
+      setInterval(() => void autoSyncStrava(), STRAVA_SYNC_INTERVAL);
+    }
+  });
+}
+
+startServer().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });

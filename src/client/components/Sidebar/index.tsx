@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Drawer } from 'vaul';
-import { TrackingPoint, StravaActivity } from '../../types';
+import type { TrackingPoint, StravaActivity } from '../../types';
 import { AddPointForm } from '../AddPointForm';
 import { PointCard } from '../PointCard';
 import styles from './Sidebar.module.css';
@@ -35,7 +35,7 @@ function SidebarContent({
   points, totalDistanceKm, totalElevationGain, stravaActivities,
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, onAddSuccess, pickedCoords, isAdmin, forceFormOpen,
 }: SidebarProps) {
-  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+  const [activeFilters, setActiveFilters] = useState(new Set());
 
   const toggleFilter = (key: string) => {
     setActiveFilters(prev => {

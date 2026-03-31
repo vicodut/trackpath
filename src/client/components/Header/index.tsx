@@ -27,16 +27,16 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
 
   useEffect(() => {
     if (!menuOpen) return;
+    let cleanup: (() => void) | undefined;
     const timer = setTimeout(() => {
       const handleClose = (e: Event) => {
-        if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        if (menuRef.current && e.target instanceof Node && !menuRef.current.contains(e.target)) {
           setMenuOpen(false);
         }
       };
       document.addEventListener('pointerdown', handleClose);
       cleanup = () => document.removeEventListener('pointerdown', handleClose);
     }, 50);
-    let cleanup: (() => void) | undefined;
     return () => { clearTimeout(timer); cleanup?.(); };
   }, [menuOpen]);
 

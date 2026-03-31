@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TrackingPoint, StravaActivity } from '../../types';
+import type { TrackingPoint, StravaActivity } from '../../types';
 import { PointCard } from '../PointCard';
 import styles from './TrailLogPage.module.css';
 
@@ -29,7 +29,7 @@ export function TrailLogPage({
   points, totalDistanceKm, totalElevationGain, stravaActivities,
   onSelectPoint, onDeletePoint, isAdmin, onClose,
 }: TrailLogPageProps) {
-  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+  const [activeFilters, setActiveFilters] = useState(new Set());
 
   const stravaElevation = useMemo(() =>
     stravaActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0),

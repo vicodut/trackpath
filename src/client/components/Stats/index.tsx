@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TrackingPoint, StravaActivity } from '../../types';
+import type { TrackingPoint, StravaActivity } from '../../types';
 import styles from './Stats.module.css';
 
 interface StatsProps {

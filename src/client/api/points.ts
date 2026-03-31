@@ -1,4 +1,4 @@
-import { TrackingPoint, SyncResult } from '../types';
+import type { TrackingPoint, SyncResult } from '../types';
 
 export async function getPoints(): Promise<TrackingPoint[]> {
   const res = await fetch('/api/points');

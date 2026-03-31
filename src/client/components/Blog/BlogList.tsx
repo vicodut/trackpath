@@ -4,9 +4,6 @@ import styles from './Blog.module.css';
 
 import { colors } from '../../theme';
 
-const GHOST_URL = 'https://ghost-production-1882.up.railway.app';
-const GHOST_KEY = '0d6476834a0eeaa76e910081c9';
-
 interface Post {
   id: string;
   title: string;
@@ -91,7 +88,7 @@ export function BlogList({ onSelectPost, onClose }: BlogListProps) {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${GHOST_URL}/ghost/api/content/posts/?key=${GHOST_KEY}&fields=id,title,slug,feature_image,excerpt,published_at,reading_time&order=published_at%20asc`)
+      fetch('/api/blog/posts?order=asc')
         .then(r => r.json())
         .then((data: { posts: Post[] }) => data.posts),
       fetch('/api/strava/activities')

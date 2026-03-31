@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
 import styles from './Blog.module.css';
-
-const GHOST_URL = 'https://ghost-production-1882.up.railway.app';
-const GHOST_KEY = '0d6476834a0eeaa76e910081c9';
 
 interface Post {
   title: string;
@@ -23,7 +21,7 @@ export function BlogPost({ slug, onBack, onClose }: BlogPostProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${GHOST_URL}/ghost/api/content/posts/slug/${slug}/?key=${GHOST_KEY}&formats=html`)
+    fetch(`/api/blog/posts/${slug}`)
       .then(r => r.json())
       .then((data: { posts: Post[] }) => {
         setPost(data.posts[0] ?? null);
@@ -60,7 +58,7 @@ export function BlogPost({ slug, onBack, onClose }: BlogPostProps) {
             </div>
             <div
               className={styles.blogArticleBody}
-              dangerouslySetInnerHTML={{ __html: post.html }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.html) }}
             />
           </article>
         )}

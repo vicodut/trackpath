@@ -38,10 +38,12 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
   const [tag, setTag] = useState('');
 
   // Sync picked coords into form
-  if (pickedCoords && lat !== pickedCoords.lat.toFixed(6)) {
-    setLat(pickedCoords.lat.toFixed(6));
-    setLng(pickedCoords.lng.toFixed(6));
-  }
+  useEffect(() => {
+    if (pickedCoords) {
+      setLat(pickedCoords.lat.toFixed(6));
+      setLng(pickedCoords.lng.toFixed(6));
+    }
+  }, [pickedCoords?.lat, pickedCoords?.lng]);
 
   async function handleSubmit() {
     const latitude = parseFloat(lat);

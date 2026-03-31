@@ -67,7 +67,7 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
             <label key={key} className={styles.layerToggleRow}>
               <input
                 type="checkbox"
-                checked={layers[key] as boolean}
+                checked={layers[key]}
                 onChange={() => onChange({ ...layers, [key]: !layers[key] })}
               />
               <span>{label}</span>
@@ -84,7 +84,7 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
                   <label key={tag} className={styles.layerToggleRow}>
                     <input
                       type="checkbox"
-                      checked={layers.tags[tag] !== false}
+                      checked={layers.tags[tag]}
                       onChange={() => onChange({
                         ...layers,
                         tags: { ...layers.tags, [tag]: !layers.tags[tag] },
@@ -107,7 +107,7 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
                   <label key={cat} className={styles.layerToggleRow}>
                     <input
                       type="checkbox"
-                      checked={layers.highlights[cat] !== false}
+                      checked={layers.highlights[cat]}
                       onChange={() => onChange({
                         ...layers,
                         highlights: { ...layers.highlights, [cat]: !layers.highlights[cat] },
