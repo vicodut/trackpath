@@ -7,14 +7,16 @@ import { Weather } from "./components/Weather";
 import { Stats } from "./components/Stats";
 import { AdminPage } from "./components/AdminPage";
 import { StatsPage } from "./components/StatsPage";
-import { LayerToggle, LayerVisibility } from "./components/LayerToggle";
+import type { LayerVisibility } from "./components/LayerToggle";
+import { LayerToggle } from "./components/LayerToggle";
 import { MapElevationProfile } from "./components/MapElevationProfile";
 import { PointPopup } from "./components/PointPopup";
 import { TrailLogPage } from "./components/TrailLogPage";
 import { usePoints } from "./hooks/usePoints";
-import { useTrailDistance, TrailSegment } from "./hooks/useTrailDistance";
+import type { TrailSegment } from "./hooks/useTrailDistance";
+import { useTrailDistance } from "./hooks/useTrailDistance";
 import { useSession } from "./lib/auth-client";
-import { TrackingPoint, StravaActivity } from "./types";
+import type { TrackingPoint, StravaActivity } from "./types";
 
 export function App() {
   const {
@@ -41,7 +43,7 @@ export function App() {
   const [stravaActivities, setStravaActivities] = useState<StravaActivity[]>(
     [],
   );
-  const [stravaConnected, setStravaConnected] = useState(false);
+  const [_stravaConnected, setStravaConnected] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(

@@ -1,4 +1,4 @@
-import { TrackingPoint } from '../../types';
+import type { TrackingPoint } from '../../types';
 import styles from './PointPopup.module.css';
 
 const TAG_EMOJIS: Record<string, string> = {

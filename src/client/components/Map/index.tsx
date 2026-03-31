@@ -9,11 +9,11 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
-import { TrackingPoint, StravaActivity } from "../../types";
-import { LayerVisibility } from "../LayerToggle";
+import type { TrackingPoint, StravaActivity } from "../../types";
+import type { LayerVisibility } from "../LayerToggle";
 import { HighlightsLayer } from "../HighlightsLayer";
 import { colors } from "../../theme";
-import { TrailSegment } from "../../hooks/useTrailDistance";
+import type { TrailSegment } from "../../hooks/useTrailDistance";
 import styles from "./Map.module.css";
 
 const pointIcon = L.divIcon({

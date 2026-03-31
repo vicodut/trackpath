@@ -58,10 +58,10 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
       {isPending ? null : session?.user ? (
         <>
           <span className={styles.authUser}>{session.user.name || session.user.email}</span>
-          <button onClick={() => closeAndDo(() => authClient.signOut())}>LOGOUT</button>
+          <button onClick={() => closeAndDo(() => void authClient.signOut())}>LOGOUT</button>
         </>
       ) : (
-        <button onClick={() => closeAndDo(() => authClient.signIn.social({ provider: "github", callbackURL: "/" }))}>
+        <button onClick={() => closeAndDo(() => void authClient.signIn.social({ provider: "github", callbackURL: "/" }))}>
           LOGIN_GITHUB
         </button>
       )}

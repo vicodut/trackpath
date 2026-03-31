@@ -1,11 +1,13 @@
 import 'dotenv/config';
-import express, { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import { parseString } from 'xml2js';
 import path from 'path';
 import { eq, asc } from 'drizzle-orm';
 import { toNodeHandler, fromNodeHeaders } from 'better-auth/node';
 import { db, sql as pgClient } from '../db/index.js';
-import { trackingPoints, NewTrackingPoint, stravaTokens, stravaActivities } from '../db/schema.js';
+import type { NewTrackingPoint} from '../db/schema.js';
+import { trackingPoints, stravaTokens, stravaActivities } from '../db/schema.js';
 import { auth } from './auth.js';
 
 const app = express();

@@ -75,7 +75,7 @@ export function useTrailDistance() {
 
     const startIdx = Math.min(fullFromIdx, fullToIdx);
     const endIdx = Math.max(fullFromIdx, fullToIdx);
-    const coords = fullTrail.slice(startIdx, endIdx + 1) as [number, number][];
+    const coords = fullTrail.slice(startIdx, endIdx + 1);
 
     return { distanceKm, elevationGain, coords };
   }, [trail, fullTrail]);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrackingPoint } from '../types';
+import type { TrackingPoint } from '../types';
 import * as api from '../api/points';
 
 export function usePoints() {

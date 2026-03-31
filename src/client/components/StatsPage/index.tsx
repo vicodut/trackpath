@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { TrackingPoint, StravaActivity } from '../../types';
+import type { TrackingPoint, StravaActivity } from '../../types';
 import { ICONIC_SUMMITS } from '../../data/iconic-summits';
 import styles from './StatsPage.module.css';
 
@@ -15,7 +15,6 @@ interface StatsPageProps {
 const AT_TOTAL_KM = 1500;
 const BEER_CAL = 153; // regular beer 12 fl oz, ~5% alc
 const BEER_CARBS = 12.6;
-const BEER_PROTEIN = 1.6;
 const BEER_ALCOHOL_G = 13.8;
 const CAL_PER_KM = 90; // approx cal burned hiking with pack on AT
 const ELEV_CHART_HEIGHT = 280;

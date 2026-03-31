@@ -27,7 +27,7 @@ interface AdminPageProps {
   syncing: boolean;
 }
 
-export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync, syncing }: AdminPageProps) {
+export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync, syncing: _syncing }: AdminPageProps) {
   const [status, setStatus] = useState<AdminStatus | null>(null);
   const [syncingGarmin, setSyncingGarmin] = useState(false);
   const [syncingStrava, setSyncingStrava] = useState(false);

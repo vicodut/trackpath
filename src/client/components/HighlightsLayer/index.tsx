@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import { LayerVisibility } from '../LayerToggle';
-import { TrailSegment } from '../../hooks/useTrailDistance';
+import type { LayerVisibility } from '../LayerToggle';
+import type { TrailSegment } from '../../hooks/useTrailDistance';
 import { colors } from '../../theme';
 
 interface Highlight {
