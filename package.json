@@ -35,7 +35,7 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.39.4",
     "@types/express": "^5.0.6",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^25.5.0",
@@ -45,7 +45,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^10.1.0",
+    "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "typescript": "^6.0.2",
