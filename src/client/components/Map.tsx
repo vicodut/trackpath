@@ -12,10 +12,11 @@ import {
 import { TrackingPoint, StravaActivity } from "../types";
 import { LayerVisibility } from "./LayerToggle";
 import { HighlightsLayer } from "./HighlightsLayer";
+import { colors } from "../theme";
 
 const pointIcon = L.divIcon({
   className: "",
-  html: '<div style="width:12px;height:12px;background:#fe6b00;border:2px solid #d9e6d7;border-radius:50%;box-shadow:0 0 6px rgba(254,107,0,0.6);"></div>',
+  html: `<div style="width:12px;height:12px;background:${colors.secondary};border:2px solid ${colors.onSurface};border-radius:50%;box-shadow:0 0 6px rgba(254,107,0,0.6);"></div>`,
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
@@ -85,7 +86,7 @@ function ATTrailLayer() {
   return (
     <Polyline
       positions={trailCoords}
-      pathOptions={{ color: "#fe6b00", weight: 3, opacity: 0.6 }}
+      pathOptions={{ color: colors.secondary, weight: 3, opacity: 0.6 }}
     />
   );
 }
@@ -187,8 +188,8 @@ function LocateButton() {
         } else {
           markerRef.current = L.circleMarker([latitude, longitude], {
             radius: 8,
-            color: "#b8ccb8",
-            fillColor: "#fe6b00",
+            color: colors.primary,
+            fillColor: colors.secondary,
             fillOpacity: 1,
             weight: 3,
           }).addTo(map);
@@ -290,8 +291,8 @@ function ElevationCursor({
       } else {
         markerRef.current = L.circleMarker([cursorPos.lat, cursorPos.lon], {
           radius: 7,
-          color: "#fe6b00",
-          fillColor: "#fe6b00",
+          color: colors.secondary,
+          fillColor: colors.secondary,
           fillOpacity: 1,
           weight: 2,
         }).addTo(map);
@@ -381,7 +382,7 @@ export function Map({
         <Polyline
           positions={pathCoords}
           pathOptions={{
-            color: "#fe6b00",
+            color: colors.secondary,
             weight: 3,
             opacity: 0.9,
             dashArray: "6,4",
@@ -467,7 +468,7 @@ export function Map({
             <Polyline
               key={act.id}
               positions={coords}
-              pathOptions={{ color: "#ff8c00", weight: 4, opacity: 0.8 }}
+              pathOptions={{ color: colors.strava, weight: 4, opacity: 0.8 }}
             >
               <Popup>
                 <strong>{act.name}</strong>
