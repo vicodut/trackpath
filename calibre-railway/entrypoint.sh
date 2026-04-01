@@ -23,6 +23,6 @@ python3 /app/calibre-web/cps.py &
 
 # 3. Sync inverse toutes les 30 min
 while true; do
-  sleep 1800
+  sleep 300
   rclone --config /app/rclone.conf sync /app/config r2:calibre-railway
 done
