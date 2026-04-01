@@ -17,7 +17,7 @@ rclone --config /app/rclone.conf sync r2:mon-bucket-livres /app/config
 
 # 2. Lancement Calibre-Web
 echo "Démarrage..."
-python3 /app/calibre-web/cps.py &
+python3 /app/calibre-railway/cps.py &
 
 # 3. Sync inverse toutes les 30 min
 while true; do

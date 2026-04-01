@@ -1,8 +1,10 @@
-name: Deploy to VPS
+name: Deploy Trackpath
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'calibre-railway/**'
 
 jobs:
   deploy:
@@ -17,5 +19,6 @@ jobs:
           script: |
             cd ~/at-tracker
             git pull origin main
+            cd trackpath
             npm install
             pm2 restart at-tracker
