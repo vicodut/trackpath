@@ -1,17 +1,21 @@
 FROM linuxserver/calibre-web:latest
 
-# Installation de rclone
+# 1. On installe les dépendances pour le script rclone (curl, bash, unzip)
+# 'unzip' est celui qui manquait et causait l'erreur 4
+RUN apk add --no-local --no-cache curl bash unzip
+
+# 2. On installe rclone
 RUN curl https://rclone.org/install.sh | bash
 
-# Dossier de travail
+# 3. Dossier de travail
 WORKDIR /app
 
-# Copie des fichiers de config et du script
+# 4. On copie seulement le script d'entrée (plus besoin du rclone.conf si tu utilises les variables Railway)
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
-# Port par défaut de Calibre-Web
+# Port par défaut
 EXPOSE 8083
 
-# On lance notre script au lieu du binaire par défaut
+# Lancement
 ENTRYPOINT ["./entrypoint.sh"]
