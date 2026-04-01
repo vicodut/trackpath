@@ -384,51 +384,36 @@ export function MapElevationProfile({
                 />
               </>
             )}
-          </svg>
-          {/* Segment endpoint markers (rendered as HTML on top of SVG) */}
-          {segmentMarkers &&
-            trailData &&
-            (() => {
-              const fromPt = trailData.reduce((best, p) =>
-                Math.abs(p.distanceKm - segmentMarkers.fromDistKm) <
-                Math.abs(best.distanceKm - segmentMarkers.fromDistKm)
-                  ? p
-                  : best,
+            {/* Segment endpoint markers — all inside SVG so coords are exact */}
+            {segmentMarkers && trailData && (() => {
+              const startKm = Math.min(segmentMarkers.fromDistKm, segmentMarkers.toDistKm);
+              const endKm = Math.max(segmentMarkers.fromDistKm, segmentMarkers.toDistKm);
+              const segPts = trailData.filter(
+                (p) => p.distanceKm >= startKm && p.distanceKm <= endKm,
               );
-              const toPt = trailData.reduce((best, p) =>
-                Math.abs(p.distanceKm - segmentMarkers.toDistKm) <
-                Math.abs(best.distanceKm - segmentMarkers.toDistKm)
-                  ? p
-                  : best,
-              );
+              if (segPts.length < 2) return null;
+              const leftPt = segPts[0];
+              const rightPt = segPts[segPts.length - 1];
+              const fromPt = segmentMarkers.fromDistKm <= segmentMarkers.toDistKm ? leftPt : rightPt;
+              const toPt = segmentMarkers.fromDistKm <= segmentMarkers.toDistKm ? rightPt : leftPt;
+              const fx = toX(fromPt.distanceKm);
+              const fy = toY(fromPt.elevation);
+              const tx = toX(toPt.distanceKm);
+              const ty = toY(toPt.elevation);
               return (
-                <>
-                  <div style={{
-                    position: 'absolute',
-                    left: `calc(${(toX(toPt.distanceKm) / w) * 100}% - 6px)`,
-                    top: `calc(${(toY(toPt.elevation) / h) * 100}% - 6px)`,
-                    width: 12, height: 12,
-                    borderRadius: '50%',
-                    background: 'var(--secondary)',
-                    border: '2px solid var(--surface)',
-                    pointerEvents: 'none',
-                  }} />
-                  <img
-                    src="/sasquatch.gif"
-                    alt=""
-                    style={{
-                      position: 'absolute',
-                      left: `calc(${(toX(fromPt.distanceKm) / w) * 100}% - 14px)`,
-                      top: `calc(${(toY(fromPt.elevation) / h) * 100}% - 28px)`,
-                      width: 28, height: 28,
-                      imageRendering: 'pixelated',
-                      pointerEvents: 'none',
-                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))',
-                    }}
-                  />
-                </>
+                <g style={{ pointerEvents: 'none' }}>
+                  <circle cx={tx} cy={ty} r={5} fill="var(--secondary)" stroke="var(--surface)" strokeWidth={2} />
+                  <foreignObject x={fx - 14} y={fy - 28} width={28} height={28}>
+                    <img
+                      src="/sasquatch.gif"
+                      alt=""
+                      style={{ width: 28, height: 28, imageRendering: 'pixelated', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}
+                    />
+                  </foreignObject>
+                </g>
               );
             })()}
+          </svg>
           {hovered && (
             <div
               className={styles.mapElevTooltip}
