@@ -1,17 +1,26 @@
 #!/bin/bash
 
-# 1. On rapatrie la DB et les livres depuis R2 vers le dossier local /app/config
-echo "Initialisation de la bibliothèque depuis R2..."
-rclone --config ./rclone.conf sync r2:mon-bucket-livres /app/config
+# On génère le rclone.conf à la volée avec les variables Railway
+cat <<EOF > /app/rclone.conf
+[r2]
+type = s3
+provider = Cloudflare
+access_key_id = ${R2_ACCESS_KEY}
+secret_access_key = ${R2_SECRET_KEY}
+endpoint = ${R2_ENDPOINT}
+acl = private
+EOF
 
-# 2. On lance Calibre-Web en arrière-plan
-echo "Démarrage de Calibre-Web..."
-python /app/calibre-web/cps.py &
+# 1. On rapatrie la DB et les livres depuis R2
+echo "Initialisation depuis R2..."
+rclone --config /app/rclone.conf sync r2:mon-bucket-livres /app/config
 
-# 3. (Optionnel) Boucle infinie pour renvoyer les modifs vers R2 toutes les 30 min
-# Utile si tu édites des métadonnées directement dans l'interface web
+# 2. Lancement Calibre-Web
+echo "Démarrage..."
+python3 /app/calibre-web/cps.py &
+
+# 3. Sync inverse toutes les 30 min
 while true; do
   sleep 1800
-  echo "Sauvegarde des modifs vers R2..."
-  rclone --config ./rclone.conf sync /app/config r2:mon-bucket-livres
+  rclone --config /app/rclone.conf sync /app/config r2:mon-bucket-livres
 done

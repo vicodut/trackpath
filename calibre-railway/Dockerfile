@@ -7,7 +7,6 @@ RUN curl https://rclone.org/install.sh | bash
 WORKDIR /app
 
 # Copie des fichiers de config et du script
-COPY rclone.conf .
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
