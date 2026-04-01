@@ -18,6 +18,7 @@ rclone --config /app/rclone.conf sync r2:calibre-railway /app/config
 # 2. Lancement Calibre-Web
 echo "Démarrage..."
 chown -R abc:abc /app/config && chmod -R 775 /app/config
+ls -la /app/config
 python3 /app/calibre-web/cps.py &
 
 # 3. Sync inverse toutes les 30 min
