@@ -21,16 +21,8 @@ chown -R abc:abc /config && chmod -R 775 /config
 ls -la /config
 python3 /app/calibre-web/cps.py -p /config/app.db &
 
-# Debug: find app.db after calibre-web initializes
-sleep 30
-echo "=== DEBUG: searching for app.db ==="
-find / -name "app.db" 2>/dev/null
-echo "=== DEBUG: /config contents ==="
-ls -la /config
-echo "=== DEBUG: end ==="
-
 # 3. Sync inverse toutes les 5 min
 while true; do
-  sleep 270
+  sleep 300
   rclone --config /app/rclone.conf sync /config r2:calibre-railway
 done
