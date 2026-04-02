@@ -13,16 +13,16 @@ EOF
 
 # 1. On rapatrie la DB et les livres depuis R2
 echo "Initialisation depuis R2..."
-rclone --config /app/rclone.conf sync r2:calibre-railway /app/config
+rclone --config /app/rclone.conf sync r2:calibre-railway /config
 
 # 2. Lancement Calibre-Web
 echo "Démarrage..."
-chown -R abc:abc /app/config && chmod -R 775 /app/config
-ls -la /app/config
-python3 /app/calibre-web/cps.py &
+chown -R abc:abc /config && chmod -R 775 /config
+ls -la /config
+python3 /app/calibre-web/cps.py -p /config/app.db &
 
-# 3. Sync inverse toutes les 30 min
+# 3. Sync inverse toutes les 5 min
 while true; do
   sleep 300
-  rclone --config /app/rclone.conf sync /app/config r2:calibre-railway
+  rclone --config /app/rclone.conf sync /config r2:calibre-railway
 done
