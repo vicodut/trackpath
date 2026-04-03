@@ -56,10 +56,11 @@ function getHighlightIcon(category: string): L.DivIcon {
 interface HighlightsLayerProps {
   layers: LayerVisibility;
   onHighlightTap?: (lat: number, lon: number) => void;
+  onHighlightClose?: () => void;
   trailSegment?: TrailSegment | null;
 }
 
-export function HighlightsLayer({ layers, onHighlightTap, trailSegment }: HighlightsLayerProps) {
+export function HighlightsLayer({ layers, onHighlightTap, onHighlightClose, trailSegment }: HighlightsLayerProps) {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [zoom, setZoom] = useState(6);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
@@ -111,9 +112,10 @@ export function HighlightsLayer({ layers, onHighlightTap, trailSegment }: Highli
           key={h.id}
           position={[h.lat, h.lon]}
           icon={getHighlightIcon(h.category)}
-          eventHandlers={onHighlightTap ? {
-            click: () => onHighlightTap(h.lat, h.lon),
-          } : undefined}
+          eventHandlers={{
+            ...(onHighlightTap ? { click: () => onHighlightTap(h.lat, h.lon) } : {}),
+            ...(onHighlightClose ? { popupclose: () => onHighlightClose() } : {}),
+          }}
         >
           <Popup>
             <strong>{h.name}</strong>

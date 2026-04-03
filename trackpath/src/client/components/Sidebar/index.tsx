@@ -72,7 +72,7 @@ function SidebarContent({
     <>
       <div className={styles.sidebarHeader}>
         <h2>TRAIL_LOG</h2>
-        <div className="stats">
+        <div className={styles.stats}>
           <span>PTS: <strong>{filteredPoints.length}</strong></span>
           <span>DIST: <strong>{totalDistanceKm.toFixed(1)}</strong> km</span>
           <span>ELEV: <strong>{Math.round(totalElev)}</strong> m</span>

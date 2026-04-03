@@ -61,6 +61,7 @@ interface MapProps {
   onLongPress: (lat: number, lng: number) => void;
   onPointTap?: (point: TrackingPoint) => void;
   onHighlightTap?: (lat: number, lon: number) => void;
+  onHighlightClose?: () => void;
   onAddPoint?: () => void;
   trailSegment?: TrailSegment | null;
   sidebarVisible: boolean;
@@ -324,6 +325,7 @@ export function Map({
   onLongPress,
   onPointTap,
   onHighlightTap,
+  onHighlightClose,
   onAddPoint,
   trailSegment,
   sidebarVisible,
@@ -349,7 +351,7 @@ export function Map({
         attribution="&copy; OpenStreetMap contributors"
       />
       {layers.atTrail && <ATTrailLayer />}
-      <HighlightsLayer layers={layers} onHighlightTap={onHighlightTap} trailSegment={trailSegment} />
+      <HighlightsLayer layers={layers} onHighlightTap={onHighlightTap} onHighlightClose={onHighlightClose} trailSegment={trailSegment} />
 
       {/* Trail endpoints */}
       {layers.atTrail && (

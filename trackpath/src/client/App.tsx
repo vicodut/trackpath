@@ -129,6 +129,7 @@ export function App() {
               onLongPress={handleLongPress}
               onPointTap={handlePointSelect}
               onHighlightTap={handleHighlightTap}
+              onHighlightClose={handlePointClose}
               trailSegment={trailSegment}
               onAddPoint={openForm}
               sidebarVisible={sidebarVisible}

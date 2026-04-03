@@ -26,6 +26,24 @@
   letter-spacing: 0.15em;
 }
 
+.stats {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.stats span {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stats strong {
+  color: var(--secondary);
+}
+
 /* Tag filters */
 .tagFilters {
   display: flex;

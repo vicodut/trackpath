@@ -60,7 +60,7 @@ export function MapElevationProfile({
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, [collapsed]);
+  }, [collapsed, trailData]);
 
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -73,7 +73,8 @@ export function MapElevationProfile({
       const plotW = svgWidth - left - CHART_PADDING.right;
 
       const rect = containerRef.current.getBoundingClientRect();
-      const mx = clientX - rect.left;
+      const scale = rect.width > 0 ? svgWidth / rect.width : 1;
+      const mx = (clientX - rect.left) * scale;
       const dist = ((mx - left) / plotW) * maxDist;
 
       let closest = trailData[0];
