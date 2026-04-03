@@ -11,19 +11,21 @@ endpoint = ${R2_ENDPOINT}
 acl = private
 EOF
 
-# 1. Pull config and library from R2
+# 1. Pull config and library from R2 (same bucket folder → both mount points)
 echo "Initialisation depuis R2..."
 rclone --config /app/rclone.conf sync r2:calibre-railway /config
+rclone --config /app/rclone.conf sync r2:calibre-railway /calibre-library
 
 # 2. Fix permissions
-chown -R abc:abc /config
-chmod -R 775 /config
+chown -R abc:abc /config /calibre-library
+chmod -R 775 /config /calibre-library
 
 # 3. Background sync loop
 (
   while true; do
     sleep 300
-    rclone --config /app/rclone.conf sync /config r2:calibre-railway
+    rclone --config /app/rclone.conf copy /config r2:calibre-railway
+    rclone --config /app/rclone.conf copy /calibre-library r2:calibre-railway
   done
 ) &
 
