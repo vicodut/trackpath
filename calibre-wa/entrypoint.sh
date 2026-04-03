@@ -19,12 +19,14 @@ rclone --config /app/rclone.conf sync r2:calibre-railway /config
 chown -R abc:abc /config
 chmod -R 775 /config
 
-# 3. Start CWA via its init system
-echo "Démarrage CWA..."
-/init &
+# 3. Background sync loop
+(
+  while true; do
+    sleep 300
+    rclone --config /app/rclone.conf sync /config r2:calibre-railway
+  done
+) &
 
-# 4. Sync back to R2 every 5 min
-while true; do
-  sleep 300
-  rclone --config /app/rclone.conf sync /config r2:calibre-railway
-done
+# 4. Start CWA as PID 1
+echo "Démarrage CWA..."
+exec /init
