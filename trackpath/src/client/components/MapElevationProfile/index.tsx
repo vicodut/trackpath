@@ -38,6 +38,7 @@ export function MapElevationProfile({
     dist: number;
     x: number;
     y: number;
+    isTouch?: boolean;
     summitName?: string;
   } | null>(null);
   const [svgWidth, setSvgWidth] = useState(800);
@@ -65,7 +66,7 @@ export function MapElevationProfile({
   const svgRef = useRef<SVGSVGElement>(null);
 
   const updateHover = useCallback(
-    (clientX: number, clientY: number) => {
+    (clientX: number, clientY: number, isTouch = false) => {
       if (!trailData || trailData.length < 2 || !containerRef.current) return;
 
       const maxDist = trailData[trailData.length - 1].distanceKm;
@@ -95,6 +96,7 @@ export function MapElevationProfile({
         dist: closest.distanceKm,
         x: clientX,
         y: clientY,
+        isTouch,
         summitName: nearSummit?.name,
       });
 
@@ -117,14 +119,14 @@ export function MapElevationProfile({
       if (e.touches.length !== 1) return;
       e.preventDefault();
       const t = e.touches[0];
-      updateHover(t.clientX, t.clientY);
+      updateHover(t.clientX, t.clientY, true);
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       e.preventDefault();
       const t = e.touches[0];
-      updateHover(t.clientX, t.clientY);
+      updateHover(t.clientX, t.clientY, true);
     };
 
     const onTouchEnd = () => {
@@ -421,7 +423,7 @@ export function MapElevationProfile({
               style={{
                 position: "fixed",
                 left: hovered.x,
-                top: hovered.y - 12,
+                top: hovered.y - (hovered.isTouch ? 60 : 12),
                 transform: "translate(-50%, -100%)",
               }}
             >
