@@ -451,35 +451,36 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
 const AT_FULL_KM_MORDOR = 3524;
 
 const MORDOR_MILESTONES = [
-  { name: 'THE SHIRE',    place: 'Springer Mtn GA',    km: 0,                    sprite: 'shire'     },
-  { name: 'RIVENDELL',    place: 'Damascus VA',         km: 700,                  sprite: 'rivendell' },
-  { name: 'MORIA',        place: 'Rocksylvania PA',     km: 1760,                 sprite: 'moria'     },
-  { name: 'DEAD MARSHES', place: '100-Mile Wilderness', km: 2820,                 sprite: 'marshes'   },
-  { name: 'MOUNT DOOM',   place: 'Katahdin ME',         km: AT_FULL_KM_MORDOR,    sprite: 'doom'      },
+  { name: 'THE SHIRE',    place: 'Springer Mtn GA',    km: 0,                 sprite: 'shire'      },
+  { name: 'WEATHERTOP',   place: 'Great Smokies NC',   km: 300,               sprite: 'weathertop' },
+  { name: 'RIVENDELL',    place: 'Damascus VA',         km: 700,               sprite: 'rivendell'  },
+  { name: 'MORIA',        place: 'Shenandoah VA',       km: 1100,              sprite: 'moria'      },
+  { name: 'LOTHLÓRIEN',   place: "Harper's Ferry WV",  km: 1500,              sprite: 'lothlorien' },
+  { name: 'ROHAN',        place: 'Delaware Water Gap',  km: 1900,              sprite: 'rohan'      },
+  { name: 'ITHILIEN',     place: 'Vermont Green Mtns',  km: 2300,              sprite: 'ithilien'   },
+  { name: 'DEAD MARSHES', place: 'Southern Maine',      km: 2700,              sprite: 'marshes'    },
+  { name: 'CIRITH UNGOL', place: '100-Mile Wilderness', km: 3100,              sprite: 'cirith'     },
+  { name: 'MOUNT DOOM',   place: 'Katahdin ME',         km: AT_FULL_KM_MORDOR, sprite: 'doom'       },
 ];
 
-// Single-char color palette shared across all sprites
+// Single-char color palette — shared across all sprites
 const MP: Record<string, string> = {
-  g: '#4a9a4a', // light green (shire grass)
-  G: '#2d6a2d', // dark forest green
-  B: '#7c4a1e', // brown (hobbit door)
-  b: '#3a1a08', // dark brown
-  W: '#e8dfc0', // ivory (rivendell)
-  w: '#b0a890', // warm stone
-  D: '#3a3a3a', // dark stone (moria)
-  d: '#1a1a1a', // very dark stone
-  E: '#ffaa00', // torch/eye amber
-  m: '#1a3020', // swamp green (marshes)
-  F: '#88ff66', // will-o-wisp
-  O: '#ff6600', // fire orange (doom)
-  R: '#6a1100', // volcanic rock
-  r: '#3a0800', // dark volcanic base
-  Y: '#ffd890', // skin
-  T: '#8b6914', // hair brown
-  C: '#4a6070', // cloak grey-blue
+  g: '#4a9a4a', G: '#2d6a2d',  // shire greens
+  B: '#7c4a1e', b: '#3a1a08',  // browns
+  W: '#e8dfc0', w: '#b0a890',  // rivendell ivory/stone
+  D: '#3a3a3a', d: '#1a1a1a',  // dark stone (moria / cirith)
+  E: '#ffaa00',                // torch amber
+  S: '#888888', s: '#555555',  // weathertop stone
+  L: '#f0c040', l: '#c8a030',  // lothlórien / rohan gold
+  n: '#3a8a3a', N: '#1d5c1d',  // ithilien greens
+  m: '#1a3020', F: '#88ff66',  // marshes + wisp
+  O: '#ff6600', R: '#6a1100', r: '#3a0800', // doom fire/rock
+  Y: '#ffd890', T: '#8b6914', C: '#4a6070', // frodo skin/hair/cloak
+  // Sauron armor
+  k: '#1e1e30', H: '#3a3a58', A: '#b8922a', Z: '#252535',
 };
 
-// 10 cols × N rows, '.' = transparent
+// 10 cols × N rows — '.' = transparent
 const MORDOR_SPRITES: Record<string, string[]> = {
   shire: [
     '..ggggg...',
@@ -487,6 +488,14 @@ const MORDOR_SPRITES: Record<string, string[]> = {
     'gGGGbBbGGg',
     'GGGGBbBGGG',
     'GGGGGGGGGG',
+  ],
+  weathertop: [
+    '....S.....',
+    '...SSS....',
+    '...S.S....',
+    '..SsSsS...',
+    '.sSSsSSs..',
+    'SSSSSSSSSS',
   ],
   rivendell: [
     '....Ww....',
@@ -505,12 +514,46 @@ const MORDOR_SPRITES: Record<string, string[]> = {
     'D........D',
     'DdDdDdDdDd',
   ],
+  lothlorien: [
+    '...LLLLL..',
+    '..LLLLLLL.',
+    '.LLLlLLLL.',
+    '..LLLLLLL.',
+    '....B.....',
+    '....B.....',
+    '...BBB....',
+  ],
+  rohan: [
+    '..LLLLLL..',
+    '.LLLLLLLL.',
+    'LLLLLLLLLL',
+    '.BBBBBBBB.',
+    '.BB.BB.BB.',
+    'BBBBBBBBBB',
+  ],
+  ithilien: [
+    '...nnn....',
+    '..nnnnn...',
+    '.nNnNnNn..',
+    '..nnnnn...',
+    '....B.....',
+    '....B.....',
+    '...BBB....',
+  ],
   marshes: [
     '..m..m..m.',
     '.m.m.m.m..',
     '..F....F..',
     '.m.m.m.m..',
     '..m..m..m.',
+  ],
+  cirith: [
+    '....d.....',
+    '...dDd....',
+    '..DdDdD...',
+    '.dDdDdDd..',
+    'dDdDdDdDd.',
+    'DDDDDDDDDD',
   ],
   doom: [
     '....OO....',
@@ -530,7 +573,7 @@ const MORDOR_SPRITES: Record<string, string[]> = {
   ],
 };
 
-const PS = 4; // pixel size (px per "pixel")
+const PS = 4; // pixel size
 
 function MordorSprite({ name, cx, cy }: { name: string; cx: number; cy: number }) {
   const rows = MORDOR_SPRITES[name];
@@ -547,12 +590,9 @@ function MordorSprite({ name, cx, cy }: { name: string; cx: number; cy: number }
           return (
             <rect
               key={`${ri}-${ci}`}
-              x={x0 + ci * PS}
-              y={y0 + ri * PS}
-              width={PS}
-              height={PS}
-              fill={MP[c]}
-              shapeRendering="crispEdges"
+              x={x0 + ci * PS} y={y0 + ri * PS}
+              width={PS} height={PS}
+              fill={MP[c]} shapeRendering="crispEdges"
             />
           );
         })
@@ -561,26 +601,163 @@ function MordorSprite({ name, cx, cy }: { name: string; cx: number; cy: number }
   );
 }
 
+function EyeOfSauron({ cx, cy }: { cx: number; cy: number }) {
+  const rx = 17, ry = 9;
+  const flames = Array.from({ length: 12 }, (_, i) => {
+    const a = (i / 12) * Math.PI * 2;
+    const fr = rx + 7;
+    return {
+      x: Math.round(cx + Math.cos(a) * fr) - 1,
+      y: Math.round(cy + Math.sin(a) * (fr * 0.52)) - 2,
+      fill: i % 3 === 0 ? '#ff8800' : i % 3 === 1 ? '#ff4400' : '#cc2200',
+    };
+  });
+
+  return (
+    <g>
+      {/* Pulsing outer halos */}
+      <ellipse cx={cx} cy={cy} rx={rx + 16} ry={ry + 10} fill="#ff2200" opacity="0.04">
+        <animate attributeName="opacity" values="0.02;0.18;0.02" dur="2.2s" repeatCount="indefinite" />
+      </ellipse>
+      <ellipse cx={cx} cy={cy} rx={rx + 9} ry={ry + 5} fill="#ff4400" opacity="0.1">
+        <animate attributeName="opacity" values="0.05;0.3;0.05" dur="1.8s" begin="-0.4s" repeatCount="indefinite" />
+      </ellipse>
+
+      {/* Rotating fire ring */}
+      <g>
+        <animateTransform attributeName="transform" type="rotate"
+          from={`0 ${cx} ${cy}`} to={`360 ${cx} ${cy}`}
+          dur="7s" repeatCount="indefinite" />
+        {flames.map((f, i) => (
+          <rect key={i} x={f.x} y={f.y} width={3} height={4} fill={f.fill} shapeRendering="crispEdges" />
+        ))}
+      </g>
+
+      {/* Eye socket */}
+      <ellipse cx={cx} cy={cy} rx={rx + 1} ry={ry + 1} fill="#1a0000" />
+      {/* Iris layers */}
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#ff6600" />
+      <ellipse cx={cx} cy={cy} rx={Math.round(rx * 0.8)} ry={Math.round(ry * 0.82)} fill="#ee3f00" />
+      <ellipse cx={cx} cy={cy} rx={Math.round(rx * 0.52)} ry={Math.round(ry * 0.65)} fill="#cc1f00" />
+
+      {/* Scanning vertical slit pupil */}
+      <g>
+        <animateTransform attributeName="transform" type="translate"
+          values={`-5 0;5 0;-5 0`} dur="4s"
+          calcMode="spline" keyTimes="0;0.5;1"
+          keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+          repeatCount="indefinite" />
+        <ellipse cx={cx} cy={cy} rx={2} ry={Math.round(ry * 0.88)} fill="#050000" />
+      </g>
+
+      {/* Eyelid curves */}
+      <path d={`M ${cx - rx} ${cy} Q ${cx} ${cy - ry - 5} ${cx + rx} ${cy}`} fill="none" stroke="#551100" strokeWidth="1.5" />
+      <path d={`M ${cx - rx} ${cy} Q ${cx} ${cy + ry + 5} ${cx + rx} ${cy}`} fill="none" stroke="#551100" strokeWidth="1.5" />
+
+      {/* Corner flicker flames */}
+      <rect x={cx - rx - 3} y={cy - 3} width={3} height={5} fill="#ff5500" shapeRendering="crispEdges">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="0.9s" repeatCount="indefinite" />
+      </rect>
+      <rect x={cx + rx + 1} y={cy - 3} width={3} height={5} fill="#ff5500" shapeRendering="crispEdges">
+        <animate attributeName="opacity" values="1;0.4;1" dur="0.9s" repeatCount="indefinite" />
+      </rect>
+
+      {/* Label */}
+      <text x={cx} y={cy + ry + 14} textAnchor="middle"
+        fill="#661100" fontSize="7" fontFamily="var(--font-headline)" fontWeight="bold" letterSpacing="1">
+        EYE OF SAURON
+      </text>
+    </g>
+  );
+}
+
+function SauronMarker({ cx, cy }: { cx: number; cy: number }) {
+  // 10 cols × 9 rows — dark armored lord
+  const sprite = [
+    '....kk....',  // helmet spike tips
+    '...kHHk...',  // upper helm dome
+    '..kHEEHk..',  // visor with glowing eyes
+    '..kHkHHk..',  // lower visor
+    '.AkAAAAkA.',  // gold shoulder pauldrons
+    '.AZZZZZA..',  // armored torso
+    '..ZZZZZ...',  // lower torso
+    '..kZ.Zk...',  // greaves
+    '.kk...kk..',  // sabatons
+  ];
+  const sw = sprite[0].length * PS;
+  const sh = sprite.length * PS;
+  const x0 = cx - sw / 2;
+  const y0 = cy - sh / 2;
+  // Eyes are at row 2, cols 4-5 → vertical center of that row
+  const eyeY = y0 + 2 * PS + PS / 2;
+
+  const auraPts = [
+    { x: x0 - 4, y: cy - 8, delay: '0s',     col: '#ff5500' },
+    { x: x0 + sw + 2, y: cy - 8, delay: '-0.35s', col: '#cc2200' },
+    { x: x0 - 4, y: cy + 4, delay: '-0.7s',  col: '#cc2200' },
+    { x: x0 + sw + 2, y: cy + 4, delay: '-1.05s', col: '#ff5500' },
+  ];
+
+  return (
+    <g>
+      {/* Ground glow */}
+      <ellipse cx={cx} cy={cy + sh / 2} rx="12" ry="4" fill="#ff4400" opacity="0.15">
+        <animate attributeName="opacity" values="0.07;0.28;0.07" dur="1.6s" repeatCount="indefinite" />
+      </ellipse>
+
+      {/* Side aura flames */}
+      {auraPts.map((f, i) => (
+        <rect key={i} x={f.x} y={f.y} width={2} height={5}
+          fill={f.col} shapeRendering="crispEdges">
+          <animate attributeName="opacity" values="0.15;0.9;0.15" dur="0.65s" begin={f.delay} repeatCount="indefinite" />
+          <animate attributeName="y" values={`${f.y};${f.y - 2};${f.y}`} dur="0.65s" begin={f.delay} repeatCount="indefinite" />
+        </rect>
+      ))}
+
+      {/* Sprite pixels */}
+      {sprite.flatMap((row, ri) =>
+        row.split('').map((c, ci) => {
+          if (c === '.' || !MP[c]) return null;
+          return (
+            <rect key={`${ri}-${ci}`}
+              x={x0 + ci * PS} y={y0 + ri * PS}
+              width={PS} height={PS}
+              fill={MP[c]} shapeRendering="crispEdges"
+            />
+          );
+        })
+      )}
+
+      {/* Eye glow pulse */}
+      <ellipse cx={cx} cy={eyeY} rx={PS + 2} ry={PS * 0.75} fill="#ffaa00" opacity="0.45">
+        <animate attributeName="opacity" values="0.15;0.75;0.15" dur="1.8s" repeatCount="indefinite" />
+        <animate attributeName="rx" values={`${PS + 2};${PS + 5};${PS + 2}`} dur="1.8s" repeatCount="indefinite" />
+      </ellipse>
+    </g>
+  );
+}
+
 function RoadToMordor({ distanceKm }: { distanceKm: number }) {
-  const W = 800, H = 198;
-  const PL = 50, PR = 50;
+  const W = 1100, H = 215;
+  const PL = 55, PR = 55;
   const PLOT_W = W - PL - PR;
-  const PATH_Y = 138;
-  const SPRITE_CY = 92;
+  const PATH_Y = 150;
+  const SPRITE_CY = 97;
+  const EYE_CY = 46;
 
   const toX = (km: number) => PL + (Math.min(km, AT_FULL_KM_MORDOR) / AT_FULL_KM_MORDOR) * PLOT_W;
   const frodoX = toX(distanceKm);
+  const doomX = toX(AT_FULL_KM_MORDOR);
 
   const pct = Math.min((distanceKm / AT_FULL_KM_MORDOR) * 100, 100).toFixed(1);
   const currentStage = [...MORDOR_MILESTONES].reverse().find(m => distanceKm >= m.km) ?? MORDOR_MILESTONES[0];
   const nextStage = MORDOR_MILESTONES.find(m => m.km > distanceKm);
 
-  // Deterministic stars
-  const stars = Array.from({ length: 44 }, (_, i) => ({
+  const stars = Array.from({ length: 55 }, (_, i) => ({
     cx: (i * 47 + 23) % W,
-    cy: (i * 31 + 11) % 58 + 4,
+    cy: (i * 31 + 11) % 60 + 4,
     r: i % 5 === 0 ? 1.2 : 0.7,
-    opacity: 0.18 + (i % 4) * 0.14,
+    opacity: 0.15 + (i % 4) * 0.12,
   }));
 
   return (
@@ -597,13 +774,13 @@ function RoadToMordor({ distanceKm }: { distanceKm: number }) {
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
         <defs>
           <linearGradient id="mSky" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#080810" />
-            <stop offset="55%" stopColor="#180e04" />
-            <stop offset="100%" stopColor="#251408" />
+            <stop offset="0%" stopColor="#050510" />
+            <stop offset="55%" stopColor="#160c04" />
+            <stop offset="100%" stopColor="#221206" />
           </linearGradient>
           <linearGradient id="mGround" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#251408" />
-            <stop offset="100%" stopColor="#150a02" />
+            <stop offset="0%" stopColor="#221206" />
+            <stop offset="100%" stopColor="#130800" />
           </linearGradient>
           <linearGradient id="mPathDone" x1="0" x2="1" y1="0" y2="0">
             <stop offset="0%" stopColor="#4a2a08" />
@@ -615,20 +792,27 @@ function RoadToMordor({ distanceKm }: { distanceKm: number }) {
         <rect width={W} height={PATH_Y + 6} fill="url(#mSky)" />
         <rect y={PATH_Y + 6} width={W} height={H - PATH_Y - 6} fill="url(#mGround)" />
 
-        {/* Stars */}
-        {stars.map((s, i) => (
+        {/* Stars — skip the eye area */}
+        {stars.filter(s => Math.abs(s.cx - doomX) > 28 || s.cy < 28 || s.cy > 68).map((s, i) => (
           <circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill="white" opacity={s.opacity} />
         ))}
 
-        {/* Far mountains silhouette */}
+        {/* Far mountain silhouettes (scaled to 1100px) */}
         <polygon
-          points="0,100 50,62 110,82 180,52 250,75 320,58 400,88 470,55 540,70 610,62 680,80 750,58 800,75 800,100"
-          fill="#0c0c18" opacity="0.9"
+          points="0,105 69,62 151,82 248,52 344,75 440,58 550,88 646,55 743,70 839,62 935,80 1031,58 1100,75 1100,105"
+          fill="#0c0c18" opacity="0.85"
         />
         <polygon
-          points="0,108 40,72 90,92 150,68 210,88 280,74 350,98 420,70 490,84 560,76 630,90 700,72 760,88 800,78 800,108"
+          points="0,112 55,72 124,92 206,68 289,88 385,74 481,98 578,70 674,84 770,76 866,90 963,72 1045,88 1100,78 1100,112"
           fill="#141414" opacity="0.95"
         />
+
+        {/* Eye of Sauron — above Mount Doom */}
+        <EyeOfSauron cx={doomX} cy={EYE_CY} />
+
+        {/* Dark tower shaft connecting Eye to doom sprite */}
+        <line x1={doomX} y1={EYE_CY + 11} x2={doomX} y2={SPRITE_CY - 14}
+          stroke="#330000" strokeWidth="1" opacity="0.4" />
 
         {/* Road — unwalked */}
         <rect x={PL} y={PATH_Y - 5} width={PLOT_W} height={10} fill="#221408" rx="1" />
@@ -645,42 +829,36 @@ function RoadToMordor({ distanceKm }: { distanceKm: number }) {
           const mx = toX(m.km);
           const reached = distanceKm >= m.km;
           const spriteH = (MORDOR_SPRITES[m.sprite]?.length ?? 5) * PS;
-          const connectorBottom = SPRITE_CY + spriteH / 2 + 2;
+          const connectorTop = SPRITE_CY + spriteH / 2 + 2;
 
           return (
             <g key={m.name}>
-              <line
-                x1={mx} y1={PATH_Y - 5}
-                x2={mx} y2={connectorBottom}
-                stroke={reached ? '#7a5020' : '#2a1a08'}
-                strokeWidth="1"
-                strokeDasharray={reached ? undefined : '2,2'}
-              />
+              <line x1={mx} y1={PATH_Y - 5} x2={mx} y2={connectorTop}
+                stroke={reached ? '#7a5020' : '#2a1a08'} strokeWidth="1"
+                strokeDasharray={reached ? undefined : '2,2'} />
               <MordorSprite name={m.sprite} cx={mx} cy={SPRITE_CY} />
-              {/* dot on path */}
               {reached
                 ? <circle cx={mx} cy={PATH_Y} r="4" fill={m.km === AT_FULL_KM_MORDOR ? '#ff6600' : '#aa7730'} opacity="0.9" />
                 : <circle cx={mx} cy={PATH_Y} r="3" fill="#221408" stroke="#3a2010" strokeWidth="1" />
               }
-              <text x={mx} y={PATH_Y + 18} textAnchor="middle" fill={reached ? '#cc9944' : '#3a2810'} fontSize="8" fontFamily="var(--font-headline)" fontWeight="bold">
+              <text x={mx} y={PATH_Y + 17} textAnchor="middle"
+                fill={reached ? '#cc9944' : '#3a2810'} fontSize="8"
+                fontFamily="var(--font-headline)" fontWeight="bold">
                 {m.name}
               </text>
-              <text x={mx} y={PATH_Y + 29} textAnchor="middle" fill={reached ? '#886622' : '#2a1a08'} fontSize="7" fontFamily="var(--font-headline)">
+              <text x={mx} y={PATH_Y + 27} textAnchor="middle"
+                fill={reached ? '#886622' : '#2a1a08'} fontSize="6.5"
+                fontFamily="var(--font-headline)">
                 {m.place}
               </text>
             </g>
           );
         })}
 
-        {/* Frodo marker */}
-        {distanceKm > 0 && (
-          <g>
-            <ellipse cx={frodoX} cy={PATH_Y - 5} rx="7" ry="3" fill="#cc9944" opacity="0.25" />
-            <MordorSprite name="frodo" cx={frodoX} cy={PATH_Y - 18} />
-          </g>
-        )}
+        {/* Sauron position marker */}
+        {distanceKm > 0 && <SauronMarker cx={frodoX} cy={PATH_Y - 23} />}
 
-        {/* km label */}
+        {/* Footer */}
         <text x={W / 2} y={H - 4} textAnchor="middle" fill="#3a2810" fontSize="8" fontFamily="var(--font-headline)">
           {distanceKm.toFixed(0)} KM / {AT_FULL_KM_MORDOR} KM — {pct}% TO KATAHDIN
         </text>
