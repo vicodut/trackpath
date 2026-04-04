@@ -446,6 +446,251 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
   );
 }
 
+// ─── Road to Mordor ───────────────────────────────────────────────────────────
+
+const AT_FULL_KM_MORDOR = 3524;
+
+const MORDOR_MILESTONES = [
+  { name: 'THE SHIRE',    place: 'Springer Mtn GA',    km: 0,                    sprite: 'shire'     },
+  { name: 'RIVENDELL',    place: 'Damascus VA',         km: 700,                  sprite: 'rivendell' },
+  { name: 'MORIA',        place: 'Rocksylvania PA',     km: 1760,                 sprite: 'moria'     },
+  { name: 'DEAD MARSHES', place: '100-Mile Wilderness', km: 2820,                 sprite: 'marshes'   },
+  { name: 'MOUNT DOOM',   place: 'Katahdin ME',         km: AT_FULL_KM_MORDOR,    sprite: 'doom'      },
+];
+
+// Single-char color palette shared across all sprites
+const MP: Record<string, string> = {
+  g: '#4a9a4a', // light green (shire grass)
+  G: '#2d6a2d', // dark forest green
+  B: '#7c4a1e', // brown (hobbit door)
+  b: '#3a1a08', // dark brown
+  W: '#e8dfc0', // ivory (rivendell)
+  w: '#b0a890', // warm stone
+  D: '#3a3a3a', // dark stone (moria)
+  d: '#1a1a1a', // very dark stone
+  E: '#ffaa00', // torch/eye amber
+  m: '#1a3020', // swamp green (marshes)
+  F: '#88ff66', // will-o-wisp
+  O: '#ff6600', // fire orange (doom)
+  R: '#6a1100', // volcanic rock
+  r: '#3a0800', // dark volcanic base
+  Y: '#ffd890', // skin
+  T: '#8b6914', // hair brown
+  C: '#4a6070', // cloak grey-blue
+};
+
+// 10 cols × N rows, '.' = transparent
+const MORDOR_SPRITES: Record<string, string[]> = {
+  shire: [
+    '..ggggg...',
+    '.gGGGGGg..',
+    'gGGGbBbGGg',
+    'GGGGBbBGGG',
+    'GGGGGGGGGG',
+  ],
+  rivendell: [
+    '....Ww....',
+    '...WwwW...',
+    '...WwwW...',
+    '....WW....',
+    '..WwwwwW..',
+    '.WwwwwwwW.',
+    '.wwwwwwww.',
+  ],
+  moria: [
+    'DdDdDdDdDd',
+    'D........D',
+    'D..EEEE..D',
+    'D..EEEE..D',
+    'D........D',
+    'DdDdDdDdDd',
+  ],
+  marshes: [
+    '..m..m..m.',
+    '.m.m.m.m..',
+    '..F....F..',
+    '.m.m.m.m..',
+    '..m..m..m.',
+  ],
+  doom: [
+    '....OO....',
+    '...OOOO...',
+    '..OOOOOO..',
+    '..RRRRRR..',
+    '.RRRRRRRR.',
+    'RRRRrRRRRR',
+    'rrrrrrrrrr',
+  ],
+  frodo: [
+    '...YYY....',
+    '..YTTYY...',
+    '..CCCCC...',
+    '...CCC....',
+    '..bC.Cb...',
+  ],
+};
+
+const PS = 4; // pixel size (px per "pixel")
+
+function MordorSprite({ name, cx, cy }: { name: string; cx: number; cy: number }) {
+  const rows = MORDOR_SPRITES[name];
+  if (!rows) return null;
+  const sw = rows[0].length * PS;
+  const sh = rows.length * PS;
+  const x0 = cx - sw / 2;
+  const y0 = cy - sh / 2;
+  return (
+    <>
+      {rows.flatMap((row, ri) =>
+        row.split('').map((c, ci) => {
+          if (c === '.' || !MP[c]) return null;
+          return (
+            <rect
+              key={`${ri}-${ci}`}
+              x={x0 + ci * PS}
+              y={y0 + ri * PS}
+              width={PS}
+              height={PS}
+              fill={MP[c]}
+              shapeRendering="crispEdges"
+            />
+          );
+        })
+      )}
+    </>
+  );
+}
+
+function RoadToMordor({ distanceKm }: { distanceKm: number }) {
+  const W = 800, H = 198;
+  const PL = 50, PR = 50;
+  const PLOT_W = W - PL - PR;
+  const PATH_Y = 138;
+  const SPRITE_CY = 92;
+
+  const toX = (km: number) => PL + (Math.min(km, AT_FULL_KM_MORDOR) / AT_FULL_KM_MORDOR) * PLOT_W;
+  const frodoX = toX(distanceKm);
+
+  const pct = Math.min((distanceKm / AT_FULL_KM_MORDOR) * 100, 100).toFixed(1);
+  const currentStage = [...MORDOR_MILESTONES].reverse().find(m => distanceKm >= m.km) ?? MORDOR_MILESTONES[0];
+  const nextStage = MORDOR_MILESTONES.find(m => m.km > distanceKm);
+
+  // Deterministic stars
+  const stars = Array.from({ length: 44 }, (_, i) => ({
+    cx: (i * 47 + 23) % W,
+    cy: (i * 31 + 11) % 58 + 4,
+    r: i % 5 === 0 ? 1.2 : 0.7,
+    opacity: 0.18 + (i % 4) * 0.14,
+  }));
+
+  return (
+    <div className={styles.mordorWrapper}>
+      <div className={styles.mordorHeader}>
+        <span className={styles.mordorCurrent}>{currentStage.name}</span>
+        {nextStage && (
+          <span className={styles.mordorNext}>
+            → {nextStage.name} · {(nextStage.km - distanceKm).toFixed(0)} km
+          </span>
+        )}
+        <span className={styles.mordorPct}>{pct}%</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+        <defs>
+          <linearGradient id="mSky" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#080810" />
+            <stop offset="55%" stopColor="#180e04" />
+            <stop offset="100%" stopColor="#251408" />
+          </linearGradient>
+          <linearGradient id="mGround" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#251408" />
+            <stop offset="100%" stopColor="#150a02" />
+          </linearGradient>
+          <linearGradient id="mPathDone" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stopColor="#4a2a08" />
+            <stop offset="100%" stopColor="#7a5220" />
+          </linearGradient>
+        </defs>
+
+        {/* Sky + ground */}
+        <rect width={W} height={PATH_Y + 6} fill="url(#mSky)" />
+        <rect y={PATH_Y + 6} width={W} height={H - PATH_Y - 6} fill="url(#mGround)" />
+
+        {/* Stars */}
+        {stars.map((s, i) => (
+          <circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill="white" opacity={s.opacity} />
+        ))}
+
+        {/* Far mountains silhouette */}
+        <polygon
+          points="0,100 50,62 110,82 180,52 250,75 320,58 400,88 470,55 540,70 610,62 680,80 750,58 800,75 800,100"
+          fill="#0c0c18" opacity="0.9"
+        />
+        <polygon
+          points="0,108 40,72 90,92 150,68 210,88 280,74 350,98 420,70 490,84 560,76 630,90 700,72 760,88 800,78 800,108"
+          fill="#141414" opacity="0.95"
+        />
+
+        {/* Road — unwalked */}
+        <rect x={PL} y={PATH_Y - 5} width={PLOT_W} height={10} fill="#221408" rx="1" />
+        <line x1={PL} y1={PATH_Y - 5} x2={W - PR} y2={PATH_Y - 5} stroke="#3a2010" strokeWidth="1" />
+        <line x1={PL} y1={PATH_Y + 5} x2={W - PR} y2={PATH_Y + 5} stroke="#3a2010" strokeWidth="1" />
+
+        {/* Road — walked */}
+        {distanceKm > 0 && (
+          <rect x={PL} y={PATH_Y - 5} width={frodoX - PL} height={10} fill="url(#mPathDone)" rx="1" />
+        )}
+
+        {/* Milestones */}
+        {MORDOR_MILESTONES.map((m) => {
+          const mx = toX(m.km);
+          const reached = distanceKm >= m.km;
+          const spriteH = (MORDOR_SPRITES[m.sprite]?.length ?? 5) * PS;
+          const connectorBottom = SPRITE_CY + spriteH / 2 + 2;
+
+          return (
+            <g key={m.name}>
+              <line
+                x1={mx} y1={PATH_Y - 5}
+                x2={mx} y2={connectorBottom}
+                stroke={reached ? '#7a5020' : '#2a1a08'}
+                strokeWidth="1"
+                strokeDasharray={reached ? undefined : '2,2'}
+              />
+              <MordorSprite name={m.sprite} cx={mx} cy={SPRITE_CY} />
+              {/* dot on path */}
+              {reached
+                ? <circle cx={mx} cy={PATH_Y} r="4" fill={m.km === AT_FULL_KM_MORDOR ? '#ff6600' : '#aa7730'} opacity="0.9" />
+                : <circle cx={mx} cy={PATH_Y} r="3" fill="#221408" stroke="#3a2010" strokeWidth="1" />
+              }
+              <text x={mx} y={PATH_Y + 18} textAnchor="middle" fill={reached ? '#cc9944' : '#3a2810'} fontSize="8" fontFamily="var(--font-headline)" fontWeight="bold">
+                {m.name}
+              </text>
+              <text x={mx} y={PATH_Y + 29} textAnchor="middle" fill={reached ? '#886622' : '#2a1a08'} fontSize="7" fontFamily="var(--font-headline)">
+                {m.place}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Frodo marker */}
+        {distanceKm > 0 && (
+          <g>
+            <ellipse cx={frodoX} cy={PATH_Y - 5} rx="7" ry="3" fill="#cc9944" opacity="0.25" />
+            <MordorSprite name="frodo" cx={frodoX} cy={PATH_Y - 18} />
+          </g>
+        )}
+
+        {/* km label */}
+        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#3a2810" fontSize="8" fontFamily="var(--font-headline)">
+          {distanceKm.toFixed(0)} KM / {AT_FULL_KM_MORDOR} KM — {pct}% TO KATAHDIN
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+// ─── Beer Calculator ───────────────────────────────────────────────────────────
+
 function BeerCalculator({ distanceKm }: { distanceKm: number }) {
   const calBurned = distanceKm * CAL_PER_KM;
   const beersEarned = Math.floor(calBurned / BEER_CAL);
@@ -613,6 +858,14 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
             <span className={styles.statsLabel}>STRAVA_DIST</span>
             <div className={styles.statsBentoNumber}>{stats.stravaDist.toFixed(1)}<span className={styles.statsBentoUnit}>KM</span></div>
           </div>
+        </section>
+
+        {/* Road to Mordor */}
+        <section className={styles.statsSection} style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '24px 24px 0' }}>
+            <h3 className={styles.statsSectionTitle}>ROAD_TO_MORDOR</h3>
+          </div>
+          <RoadToMordor distanceKm={stats.combinedDist} />
         </section>
 
         {/* Activity heatmap */}

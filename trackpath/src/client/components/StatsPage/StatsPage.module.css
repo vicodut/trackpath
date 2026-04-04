@@ -314,6 +314,45 @@
   fill: var(--outline);
 }
 
+/* Road to Mordor */
+.mordorWrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.mordorHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px 12px;
+}
+
+.mordorCurrent {
+  font-family: var(--font-headline);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.mordorNext {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mordorPct {
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--outline);
+  margin-left: auto;
+  letter-spacing: 0.05em;
+}
+
 /* Beer calculator */
 .beerCalc {}
 
