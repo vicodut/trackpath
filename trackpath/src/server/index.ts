@@ -491,7 +491,7 @@ async function syncStravaActivities() {
   const accessToken = await getStravaToken();
   if (!accessToken) return { synced: 0, error: 'Strava not connected' };
 
-  const activitiesRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=10', {
+  const activitiesRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=200', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!activitiesRes.ok) return { synced: 0, error: `Strava API error: ${activitiesRes.status}` };
@@ -500,7 +500,8 @@ async function syncStravaActivities() {
   let synced = 0;
   for (const act of activities) {
     const existing = await db.select().from(stravaActivities).where(eq(stravaActivities.stravaId, act.id));
-    if (existing.length > 0) continue;
+    const hasCoords = existing.length > 0 && existing[0].coords && existing[0].coords !== '[]';
+    if (hasCoords) continue;
 
     let coords: [number, number][] = [];
     try {
@@ -518,16 +519,22 @@ async function syncStravaActivities() {
       // No GPS data for this activity
     }
 
-    await db.insert(stravaActivities).values({
-      stravaId: act.id,
-      name: act.name,
-      type: act.type,
-      distance: act.distance,
-      movingTime: act.moving_time,
-      elevationGain: act.total_elevation_gain || 0,
-      startDate: act.start_date,
-      coords: JSON.stringify(coords),
-    });
+    if (existing.length > 0) {
+      await db.update(stravaActivities)
+        .set({ coords: JSON.stringify(coords) })
+        .where(eq(stravaActivities.stravaId, act.id));
+    } else {
+      await db.insert(stravaActivities).values({
+        stravaId: act.id,
+        name: act.name,
+        type: act.type,
+        distance: act.distance,
+        movingTime: act.moving_time,
+        elevationGain: act.total_elevation_gain || 0,
+        startDate: act.start_date,
+        coords: JSON.stringify(coords),
+      });
+    }
     synced++;
   }
 

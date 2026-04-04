@@ -12,7 +12,7 @@ export function useStrava() {
       .catch(() => setConnected(false));
     fetch('/api/strava/activities')
       .then((r) => r.json())
-      .then(setActivities)
+      .then((data) => setActivities(Array.isArray(data) ? data : []))
       .catch((err: unknown) => console.error('Failed to load Strava activities:', err));
   }, []);
 

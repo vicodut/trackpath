@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import type { TrackingPoint } from '../../types';
 import { TAG_EMOJIS } from '../../lib/constants';
+import { useUnit } from '../../hooks/useUnit';
 import styles from './PointPopup.module.css';
 
 interface PointPopupProps {
@@ -13,6 +14,7 @@ interface PointPopupProps {
 export const PointPopup = memo(function PointPopup({ point, trailDistanceKm, trailElevationGain, onClose }: PointPopupProps) {
   const time = new Date(point.timestamp);
   const emoji = point.eventType ? TAG_EMOJIS[point.eventType] : null;
+  const { fmtDist } = useUnit();
 
   return (
     <div className={styles.pointPopupOverlay} onClick={onClose}>
@@ -45,7 +47,7 @@ export const PointPopup = memo(function PointPopup({ point, trailDistanceKm, tra
         )}
         {trailDistanceKm != null && trailDistanceKm > 0 && (
           <div className={styles.pointPopupTrailDist}>
-            {trailDistanceKm.toFixed(1)} km · +{Math.round(trailElevationGain ?? 0)}m
+            {fmtDist(trailDistanceKm)} · +{Math.round(trailElevationGain ?? 0)}m
           </div>
         )}
       </div>

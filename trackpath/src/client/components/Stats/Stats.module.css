@@ -32,6 +32,27 @@
   color: var(--outline);
 }
 
+.unitToggle {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--outline);
+  background: none;
+  border: 1px solid var(--outline-variant);
+  padding: 2px 6px;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.unitToggle:hover {
+  color: var(--secondary);
+  border-color: var(--secondary);
+  background: none;
+}
+
 .statsWidgetBody {
   padding: 0 14px 12px;
   display: flex;

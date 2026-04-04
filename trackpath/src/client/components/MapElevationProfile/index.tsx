@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { ICONIC_SUMMITS } from "../../data/iconic-summits";
+import { useUnit } from "../../hooks/useUnit";
 import styles from "./MapElevationProfile.module.css";
 
 interface TrailElevationPoint {
@@ -18,6 +19,7 @@ interface MapElevationProfileProps {
   onHover: (lat: number, lon: number) => void;
   onHoverEnd: () => void;
   segmentMarkers?: SegmentMarkers | null;
+  campMarkers?: number[];
 }
 
 const CHART_HEIGHT = 160;
@@ -28,7 +30,9 @@ export function MapElevationProfile({
   onHover,
   onHoverEnd,
   segmentMarkers,
+  campMarkers,
 }: MapElevationProfileProps) {
+  const { unit, fmtDist } = useUnit();
   const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(
     null,
   );
@@ -276,13 +280,13 @@ export function MapElevationProfile({
             {/* X-axis labels */}
             {xTickValues.map((v) => (
               <text
-                key={`xl-${v}`}
+                key={`xl-${v}-${unit}`}
                 x={toX(v)}
                 y={h - 4}
                 textAnchor="middle"
                 className={styles.mapElevLabel}
               >
-                {v}km
+                {fmtDist(v, 0)}
               </text>
             ))}
             {/* Iconic summit markers */}
@@ -366,6 +370,21 @@ export function MapElevationProfile({
                 opacity="0.7"
               />
             )}
+            {/* Camp markers — one triangle per day's last point */}
+            {campMarkers && campMarkers.map((distKm) => {
+              if (distKm < 0 || distKm > maxDist) return null;
+              const x = toX(distKm);
+              const y = top + plotH;
+              return (
+                <polygon
+                  key={`camp-${distKm}`}
+                  points={`${x},${y - 7} ${x - 4},${y} ${x + 4},${y}`}
+                  fill="var(--secondary)"
+                  opacity="0.45"
+                  style={{ pointerEvents: 'none' }}
+                />
+              );
+            })}
             {/* Hover crosshair */}
             {hovered && (
               <>

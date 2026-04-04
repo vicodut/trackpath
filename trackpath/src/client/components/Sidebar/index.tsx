@@ -5,6 +5,7 @@ import { TAGS, TAG_EMOJIS } from '../../lib/constants';
 import { AddPointForm } from '../AddPointForm';
 import { PointCard } from '../PointCard';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useUnit } from '../../hooks/useUnit';
 import styles from './Sidebar.module.css';
 
 const TAG_FILTERS = [
@@ -38,6 +39,7 @@ function SidebarContent({
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, onAddSuccess, pickedCoords, isAdmin, forceFormOpen,
 }: SidebarProps) {
   const [activeFilters, setActiveFilters] = useState(new Set());
+  const { fmtDist } = useUnit();
 
   const toggleFilter = (key: string) => {
     setActiveFilters(prev => {
@@ -74,7 +76,7 @@ function SidebarContent({
         <h2>TRAIL_LOG</h2>
         <div className={styles.stats}>
           <span>PTS: <strong>{filteredPoints.length}</strong></span>
-          <span>DIST: <strong>{totalDistanceKm.toFixed(1)}</strong> km</span>
+          <span>DIST: <strong>{fmtDist(totalDistanceKm)}</strong></span>
           <span>ELEV: <strong>{Math.round(totalElev)}</strong> m</span>
         </div>
       </div>

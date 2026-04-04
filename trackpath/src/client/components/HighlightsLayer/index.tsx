@@ -24,6 +24,7 @@ const HIGHLIGHT_EMOJIS: Record<string, string> = {
   'road-crossing': '🛣️',
   landmark: '⭐',
   'state-border': '🚩',
+  'water-source': '💧',
 };
 
 function getZoomThresholds(isMobile: boolean): Record<string, number> {
@@ -35,6 +36,7 @@ function getZoomThresholds(isMobile: boolean): Record<string, number> {
     shelter: isMobile ? 12 : 10,
     campsite: isMobile ? 12 : 10,
     'road-crossing': isMobile ? 13 : 11,
+    'water-source': isMobile ? 14 : 12,
   };
 }
 

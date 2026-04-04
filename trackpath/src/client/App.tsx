@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { Header } from "./components/Header";
-import { Map } from "./components/Map";
+import { Map as TrailMap } from "./components/Map";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { Weather } from "./components/Weather";
@@ -55,6 +55,7 @@ export function App() {
       'road-crossing': window.innerWidth > 768,
       landmark: true,
       'state-border': true,
+      'water-source': false,
     },
   });
 
@@ -86,6 +87,20 @@ export function App() {
       setTrailSegment(getSegment(lastGarminPoint.latitude, lastGarminPoint.longitude, lat, lon));
     }
   }, [lastGarminPoint, getSegment]);
+
+  const campMarkers = useMemo(() => {
+    const garminPts = points.filter(p => !p.garminId?.startsWith('manual-'));
+    const byDay = new Map<string, TrackingPoint>();
+    for (const pt of garminPts) {
+      byDay.set(new Date(pt.timestamp).toDateString(), pt);
+    }
+    const markers: number[] = [];
+    for (const pt of byDay.values()) {
+      const km = getTrailKm(pt.latitude, pt.longitude);
+      if (km != null) markers.push(km);
+    }
+    return markers.sort((a, b) => a - b);
+  }, [points, getTrailKm]);
 
   const segmentMarkers = useMemo(() => {
     const target = tappedPoint || highlightTarget;
@@ -120,7 +135,7 @@ export function App() {
       <div className="main-container">
         <div className="map-wrapper">
           <div className="map-area">
-            <Map
+            <TrailMap
               points={points}
               stravaActivities={stravaActivities}
               selectedPoint={selectedPoint}
@@ -150,6 +165,7 @@ export function App() {
             onHover={(lat, lon) => setElevationCursor({ lat, lon })}
             onHoverEnd={() => setElevationCursor(null)}
             segmentMarkers={segmentMarkers}
+            campMarkers={campMarkers}
           />
         </div>
         {sidebarVisible && (

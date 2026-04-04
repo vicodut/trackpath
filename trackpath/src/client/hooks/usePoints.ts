@@ -14,9 +14,10 @@ export function usePoints() {
   const loadPoints = useCallback(async () => {
     try {
       const pts = await api.getPoints();
-      setPoints(pts);
-      const lastTime = pts.length > 0
-        ? new Date(pts[pts.length - 1].timestamp).toLocaleString()
+      const safePoints = Array.isArray(pts) ? pts : [];
+      setPoints(safePoints);
+      const lastTime = safePoints.length > 0
+        ? new Date(safePoints[safePoints.length - 1].timestamp).toLocaleString()
         : null;
       setStatus({ message: `Ready${lastTime ? ` — last: ${lastTime}` : ''}`, type: '' });
     } catch (err) {
@@ -30,9 +31,10 @@ export function usePoints() {
     setStatus({ message: 'Syncing with inReach...', type: 'syncing' });
     try {
       const data = await api.syncPoints();
-      setPoints(data.points);
-      const lastTime = data.points.length > 0
-        ? new Date(data.points[data.points.length - 1].timestamp).toLocaleString()
+      const safePoints = Array.isArray(data?.points) ? data.points : [];
+      setPoints(safePoints);
+      const lastTime = safePoints.length > 0
+        ? new Date(safePoints[safePoints.length - 1].timestamp).toLocaleString()
         : null;
       setStatus({ message: `Synced! ${data.synced} new points (${data.total} total)${lastTime ? ` — last: ${lastTime}` : ''}`, type: 'success' });
       return data;
@@ -60,6 +62,7 @@ export function usePoints() {
   }, []);
 
   const pointsWithSpeed = useMemo(() => {
+    if (!Array.isArray(points)) return [];
     return points.map((pt, i) => {
       if (i === 0 || pt.velocity != null) return pt;
       const prev = points[i - 1];

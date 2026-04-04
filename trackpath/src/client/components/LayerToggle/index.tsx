@@ -5,7 +5,7 @@ import styles from './LayerToggle.module.css';
 export { TAGS as TAG_LIST } from '../../lib/constants';
 
 export const HIGHLIGHT_CATEGORIES = [
-  'shelter', 'summit', 'campsite', 'town', 'road-crossing', 'landmark', 'state-border',
+  'shelter', 'summit', 'campsite', 'town', 'road-crossing', 'landmark', 'state-border', 'water-source',
 ] as const;
 
 const HIGHLIGHT_EMOJIS: Record<string, string> = {
@@ -16,6 +16,7 @@ const HIGHLIGHT_EMOJIS: Record<string, string> = {
   'road-crossing': '🛣️',
   landmark: '⭐',
   'state-border': '🚩',
+  'water-source': '💧',
 };
 
 export interface LayerVisibility {

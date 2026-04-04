@@ -206,6 +206,39 @@ async function fetchRoadCrossings(): Promise<Highlight[]> {
   return results;
 }
 
+async function fetchWaterSources(): Promise<Highlight[]> {
+  console.log('Fetching water sources...');
+  const elements = await queryOverpass(`
+    ${AT_PREAMBLE}
+    (
+      node["natural"="spring"](around.trail:300);
+      node["amenity"="drinking_water"](around.trail:300);
+      node["amenity"="water_point"](around.trail:300);
+    );
+    out body;
+  `);
+
+  const seen = new Set<string>();
+  const results: Highlight[] = [];
+  for (const el of elements) {
+    const coords = getCoords(el);
+    if (!coords) continue;
+    const key = `${(coords.lat * 1000).toFixed(0)},${(coords.lon * 1000).toFixed(0)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const name = el.tags?.name || (el.tags?.natural === 'spring' ? 'Spring' : 'Water Source');
+    results.push({
+      id: `water-${el.id}`,
+      category: 'water-source',
+      name,
+      lat: coords.lat,
+      lon: coords.lon,
+      description: el.tags?.description || undefined,
+    });
+  }
+  return results;
+}
+
 // Curated notable landmarks
 const CURATED_LANDMARKS: Highlight[] = [
   { id: 'lm-springer', category: 'landmark', name: 'Springer Mountain', lat: 34.6270, lon: -84.1940, description: 'Southern terminus of the AT' },
@@ -292,6 +325,11 @@ async function main() {
   const roads = await fetchRoadCrossings();
   console.log(`  -> ${roads.length} road crossings`);
   all.push(...roads);
+  await delay(3000);
+
+  const water = await fetchWaterSources();
+  console.log(`  -> ${water.length} water sources`);
+  all.push(...water);
 
   // Add curated data
   all.push(...CURATED_LANDMARKS);
