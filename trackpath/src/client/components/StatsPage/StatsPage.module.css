@@ -320,6 +320,17 @@
   flex-direction: column;
 }
 
+.mordorScroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* hide scrollbar but keep functionality */
+  scrollbar-width: none;
+}
+
+.mordorScroll::-webkit-scrollbar {
+  display: none;
+}
+
 .mordorHeader {
   display: flex;
   align-items: center;
@@ -329,7 +340,7 @@
 
 .mordorCurrent {
   font-family: var(--font-headline);
-  font-size: 0.8rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--secondary);
   text-transform: uppercase;
@@ -338,7 +349,7 @@
 
 .mordorNext {
   font-family: var(--font-headline);
-  font-size: 0.65rem;
+  font-size: 1rem;
   color: var(--outline);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -346,7 +357,7 @@
 
 .mordorPct {
   font-family: var(--font-headline);
-  font-size: 0.7rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--outline);
   margin-left: auto;

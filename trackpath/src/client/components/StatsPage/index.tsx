@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TrackingPoint, StravaActivity } from '../../types';
 import { ICONIC_SUMMITS } from '../../data/iconic-summits';
 import { haversine } from '../../lib/geo';
@@ -449,6 +449,7 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
 // ─── Road to Mordor ───────────────────────────────────────────────────────────
 
 const AT_FULL_KM_MORDOR = 3524;
+const GOAL_KM_MORDOR = 1500; // hiker's personal goal (same as AT_TOTAL_KM)
 
 const MORDOR_MILESTONES = [
   { name: 'THE SHIRE',    place: 'Springer Mtn GA',    km: 0,                 sprite: 'shire'      },
@@ -478,6 +479,8 @@ const MP: Record<string, string> = {
   Y: '#ffd890', T: '#8b6914', C: '#4a6070', // frodo skin/hair/cloak
   // Sauron armor
   k: '#1e1e30', H: '#3a3a58', A: '#b8922a', Z: '#252535',
+  // Gandalf staff
+  p: '#d4b870',
 };
 
 // 10 cols × N rows — '.' = transparent
@@ -565,11 +568,14 @@ const MORDOR_SPRITES: Record<string, string[]> = {
     'rrrrrrrrrr',
   ],
   frodo: [
-    '...YYY....',
-    '..YTTYY...',
-    '..CCCCC...',
-    '...CCC....',
-    '..bC.Cb...',
+    '...TTTT...',  // curly brown hair
+    '..TYYYYT..',  // hair + face
+    '..TYYYYT..',  // face
+    '..CCCCCC..',  // blue-grey cloak
+    '..CLCCCC..',  // cloak + One Ring (L=gold at col 3)
+    '..CCCCCC..',  // lower body
+    '.bCCC.CCb.',  // lower cloak, foot hints
+    '.bbbbbbbb.',  // big hairy hobbit feet!
   ],
 };
 
@@ -671,50 +677,89 @@ function EyeOfSauron({ cx, cy }: { cx: number; cy: number }) {
   );
 }
 
-function SauronMarker({ cx, cy }: { cx: number; cy: number }) {
-  // 10 cols × 9 rows — dark armored lord
+// ── Animated position marker: Frodo ──────────────────────────────────────────
+
+function FrodoMarker({ cx, cy }: { cx: number; cy: number }) {
+  const rows = MORDOR_SPRITES.frodo;
+  const sw = rows[0].length * PS;
+  const sh = rows.length * PS;
+  const x0 = cx - sw / 2;
+  const y0 = cy - sh / 2;
+  // One Ring is at row 4, col 3
+  const ringX = x0 + 3 * PS + PS / 2;
+  const ringY = y0 + 4 * PS + PS / 2;
+
+  return (
+    <g>
+      {/* Earthy ground glow */}
+      <ellipse cx={cx} cy={cy + sh / 2} rx="13" ry="3" fill="#4a9a4a" opacity="0.18">
+        <animate attributeName="opacity" values="0.08;0.28;0.08" dur="2.2s" repeatCount="indefinite" />
+      </ellipse>
+      {/* Sprite */}
+      {rows.flatMap((row, ri) =>
+        row.split('').map((c, ci) => {
+          if (c === '.' || !MP[c]) return null;
+          return (
+            <rect key={`${ri}-${ci}`}
+              x={x0 + ci * PS} y={y0 + ri * PS}
+              width={PS} height={PS}
+              fill={MP[c]} shapeRendering="crispEdges"
+            />
+          );
+        })
+      )}
+      {/* One Ring pulsing glow — sinister gold light */}
+      <ellipse cx={ringX} cy={ringY} rx={PS + 1} ry={PS * 0.65} fill="#f0c040" opacity="0.35">
+        <animate attributeName="opacity" values="0.1;0.75;0.1" dur="2.6s" repeatCount="indefinite" />
+        <animate attributeName="rx" values={`${PS + 1};${PS + 3};${PS + 1}`} dur="2.6s" repeatCount="indefinite" />
+      </ellipse>
+    </g>
+  );
+}
+
+// ── Goal marker: Gandalf ──────────────────────────────────────────────────────
+
+function GandalfMarker({ cx, cy }: { cx: number; cy: number }) {
+  // 10 cols × 9 rows — Grey Pilgrim with staff
   const sprite = [
-    '....kk....',  // helmet spike tips
-    '...kHHk...',  // upper helm dome
-    '..kHEEHk..',  // visor with glowing eyes
-    '..kHkHHk..',  // lower visor
-    '.AkAAAAkA.',  // gold shoulder pauldrons
-    '.AZZZZZA..',  // armored torso
-    '..ZZZZZ...',  // lower torso
-    '..kZ.Zk...',  // greaves
-    '.kk...kk..',  // sabatons
+    '....SS..E.',  // grey hat tip + staff orb (E=amber glow at col 8)
+    '...SSSS.p.',  // hat body, staff (p at col 8)
+    '..SSSSSSp.',  // wide brim + staff
+    '...SYYYSp.',  // face (Y=skin, S=hat outline) + staff
+    '...SWWWSp.',  // white beard + staff
+    '..SWWWWSp.',  // grey robe (S outline, W inner) + staff
+    '..SWwWWSp.',  // robe shadow detail + staff
+    '..SWWWWSp.',  // lower robe + staff
+    '...SWWSs..',  // feet with base shadow
   ];
   const sw = sprite[0].length * PS;
   const sh = sprite.length * PS;
   const x0 = cx - sw / 2;
   const y0 = cy - sh / 2;
-  // Eyes are at row 2, cols 4-5 → vertical center of that row
-  const eyeY = y0 + 2 * PS + PS / 2;
-
-  const auraPts = [
-    { x: x0 - 4, y: cy - 8, delay: '0s',     col: '#ff5500' },
-    { x: x0 + sw + 2, y: cy - 8, delay: '-0.35s', col: '#cc2200' },
-    { x: x0 - 4, y: cy + 4, delay: '-0.7s',  col: '#cc2200' },
-    { x: x0 + sw + 2, y: cy + 4, delay: '-1.05s', col: '#ff5500' },
-  ];
+  // Staff orb at row 0 col 8
+  const orbX = x0 + 8 * PS + PS / 2;
+  const orbY = y0 + PS / 2;
 
   return (
     <g>
-      {/* Ground glow */}
-      <ellipse cx={cx} cy={cy + sh / 2} rx="12" ry="4" fill="#ff4400" opacity="0.15">
-        <animate attributeName="opacity" values="0.07;0.28;0.07" dur="1.6s" repeatCount="indefinite" />
+      {/* Goal dashed line */}
+      <line x1={cx} y1={cy + sh / 2} x2={cx} y2={cy + sh / 2 + 22}
+        stroke="#f0c040" strokeWidth="1.5" strokeDasharray="3,2" opacity="0.5" />
+      {/* "GOAL" tag */}
+      <text x={cx} y={cy + sh / 2 + 34} textAnchor="middle"
+        fill="#f0c040" fontSize="8" fontFamily="var(--font-headline)" fontWeight="bold" letterSpacing="1">
+        GOAL
+      </text>
+      {/* Staff orb glow */}
+      <ellipse cx={orbX} cy={orbY} rx={PS + 2} ry={PS + 2} fill="#f0c040" opacity="0.35">
+        <animate attributeName="opacity" values="0.15;0.7;0.15" dur="2.1s" repeatCount="indefinite" />
+        <animate attributeName="rx" values={`${PS + 1};${PS + 4};${PS + 1}`} dur="2.1s" repeatCount="indefinite" />
       </ellipse>
-
-      {/* Side aura flames */}
-      {auraPts.map((f, i) => (
-        <rect key={i} x={f.x} y={f.y} width={2} height={5}
-          fill={f.col} shapeRendering="crispEdges">
-          <animate attributeName="opacity" values="0.15;0.9;0.15" dur="0.65s" begin={f.delay} repeatCount="indefinite" />
-          <animate attributeName="y" values={`${f.y};${f.y - 2};${f.y}`} dur="0.65s" begin={f.delay} repeatCount="indefinite" />
-        </rect>
-      ))}
-
-      {/* Sprite pixels */}
+      {/* Ground glow */}
+      <ellipse cx={cx} cy={cy + sh / 2} rx="10" ry="3" fill="#e8e0a0" opacity="0.1">
+        <animate attributeName="opacity" values="0.05;0.2;0.05" dur="2.1s" repeatCount="indefinite" />
+      </ellipse>
+      {/* Sprite */}
       {sprite.flatMap((row, ri) =>
         row.split('').map((c, ci) => {
           if (c === '.' || !MP[c]) return null;
@@ -727,38 +772,142 @@ function SauronMarker({ cx, cy }: { cx: number; cy: number }) {
           );
         })
       )}
+    </g>
+  );
+}
 
-      {/* Eye glow pulse */}
-      <ellipse cx={cx} cy={eyeY} rx={PS + 2} ry={PS * 0.75} fill="#ffaa00" opacity="0.45">
-        <animate attributeName="opacity" values="0.15;0.75;0.15" dur="1.8s" repeatCount="indefinite" />
-        <animate attributeName="rx" values={`${PS + 2};${PS + 5};${PS + 2}`} dur="1.8s" repeatCount="indefinite" />
+// ── Background creature: Balrog ───────────────────────────────────────────────
+
+function BalrogBG({ cx, cy }: { cx: number; cy: number }) {
+  const bw = 13; // half body width
+  const bh = 50; // body height
+  const ws = 50; // half wing span
+
+  return (
+    <g opacity="0.28">
+      {/* Background hellish glow */}
+      <ellipse cx={cx} cy={cy + bh * 0.55} rx={ws + 14} ry={bh * 0.52}
+        fill="#ff1a00" opacity="0.06">
+        <animate attributeName="opacity" values="0.03;0.16;0.03" dur="2.6s" repeatCount="indefinite" />
+      </ellipse>
+      {/* Left wing */}
+      <polygon
+        points={`${cx - bw * 0.5},${cy + 4} ${cx - ws},${cy - 14} ${cx - ws - 10},${cy + 24} ${cx - bw},${cy + bh * 0.42}`}
+        fill="#0e0606"
+      />
+      {/* Right wing */}
+      <polygon
+        points={`${cx + bw * 0.5},${cy + 4} ${cx + ws},${cy - 14} ${cx + ws + 10},${cy + 24} ${cx + bw},${cy + bh * 0.42}`}
+        fill="#0e0606"
+      />
+      {/* Body */}
+      <rect x={cx - bw} y={cy} width={bw * 2} height={bh} fill="#09030303" />
+      <rect x={cx - bw} y={cy} width={bw * 2} height={bh} fill="#0a0404" />
+      {/* Left horn */}
+      <polygon points={`${cx - 4},${cy} ${cx - 9},${cy - 18} ${cx - 2},${cy}`} fill="#120707" />
+      {/* Right horn */}
+      <polygon points={`${cx + 4},${cy} ${cx + 9},${cy - 18} ${cx + 2},${cy}`} fill="#120707" />
+      {/* Glowing eyes — alternating flicker */}
+      <rect x={cx - 8} y={cy + 13} width={4} height={4} fill="#ff3300" shapeRendering="crispEdges">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="1.3s" repeatCount="indefinite" />
+      </rect>
+      <rect x={cx + 5} y={cy + 13} width={4} height={4} fill="#ff3300" shapeRendering="crispEdges">
+        <animate attributeName="opacity" values="1;0.5;1" dur="1.3s" begin="-0.25s" repeatCount="indefinite" />
+      </rect>
+      {/* Animated fire whip */}
+      <path
+        d={`M ${cx + bw} ${cy + bh * 0.52} Q ${cx + 34} ${cy + bh * 0.32} ${cx + 52} ${cy + bh * 0.64}`}
+        stroke="#ff4400" strokeWidth="2.5" fill="none" strokeLinecap="round">
+        <animate attributeName="d"
+          values={`M ${cx+bw} ${cy+bh*0.52} Q ${cx+34} ${cy+bh*0.32} ${cx+52} ${cy+bh*0.64};M ${cx+bw} ${cy+bh*0.52} Q ${cx+32} ${cy+bh*0.36} ${cx+50} ${cy+bh*0.60};M ${cx+bw} ${cy+bh*0.52} Q ${cx+34} ${cy+bh*0.32} ${cx+52} ${cy+bh*0.64}`}
+          dur="0.85s" repeatCount="indefinite" />
+      </path>
+      {/* Flame glow at feet */}
+      <ellipse cx={cx} cy={cy + bh * 0.88} rx={bw + 8} ry={7}
+        fill="#ff2200" opacity="0.35">
+        <animate attributeName="opacity" values="0.18;0.52;0.18" dur="1.4s" repeatCount="indefinite" />
+        <animate attributeName="rx" values={`${bw + 5};${bw + 12};${bw + 5}`} dur="1.4s" repeatCount="indefinite" />
       </ellipse>
     </g>
   );
 }
 
 function RoadToMordor({ distanceKm }: { distanceKm: number }) {
-  const W = 1100, H = 215;
+  const W = 1100, H = 260;
   const PL = 55, PR = 55;
   const PLOT_W = W - PL - PR;
-  const PATH_Y = 150;
-  const SPRITE_CY = 97;
-  const EYE_CY = 46;
+  const PATH_Y = 185;
+  const SPRITE_CY = 122;
+  const EYE_CY = 55;
 
   const toX = (km: number) => PL + (Math.min(km, AT_FULL_KM_MORDOR) / AT_FULL_KM_MORDOR) * PLOT_W;
   const frodoX = toX(distanceKm);
   const doomX = toX(AT_FULL_KM_MORDOR);
+  const moriaX = toX(1100);
+  const goalX = toX(GOAL_KM_MORDOR);
 
   const pct = Math.min((distanceKm / AT_FULL_KM_MORDOR) * 100, 100).toFixed(1);
   const currentStage = [...MORDOR_MILESTONES].reverse().find(m => distanceKm >= m.km) ?? MORDOR_MILESTONES[0];
   const nextStage = MORDOR_MILESTONES.find(m => m.km > distanceKm);
 
+  // Sky palette keyed by hour — always dark (it's Mordor), but shifts with real time
+  const hour = new Date().getHours();
+  // [hour, skyTop, skyMid, horizonColor, horizonGlowOpacity, starVisibility 0-1]
+  const SKY_TIMES: [number, string, string, string, number, number][] = [
+    [0,  '#020208', '#0c0610', '#180c08', 0,    1.0],  // deep night
+    [5,  '#06040e', '#180a0a', '#3a1008', 0.25, 0.6],  // pre-dawn: dark purple, red hint
+    [7,  '#0c061a', '#2a0e0a', '#5a1c0a', 0.45, 0.2],  // dawn: purple sky, red horizon
+    [9,  '#100808', '#1e0a06', '#2e0e06', 0.2,  0.0],  // morning: smoky dark red
+    [12, '#140808', '#220a04', '#300c04', 0.1,  0.0],  // midday: oppressive smog
+    [15, '#120808', '#200c06', '#2e1006', 0.15, 0.0],  // afternoon
+    [18, '#0c0610', '#1e0c0a', '#3e1608', 0.35, 0.1],  // dusk: orange-red bleeding in
+    [20, '#060410', '#14080e', '#280e08', 0.2,  0.5],  // evening
+    [22, '#020208', '#0c0610', '#180c08', 0,    1.0],  // night
+  ];
+  // Interpolate between the two nearest entries
+  const getSky = (h: number) => {
+    const next = SKY_TIMES.findIndex(([t]) => t > h);
+    if (next <= 0) return SKY_TIMES[0];
+    const a = SKY_TIMES[next - 1], b = SKY_TIMES[next];
+    const t = (h - a[0]) / (b[0] - a[0]);
+    const lerp = (ca: string, cb: string) => {
+      const pa = parseInt(ca.slice(1), 16), pb = parseInt(cb.slice(1), 16);
+      const r = Math.round(((pa >> 16) & 0xff) * (1-t) + ((pb >> 16) & 0xff) * t);
+      const g = Math.round(((pa >> 8) & 0xff) * (1-t) + ((pb >> 8) & 0xff) * t);
+      const bl = Math.round((pa & 0xff) * (1-t) + (pb & 0xff) * t);
+      return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${bl.toString(16).padStart(2,'0')}`;
+    };
+    return [0, lerp(a[1],b[1]), lerp(a[2],b[2]), lerp(a[3],b[3]),
+      a[4]*(1-t)+b[4]*t, a[5]*(1-t)+b[5]*t] as typeof SKY_TIMES[0];
+  };
+  const [, skyTop, skyMid, skyHorizon, horizonGlowOpacity, starVisibility] = getSky(hour);
+
   const stars = Array.from({ length: 55 }, (_, i) => ({
     cx: (i * 47 + 23) % W,
-    cy: (i * 31 + 11) % 60 + 4,
+    cy: (i * 31 + 11) % 70 + 4,
     r: i % 5 === 0 ? 1.2 : 0.7,
-    opacity: 0.15 + (i % 4) * 0.12,
+    opacity: (0.15 + (i % 4) * 0.12) * starVisibility,
   }));
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        // Center Frodo in the scroll container
+        const containerW = el.clientWidth;
+        const targetScroll = frodoX - containerW / 2;
+        el.scrollTo({ left: Math.max(0, targetScroll), behavior: 'smooth' });
+        observer.disconnect();
+      },
+      { threshold: 0.3 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [frodoX]);
 
   return (
     <div className={styles.mordorWrapper}>
@@ -771,12 +920,17 @@ function RoadToMordor({ distanceKm }: { distanceKm: number }) {
         )}
         <span className={styles.mordorPct}>{pct}%</span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      <div ref={scrollRef} className={styles.mordorScroll}>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
         <defs>
           <linearGradient id="mSky" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#050510" />
-            <stop offset="55%" stopColor="#160c04" />
-            <stop offset="100%" stopColor="#221206" />
+            <stop offset="0%" stopColor={skyTop} />
+            <stop offset="55%" stopColor={skyMid} />
+            <stop offset="100%" stopColor={skyHorizon} />
+          </linearGradient>
+          <linearGradient id="mHorizonGlow" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={skyHorizon} stopOpacity="0" />
+            <stop offset="100%" stopColor={skyHorizon} stopOpacity={horizonGlowOpacity} />
           </linearGradient>
           <linearGradient id="mGround" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#221206" />
@@ -791,6 +945,13 @@ function RoadToMordor({ distanceKm }: { distanceKm: number }) {
         {/* Sky + ground */}
         <rect width={W} height={PATH_Y + 6} fill="url(#mSky)" />
         <rect y={PATH_Y + 6} width={W} height={H - PATH_Y - 6} fill="url(#mGround)" />
+        {/* Horizon glow — dawn / dusk atmospheric bleed */}
+        {horizonGlowOpacity > 0 && (
+          <rect y={PATH_Y - 60} width={W} height={66} fill="url(#mHorizonGlow)" />
+        )}
+
+        {/* Balrog background — behind everything */}
+        <BalrogBG cx={moriaX} cy={62} />
 
         {/* Stars — skip the eye area */}
         {stars.filter(s => Math.abs(s.cx - doomX) > 28 || s.cy < 28 || s.cy > 68).map((s, i) => (
@@ -841,13 +1002,13 @@ function RoadToMordor({ distanceKm }: { distanceKm: number }) {
                 ? <circle cx={mx} cy={PATH_Y} r="4" fill={m.km === AT_FULL_KM_MORDOR ? '#ff6600' : '#aa7730'} opacity="0.9" />
                 : <circle cx={mx} cy={PATH_Y} r="3" fill="#221408" stroke="#3a2010" strokeWidth="1" />
               }
-              <text x={mx} y={PATH_Y + 17} textAnchor="middle"
-                fill={reached ? '#cc9944' : '#3a2810'} fontSize="8"
+              <text x={mx} y={PATH_Y + 22} textAnchor="middle"
+                fill={reached ? '#cc9944' : '#3a2810'} fontSize="13"
                 fontFamily="var(--font-headline)" fontWeight="bold">
                 {m.name}
               </text>
-              <text x={mx} y={PATH_Y + 27} textAnchor="middle"
-                fill={reached ? '#886622' : '#2a1a08'} fontSize="6.5"
+              <text x={mx} y={PATH_Y + 36} textAnchor="middle"
+                fill={reached ? '#886622' : '#2a1a08'} fontSize="11"
                 fontFamily="var(--font-headline)">
                 {m.place}
               </text>
@@ -855,14 +1016,18 @@ function RoadToMordor({ distanceKm }: { distanceKm: number }) {
           );
         })}
 
-        {/* Sauron position marker */}
-        {distanceKm > 0 && <SauronMarker cx={frodoX} cy={PATH_Y - 23} />}
+        {/* Frodo position marker */}
+        {distanceKm > 0 && <FrodoMarker cx={frodoX} cy={PATH_Y - 22} />}
+
+        {/* Gandalf at goal */}
+        <GandalfMarker cx={goalX} cy={PATH_Y - 23} />
 
         {/* Footer */}
-        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#3a2810" fontSize="8" fontFamily="var(--font-headline)">
+        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#3a2810" fontSize="14" fontFamily="var(--font-headline)">
           {distanceKm.toFixed(0)} KM / {AT_FULL_KM_MORDOR} KM — {pct}% TO KATAHDIN
         </text>
       </svg>
+      </div>
     </div>
   );
 }
@@ -994,11 +1159,11 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
           </div>
           <div className={styles.statsProgressBars}>
             <div className={`${styles.statsProgressBar} ${styles.statsProgressBarFull}`}>
-              <div className={`${styles.statsProgressFill} ${styles.statsProgressFillFull}`} style={{ width: `${(stats.combinedDist / 3500) * 100}%` }} />
+              <div className={`${styles.statsProgressFill} ${styles.statsProgressFillFull}`} style={{ width: `${Math.min((stats.combinedDist / 3500) * 100, 100)}%` }} />
               <span className={styles.statsProgressLabel}>FULL AT — 3,500 KM ({((stats.combinedDist / 3500) * 100).toFixed(1)}%)</span>
             </div>
             <div className={styles.statsProgressBar}>
-              <div className={styles.statsProgressFill} style={{ width: `${stats.progress}%` }} />
+              <div className={styles.statsProgressFill} style={{ width: `${Math.min(stats.progress, 100)}%` }} />
               <span className={styles.statsProgressLabel}>GOAL — {AT_TOTAL_KM} KM</span>
             </div>
           </div>
