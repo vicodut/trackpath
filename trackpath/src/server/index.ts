@@ -706,6 +706,46 @@ app.delete('/api/gear/items/:id', requireAuth, async (req: Request, res: Respons
   res.json({ ok: true });
 });
 
+app.post('/api/gear/import', requireAuth, async (req: Request, res: Response) => {
+  type ImportRow = { name: string; category: string; weightG: number; qty: number; worn: boolean; consumable: boolean; notes?: string };
+  const rows: ImportRow[] = req.body;
+  if (!Array.isArray(rows) || rows.length === 0) { res.status(400).json({ error: 'No rows provided' }); return; }
+
+  // Upsert categories
+  const categoryNames = [...new Set(rows.map(r => r.category).filter(Boolean))];
+  const existingCats = await db.select().from(gearCategories);
+  const catMap = new Map(existingCats.map(c => [c.name.toLowerCase(), c]));
+
+  const PALETTE = ['#e05252','#e08c52','#d4c44a','#52a852','#52a8a8','#5278e0','#a852e0','#888888'];
+  let palIdx = existingCats.length % PALETTE.length;
+
+  for (const catName of categoryNames) {
+    if (!catMap.has(catName.toLowerCase())) {
+      const [newCat] = await db.insert(gearCategories).values({
+        name: catName, color: PALETTE[palIdx % PALETTE.length],
+        sortOrder: catMap.size,
+      }).returning();
+      catMap.set(catName.toLowerCase(), newCat);
+      palIdx++;
+    }
+  }
+
+  // Insert items
+  const inserted = await db.insert(gearItems).values(
+    rows.map(r => ({
+      categoryId: catMap.get(r.category.toLowerCase())!.id,
+      name: r.name,
+      weightG: r.weightG,
+      qty: r.qty,
+      worn: r.worn,
+      consumable: r.consumable,
+      notes: r.notes ?? null,
+    }))
+  ).returning();
+
+  res.json({ imported: inserted.length });
+});
+
 // --- SPA fallback (production) ---
 if (process.env.NODE_ENV === 'production') {
   app.get('/{*path}', (_req: Request, res: Response) => {

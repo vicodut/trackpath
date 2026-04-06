@@ -77,7 +77,7 @@ export function useGear() {
   }, [load]);
 
   return {
-    categories, items, loading,
+    categories, items, loading, load,
     addCategory, updateCategory, deleteCategory, moveCategoryUp, moveCategoryDown,
     addItem, updateItem, deleteItem,
   };

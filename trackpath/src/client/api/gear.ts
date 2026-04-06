@@ -58,3 +58,16 @@ export async function deleteItem(id: number): Promise<void> {
   const res = await fetch(`/api/gear/items/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete item');
 }
+
+export async function importCsv(rows: {
+  name: string; category: string; weightG: number; qty: number;
+  worn: boolean; consumable: boolean; notes?: string;
+}[]): Promise<{ imported: number }> {
+  const res = await fetch('/api/gear/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rows),
+  });
+  if (!res.ok) throw new Error('Import failed');
+  return res.json();
+}

@@ -1,7 +1,30 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import type { GearCategory, GearItem } from '../../types';
 import { useGear } from '../../hooks/useGear';
+import { importCsv } from '../../api/gear';
 import styles from './GearPage.module.css';
+
+// ── CSV parser ────────────────────────────────────────────────────────────────
+// Columns: Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable
+const UNIT_TO_G: Record<string, number> = { gram: 1, ounce: 28.3495, oz: 28.3495, kg: 1000, lbs: 453.592 };
+
+function parseCsv(text: string) {
+  const lines = text.trim().split('\n');
+  // skip header
+  return lines.slice(1).map(line => {
+    const cols = line.split(',');
+    const name     = cols[0]?.trim() ?? '';
+    const category = cols[1]?.trim() || 'Misc';
+    const notes    = cols[2]?.trim() || undefined;
+    const qty      = parseInt(cols[3]?.trim()) || 1;
+    const weight   = parseFloat(cols[4]?.trim()) || 0;
+    const unit     = cols[5]?.trim().toLowerCase() ?? 'gram';
+    const worn     = cols[8]?.trim() === '1';
+    const consumable = cols[9]?.trim() === '1';
+    const weightG  = weight * (UNIT_TO_G[unit] ?? 1);
+    return { name, category, weightG, qty, worn, consumable, notes };
+  }).filter(r => r.name);
+}
 
 interface GearPageProps {
   isAdmin: boolean;
@@ -219,7 +242,7 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
 
 export function GearPage({ isAdmin, onClose }: GearPageProps) {
   const { categories, items, loading, addCategory, updateCategory, deleteCategory,
-    moveCategoryUp, moveCategoryDown, addItem, updateItem, deleteItem } = useGear();
+    moveCategoryUp, moveCategoryDown, addItem, updateItem, deleteItem, load } = useGear();
 
   const [unit, setUnit] = useState<WeightUnit>(() => {
     return (localStorage.getItem('gear_unit') as WeightUnit) || 'g';
@@ -228,6 +251,33 @@ export function GearPage({ isAdmin, onClose }: GearPageProps) {
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState('#5278e0');
   const [showAddCat, setShowAddCat] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportMsg(null);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const rows = parseCsv(text);
+        if (rows.length === 0) { setImportMsg('No valid rows found.'); return; }
+        const { imported } = await importCsv(rows);
+        await load();
+        setImportMsg(`Imported ${imported} item${imported !== 1 ? 's' : ''}.`);
+      } catch (err) {
+        setImportMsg(`Error: ${(err as Error).message}`);
+      } finally {
+        setImporting(false);
+        if (fileRef.current) fileRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const setUnitAndSave = (u: WeightUnit) => {
     setUnit(u);
@@ -256,7 +306,7 @@ export function GearPage({ isAdmin, onClose }: GearPageProps) {
     <div className={styles.gearPage}>
       <div className={styles.gearPageHeader}>
         <h2>GEAR_LIST</h2>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div className={styles.unitToggle}>
             {UNITS.map(u => (
               <button key={u} className={`${styles.unitBtn} ${unit === u ? styles.unitBtnActive : ''}`}
@@ -265,6 +315,24 @@ export function GearPage({ isAdmin, onClose }: GearPageProps) {
               </button>
             ))}
           </div>
+          {isAdmin && (
+            <>
+              <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImport} />
+              <button
+                className={styles.addBtn}
+                onClick={() => fileRef.current?.click()}
+                disabled={importing}
+                style={{ fontSize: '0.65rem' }}
+              >
+                {importing ? 'IMPORTING...' : 'IMPORT CSV'}
+              </button>
+              {importMsg && (
+                <span style={{ fontFamily: 'var(--font-headline)', fontSize: '0.65rem', color: 'var(--outline)' }}>
+                  {importMsg}
+                </span>
+              )}
+            </>
+          )}
           <button onClick={onClose} style={{
             fontFamily: 'var(--font-headline)', fontSize: '0.7rem', fontWeight: 700,
             letterSpacing: '0.1em', padding: '6px 12px', background: 'none',
