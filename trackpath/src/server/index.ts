@@ -641,7 +641,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 app.get('/api/gear', async (_req: Request, res: Response) => {
   const cats = await db.select().from(gearCategories).orderBy(gearCategories.sortOrder);
-  const its = await db.select().from(gearItems).orderBy(gearItems.createdAt);
+  const its = await db.select().from(gearItems).orderBy(gearItems.id);
   res.json({ categories: cats, items: its });
 });
 
