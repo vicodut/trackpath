@@ -1,22 +1,34 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-type ModalName = 'admin' | 'stats' | 'trailLog' | 'blog';
+type Route = '/' | '/stats' | '/trail-log' | '/blog' | '/admin' | '/gear';
 
 export function useModals() {
-  const [open, setOpen] = useState<ModalName | null>(null);
+  const [path, setPath] = useState<string>(() => window.location.pathname);
 
-  const show = useCallback((name: ModalName) => setOpen(name), []);
-  const close = useCallback(() => setOpen(null), []);
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const navigate = useCallback((to: Route) => {
+    history.pushState(null, '', to);
+    setPath(to);
+  }, []);
+
+  const closeModal = useCallback(() => navigate('/'), [navigate]);
 
   return {
-    showAdmin: open === 'admin',
-    showStats: open === 'stats',
-    showTrailLog: open === 'trailLog',
-    showBlog: open === 'blog',
-    openAdmin: () => show('admin'),
-    openStats: () => show('stats'),
-    openTrailLog: () => show('trailLog'),
-    openBlog: () => show('blog'),
-    closeModal: close,
+    showAdmin:    path === '/admin',
+    showStats:    path === '/stats',
+    showTrailLog: path === '/trail-log',
+    showBlog:     path === '/blog',
+    showGear:     path === '/gear',
+    openAdmin:    () => navigate('/admin'),
+    openStats:    () => navigate('/stats'),
+    openTrailLog: () => navigate('/trail-log'),
+    openBlog:     () => navigate('/blog'),
+    openGear:     () => navigate('/gear'),
+    closeModal,
   };
 }

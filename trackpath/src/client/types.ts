@@ -25,6 +25,26 @@ export interface StravaActivity {
   coords: string | null;
 }
 
+export interface GearCategory {
+  id: number;
+  name: string;
+  color: string;
+  sortOrder: number;
+  createdAt: string | null;
+}
+
+export interface GearItem {
+  id: number;
+  categoryId: number;
+  name: string;
+  weightG: number;
+  qty: number;
+  worn: boolean;
+  consumable: boolean;
+  notes: string | null;
+  createdAt: string | null;
+}
+
 export interface SyncResult {
   synced: number;
   total: number;

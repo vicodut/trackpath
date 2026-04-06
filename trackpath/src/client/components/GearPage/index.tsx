@@ -1,0 +1,381 @@
+import { useState, useMemo } from 'react';
+import type { GearCategory, GearItem } from '../../types';
+import { useGear } from '../../hooks/useGear';
+import styles from './GearPage.module.css';
+
+interface GearPageProps {
+  isAdmin: boolean;
+  onClose: () => void;
+}
+
+type WeightUnit = 'g' | 'kg' | 'lbs' | 'oz';
+const UNITS: WeightUnit[] = ['g', 'kg', 'lbs', 'oz'];
+const TO_G: Record<WeightUnit, number> = { g: 1, kg: 1000, lbs: 453.592, oz: 28.3495 };
+
+function fmtW(totalG: number, unit: WeightUnit): string {
+  const val = totalG / TO_G[unit];
+  return unit === 'g' ? Math.round(val).toString() : val.toFixed(2);
+}
+
+const PRESET_COLORS = ['#e05252', '#e08c52', '#d4c44a', '#52a852', '#52a8a8', '#5278e0', '#a852e0', '#888888'];
+
+// ── Inline editable cell ──────────────────────────────────────────────────────
+
+function EditCell({ value, type = 'text', onSave, align = 'right' }: {
+  value: string | number; type?: 'text' | 'number'; onSave: (v: string) => void; align?: 'left' | 'right';
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+
+  if (!editing) {
+    return (
+      <span style={{ cursor: 'pointer', textAlign: align }} onClick={() => { setDraft(String(value)); setEditing(true); }}>
+        {value}
+      </span>
+    );
+  }
+  return (
+    <input
+      className={styles.inlineInput}
+      style={{ textAlign: align }}
+      type={type}
+      value={draft}
+      autoFocus
+      onChange={e => setDraft(e.target.value)}
+      onBlur={() => { setEditing(false); onSave(draft); }}
+      onKeyDown={e => { if (e.key === 'Enter') { setEditing(false); onSave(draft); } if (e.key === 'Escape') setEditing(false); }}
+    />
+  );
+}
+
+// ── Add item form (inline row) ────────────────────────────────────────────────
+
+function AddItemRow({ categoryId, unit, onAdd, onCancel }: {
+  categoryId: number; unit: WeightUnit;
+  onAdd: (data: { categoryId: number; name: string; weightG: number; qty: number; worn: boolean; consumable: boolean }) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [weight, setWeight] = useState('0');
+  const [qty, setQty] = useState('1');
+  const [worn, setWorn] = useState(false);
+  const [consumable, setConsumable] = useState(false);
+
+  const submit = () => {
+    if (!name.trim()) return;
+    const weightG = parseFloat(weight) * TO_G[unit];
+    onAdd({ categoryId, name: name.trim(), weightG: isNaN(weightG) ? 0 : weightG, qty: parseInt(qty) || 1, worn, consumable });
+  };
+
+  return (
+    <tr className={styles.addItemRow}>
+      <td colSpan={5}>
+        <div className={styles.addItemForm}>
+          <input
+            type="text" placeholder="Item name" value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && submit()}
+            autoFocus
+          />
+          <input
+            type="number" placeholder={`Weight (${unit})`} value={weight}
+            onChange={e => setWeight(e.target.value)} min="0" step="any"
+          />
+          <input
+            type="number" placeholder="Qty" value={qty}
+            onChange={e => setQty(e.target.value)} min="1"
+          />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', fontFamily: 'var(--font-headline)', color: 'var(--outline)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={worn} onChange={e => setWorn(e.target.checked)} /> WORN
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', fontFamily: 'var(--font-headline)', color: 'var(--outline)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={consumable} onChange={e => setConsumable(e.target.checked)} /> CONSUMABLE
+          </label>
+          <button className={styles.addBtn} onClick={submit}>ADD</button>
+          <button className={styles.cancelBtn} onClick={onCancel}>CANCEL</button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// ── Category section ──────────────────────────────────────────────────────────
+
+function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp, onMoveDown, onDeleteCat,
+  onAddItem, onUpdateItem, onDeleteItem }: {
+  cat: GearCategory; items: GearItem[]; unit: WeightUnit; isAdmin: boolean;
+  isFirst: boolean; isLast: boolean;
+  onMoveUp: () => void; onMoveDown: () => void; onDeleteCat: () => void;
+  onAddItem: (data: { categoryId: number; name: string; weightG: number; qty: number; worn: boolean; consumable: boolean }) => void;
+  onUpdateItem: (id: number, data: Partial<GearItem>) => void;
+  onDeleteItem: (id: number) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+
+  const totalG = items.reduce((s, it) => s + it.weightG * it.qty, 0);
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <span className={styles.sectionColorDot} style={{ background: cat.color }} />
+        <span className={styles.sectionTitle}>{cat.name}</span>
+        <span className={styles.sectionMeta}>{items.length} item{items.length !== 1 ? 's' : ''} · {fmtW(totalG, unit)} {unit}</span>
+        {isAdmin && (
+          <div className={styles.sectionActions}>
+            {!isFirst && <button className={styles.iconBtn} onClick={onMoveUp} title="Move up">↑</button>}
+            {!isLast && <button className={styles.iconBtn} onClick={onMoveDown} title="Move down">↓</button>}
+            <button className={`${styles.iconBtn} ${styles.deleteBtn}`} onClick={onDeleteCat} title="Delete category">✕</button>
+          </div>
+        )}
+      </div>
+
+      <table className={styles.itemTable}>
+        <thead>
+          <tr>
+            <th style={{ width: '40%' }}>Item</th>
+            <th>Weight</th>
+            <th>Qty</th>
+            <th>Total</th>
+            {isAdmin && <th></th>}
+          </tr>
+        </thead>
+        <tbody>
+          {items.map(item => {
+            const totalItemG = item.weightG * item.qty;
+            return (
+              <tr key={item.id} className={styles.itemRow}>
+                <td>
+                  <div className={styles.itemName}>
+                    {isAdmin
+                      ? <EditCell value={item.name} type="text" align="left"
+                          onSave={v => onUpdateItem(item.id, { name: v })} />
+                      : item.name
+                    }
+                  </div>
+                  <div className={styles.itemBadges}>
+                    {item.worn && <span className={`${styles.badge} ${styles.badgeWorn}`}>WORN</span>}
+                    {item.consumable && <span className={`${styles.badge} ${styles.badgeConsumable}`}>CONSUMABLE</span>}
+                  </div>
+                </td>
+                <td className={styles.itemNum}>
+                  {isAdmin
+                    ? <EditCell value={fmtW(item.weightG, unit)} type="number"
+                        onSave={v => onUpdateItem(item.id, { weightG: parseFloat(v) * TO_G[unit] || 0 })} />
+                    : fmtW(item.weightG, unit)
+                  }
+                  <span className={styles.itemNumMuted}> {unit}</span>
+                </td>
+                <td className={styles.itemNum}>
+                  {isAdmin
+                    ? <EditCell value={item.qty} type="number"
+                        onSave={v => onUpdateItem(item.id, { qty: parseInt(v) || 1 })} />
+                    : item.qty
+                  }
+                </td>
+                <td className={styles.itemNum}>
+                  {fmtW(totalItemG, unit)} <span className={styles.itemNumMuted}>{unit}</span>
+                </td>
+                {isAdmin && (
+                  <td style={{ textAlign: 'right' }}>
+                    <button className={`${styles.iconBtn} ${styles.deleteBtn}`}
+                      onClick={() => onDeleteItem(item.id)}>✕</button>
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+
+          {/* Category total */}
+          <tr className={styles.totalRow}>
+            <td>SUBTOTAL</td>
+            <td></td>
+            <td></td>
+            <td>{fmtW(totalG, unit)} {unit}</td>
+            {isAdmin && <td></td>}
+          </tr>
+
+          {/* Add item */}
+          {isAdmin && !adding && (
+            <tr className={styles.addItemRow}>
+              <td colSpan={5}>
+                <button className={styles.addBtn} onClick={() => setAdding(true)}>+ ADD ITEM</button>
+              </td>
+            </tr>
+          )}
+          {isAdmin && adding && (
+            <AddItemRow
+              categoryId={cat.id} unit={unit}
+              onAdd={data => { onAddItem(data); setAdding(false); }}
+              onCancel={() => setAdding(false)}
+            />
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+export function GearPage({ isAdmin, onClose }: GearPageProps) {
+  const { categories, items, loading, addCategory, updateCategory, deleteCategory,
+    moveCategoryUp, moveCategoryDown, addItem, updateItem, deleteItem } = useGear();
+
+  const [unit, setUnit] = useState<WeightUnit>(() => {
+    return (localStorage.getItem('gear_unit') as WeightUnit) || 'g';
+  });
+
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatColor, setNewCatColor] = useState('#5278e0');
+  const [showAddCat, setShowAddCat] = useState(false);
+
+  const setUnitAndSave = (u: WeightUnit) => {
+    setUnit(u);
+    localStorage.setItem('gear_unit', u);
+  };
+
+  const sorted = useMemo(() =>
+    [...categories].sort((a, b) => a.sortOrder - b.sortOrder),
+  [categories]);
+
+  const itemsByCategory = useMemo(() => {
+    const map: Record<number, GearItem[]> = {};
+    for (const it of items) {
+      if (!map[it.categoryId]) map[it.categoryId] = [];
+      map[it.categoryId].push(it);
+    }
+    return map;
+  }, [items]);
+
+  // Dashboard totals
+  const totalG = items.reduce((s, it) => s + it.weightG * it.qty, 0);
+  const baseG = items.filter(it => !it.worn && !it.consumable).reduce((s, it) => s + it.weightG * it.qty, 0);
+  const wornG = items.filter(it => it.worn).reduce((s, it) => s + it.weightG * it.qty, 0);
+
+  return (
+    <div className={styles.gearPage}>
+      <div className={styles.gearPageHeader}>
+        <h2>GEAR_LIST</h2>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div className={styles.unitToggle}>
+            {UNITS.map(u => (
+              <button key={u} className={`${styles.unitBtn} ${unit === u ? styles.unitBtnActive : ''}`}
+                onClick={() => setUnitAndSave(u)}>
+                {u}
+              </button>
+            ))}
+          </div>
+          <button onClick={onClose} style={{
+            fontFamily: 'var(--font-headline)', fontSize: '0.7rem', fontWeight: 700,
+            letterSpacing: '0.1em', padding: '6px 12px', background: 'none',
+            border: 'var(--ghost-border)', color: 'var(--outline)', cursor: 'pointer',
+          }}>CLOSE</button>
+        </div>
+      </div>
+
+      <div className={styles.gearPageContent}>
+        {loading ? (
+          <div className={styles.empty}>LOADING...</div>
+        ) : (
+          <>
+            {/* Dashboard */}
+            <div className={styles.dashboard}>
+              <div className={styles.dashCards}>
+                <div className={`${styles.dashCard} ${styles.dashCardAccent}`}>
+                  <span className={styles.dashLabel}>BASE_WEIGHT</span>
+                  <span className={styles.dashValue}>{fmtW(baseG, unit)}<span className={styles.dashUnit}>{unit}</span></span>
+                </div>
+                <div className={styles.dashCard}>
+                  <span className={styles.dashLabel}>WORN</span>
+                  <span className={styles.dashValue}>{fmtW(wornG, unit)}<span className={styles.dashUnit}>{unit}</span></span>
+                </div>
+                <div className={styles.dashCard}>
+                  <span className={styles.dashLabel}>TOTAL</span>
+                  <span className={styles.dashValue}>{fmtW(totalG, unit)}<span className={styles.dashUnit}>{unit}</span></span>
+                </div>
+              </div>
+
+              {/* Category breakdown bars */}
+              {sorted.length > 0 && totalG > 0 && (
+                <div className={styles.catBars}>
+                  {sorted.map(cat => {
+                    const catItems = itemsByCategory[cat.id] ?? [];
+                    const catG = catItems.reduce((s, it) => s + it.weightG * it.qty, 0);
+                    const pct = totalG > 0 ? (catG / totalG) * 100 : 0;
+                    return (
+                      <div key={cat.id} className={styles.catBarRow}>
+                        <span className={styles.catBarLabel}>{cat.name}</span>
+                        <div className={styles.catBarTrack}>
+                          <div className={styles.catBarFill} style={{ width: `${pct}%`, background: cat.color }} />
+                        </div>
+                        <span className={styles.catBarWeight}>{fmtW(catG, unit)} {unit}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Categories */}
+            {sorted.length === 0 ? (
+              <div className={styles.empty}>NO GEAR YET — ADD A CATEGORY TO GET STARTED</div>
+            ) : (
+              sorted.map((cat, idx) => (
+                <CategorySection
+                  key={cat.id}
+                  cat={cat}
+                  items={itemsByCategory[cat.id] ?? []}
+                  unit={unit}
+                  isAdmin={isAdmin}
+                  isFirst={idx === 0}
+                  isLast={idx === sorted.length - 1}
+                  onMoveUp={() => moveCategoryUp(cat.id)}
+                  onMoveDown={() => moveCategoryDown(cat.id)}
+                  onDeleteCat={() => deleteCategory(cat.id)}
+                  onAddItem={addItem}
+                  onUpdateItem={(id, data) => updateItem(id, data as Parameters<typeof updateItem>[1])}
+                  onDeleteItem={deleteItem}
+                />
+              ))
+            )}
+
+            {/* Add category */}
+            {isAdmin && (
+              <div>
+                {!showAddCat ? (
+                  <button className={styles.addBtn} onClick={() => setShowAddCat(true)}>+ ADD CATEGORY</button>
+                ) : (
+                  <div className={styles.addCategoryArea}>
+                    <input
+                      type="text" placeholder="Category name" value={newCatName}
+                      onChange={e => setNewCatName(e.target.value)}
+                      onKeyDown={e => e.key === 'Escape' && setShowAddCat(false)}
+                      autoFocus
+                    />
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {PRESET_COLORS.map(c => (
+                        <button key={c} onClick={() => setNewCatColor(c)} style={{
+                          width: 22, height: 22, background: c, border: newCatColor === c ? '2px solid var(--on-surface)' : '1px solid transparent',
+                          cursor: 'pointer', padding: 0,
+                        }} />
+                      ))}
+                      <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)}
+                        className={styles.colorPicker} title="Custom color" />
+                    </div>
+                    <button className={styles.addBtn} onClick={async () => {
+                      if (!newCatName.trim()) return;
+                      await addCategory(newCatName.trim(), newCatColor);
+                      setNewCatName('');
+                      setShowAddCat(false);
+                    }}>CREATE</button>
+                    <button className={styles.cancelBtn} onClick={() => setShowAddCat(false)}>CANCEL</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

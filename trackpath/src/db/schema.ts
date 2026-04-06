@@ -1,4 +1,4 @@
-import { pgTable, serial, doublePrecision, text, timestamp, boolean, integer, bigint } from 'drizzle-orm/pg-core';
+import { pgTable, serial, doublePrecision, text, timestamp, boolean, integer, bigint, real } from 'drizzle-orm/pg-core';
 
 export const trackingPoints = pgTable('tracking_points', {
   id: serial('id').primaryKey(),
@@ -80,6 +80,31 @@ export const stravaActivities = pgTable("strava_activities", {
   syncedAt: timestamp("synced_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// --- Gear ---
+
+export const gearCategories = pgTable('gear_categories', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  color: text('color').notNull().default('#888888'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const gearItems = pgTable('gear_items', {
+  id: serial('id').primaryKey(),
+  categoryId: integer('category_id').notNull().references(() => gearCategories.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  weightG: real('weight_g').notNull().default(0),
+  qty: integer('qty').notNull().default(1),
+  worn: boolean('worn').notNull().default(false),
+  consumable: boolean('consumable').notNull().default(false),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export type GearCategory = typeof gearCategories.$inferSelect;
+export type GearItem = typeof gearItems.$inferSelect;
 
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),

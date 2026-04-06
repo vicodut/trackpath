@@ -7,6 +7,7 @@ import { Weather } from "./components/Weather";
 import { Stats } from "./components/Stats";
 import { AdminPage } from "./components/AdminPage";
 import { StatsPage } from "./components/StatsPage";
+import { GearPage } from "./components/GearPage";
 import type { LayerVisibility } from "./components/LayerToggle";
 import { LayerToggle } from "./components/LayerToggle";
 import { MapElevationProfile } from "./components/MapElevationProfile";
@@ -26,7 +27,7 @@ export function App() {
   const { points, loading, status, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain } = usePoints();
   const { isAdmin } = useAdmin();
   const { activities: stravaActivities, connect: stravaConnect, syncActivities: stravaSync } = useStrava();
-  const { showAdmin, showStats, showTrailLog, showBlog, openAdmin, openStats, openTrailLog, openBlog, closeModal } = useModals();
+  const { showAdmin, showStats, showTrailLog, showBlog, showGear, openAdmin, openStats, openTrailLog, openBlog, openGear, closeModal } = useModals();
   const { formOpen, setFormOpen, pickedCoords, sidebarVisible, setSidebarVisible, handleMapClick, handleLongPress, handleSubmit, handleSuccess, openForm } = useAddPoint(addPoint, isAdmin);
 
   const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(null);
@@ -131,6 +132,7 @@ export function App() {
         onStats={openStats}
         onTrailLog={openTrailLog}
         onBlog={openBlog}
+        onGear={openGear}
       />
       <div className="main-container">
         <div className="map-wrapper">
@@ -219,6 +221,9 @@ export function App() {
       )}
       {showBlog && (
         <Blog onClose={closeModal} />
+      )}
+      {showGear && (
+        <GearPage isAdmin={isAdmin} onClose={closeModal} />
       )}
       {tappedPoint && (
         <PointPopup

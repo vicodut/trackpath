@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 import { toNodeHandler, fromNodeHeaders } from 'better-auth/node';
 import { db, sql as pgClient } from '../db/index.js';
 import type { NewTrackingPoint} from '../db/schema.js';
-import { trackingPoints, stravaTokens, stravaActivities } from '../db/schema.js';
+import { trackingPoints, stravaTokens, stravaActivities, gearCategories, gearItems } from '../db/schema.js';
 import { auth } from './auth.js';
 
 const app = express();
@@ -635,6 +635,75 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
+});
+
+// --- Gear ---
+
+app.get('/api/gear', async (_req: Request, res: Response) => {
+  const cats = await db.select().from(gearCategories).orderBy(gearCategories.sortOrder);
+  const its = await db.select().from(gearItems).orderBy(gearItems.createdAt);
+  res.json({ categories: cats, items: its });
+});
+
+app.post('/api/gear/categories', requireAuth, async (req: Request, res: Response) => {
+  const { name, color, sortOrder } = req.body as { name: string; color: string; sortOrder: number };
+  if (!name) { res.status(400).json({ error: 'name required' }); return; }
+  const [cat] = await db.insert(gearCategories).values({ name, color: color || '#888888', sortOrder: sortOrder ?? 0 }).returning();
+  res.json(cat);
+});
+
+app.put('/api/gear/categories/:id', requireAuth, async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  const { name, color, sortOrder } = req.body as Partial<{ name: string; color: string; sortOrder: number }>;
+  const updates: Partial<{ name: string; color: string; sortOrder: number }> = {};
+  if (name !== undefined) updates.name = name;
+  if (color !== undefined) updates.color = color;
+  if (sortOrder !== undefined) updates.sortOrder = sortOrder;
+  await db.update(gearCategories).set(updates).where(eq(gearCategories.id, id));
+  res.json({ ok: true });
+});
+
+app.delete('/api/gear/categories/:id', requireAuth, async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  await db.delete(gearCategories).where(eq(gearCategories.id, id));
+  res.json({ ok: true });
+});
+
+app.post('/api/gear/items', requireAuth, async (req: Request, res: Response) => {
+  const { categoryId, name, weightG, qty, worn, consumable, notes } = req.body as {
+    categoryId: number; name: string; weightG: number; qty: number;
+    worn: boolean; consumable: boolean; notes?: string;
+  };
+  if (!name || !categoryId) { res.status(400).json({ error: 'name and categoryId required' }); return; }
+  const [item] = await db.insert(gearItems).values({
+    categoryId, name, weightG: weightG ?? 0, qty: qty ?? 1,
+    worn: worn ?? false, consumable: consumable ?? false, notes: notes ?? null,
+  }).returning();
+  res.json(item);
+});
+
+app.put('/api/gear/items/:id', requireAuth, async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  const { name, weightG, qty, worn, consumable, categoryId, notes } = req.body as Partial<{
+    name: string; weightG: number; qty: number; worn: boolean;
+    consumable: boolean; categoryId: number; notes: string;
+  }>;
+  const updates: Record<string, unknown> = {};
+  if (name !== undefined) updates.name = name;
+  if (weightG !== undefined) updates.weightG = weightG;
+  if (qty !== undefined) updates.qty = qty;
+  if (worn !== undefined) updates.worn = worn;
+  if (consumable !== undefined) updates.consumable = consumable;
+  if (categoryId !== undefined) updates.categoryId = categoryId;
+  if (notes !== undefined) updates.notes = notes;
+  await db.update(gearItems).set(updates).where(eq(gearItems.id, id));
+  res.json({ ok: true });
+});
+
+app.delete('/api/gear/items/:id', requireAuth, async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  await db.delete(gearItems).where(eq(gearItems.id, id));
+  res.json({ ok: true });
 });
 
 // --- SPA fallback (production) ---
