@@ -102,10 +102,10 @@ function WeightEditCell({ weightG, displayUnit, onSave }: {
   }
 
   return (
-    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+    <span style={{ display: 'flex', gap: 2, alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
       <input
         className={styles.inlineInput}
-        style={{ textAlign: 'right', width: 64 }}
+        style={{ textAlign: 'right', width: 0, flex: 1 }}
         type="number" value={draft} autoFocus min="0" step="any"
         onChange={e => setDraft(e.target.value)}
         onBlur={save}
@@ -113,7 +113,7 @@ function WeightEditCell({ weightG, displayUnit, onSave }: {
       />
       <select
         className={styles.inlineInput}
-        style={{ width: 48, padding: '2px 2px' }}
+        style={{ width: 42, padding: '2px 1px', flexShrink: 0 }}
         value={editUnit}
         onChange={e => setEditUnit(e.target.value as WeightUnit)}
         onBlur={save}

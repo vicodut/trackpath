@@ -222,7 +222,15 @@
 .itemTable {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
+
+/* col widths: name=auto, weight=110px, qty=52px, total=110px, del=36px */
+.itemTable th:nth-child(1) { width: auto; }
+.itemTable th:nth-child(2) { width: 110px; }
+.itemTable th:nth-child(3) { width: 52px; }
+.itemTable th:nth-child(4) { width: 110px; }
+.itemTable th:nth-child(5) { width: 36px; }
 
 .itemTable th {
   font-family: var(--font-headline);
@@ -295,7 +303,8 @@
   color: var(--on-surface);
   padding: 2px 6px;
   width: 100%;
-  min-width: 40px;
+  box-sizing: border-box;
+  min-width: 0;
   text-align: inherit;
 }
 
