@@ -71,6 +71,59 @@ function EditCell({ value, type = 'text', onSave, align = 'right' }: {
   );
 }
 
+// ── Weight edit cell (number + unit selector) ─────────────────────────────────
+
+function WeightEditCell({ weightG, displayUnit, onSave }: {
+  weightG: number; displayUnit: WeightUnit; onSave: (grams: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [editUnit, setEditUnit] = useState<WeightUnit>(displayUnit);
+
+  const open = () => {
+    setEditUnit(displayUnit);
+    setDraft(fmtW(weightG, displayUnit));
+    setEditing(true);
+  };
+
+  const save = () => {
+    setEditing(false);
+    const grams = parseFloat(draft) * TO_G[editUnit];
+    onSave(isNaN(grams) ? 0 : grams);
+  };
+
+  if (!editing) {
+    return (
+      <span style={{ cursor: 'pointer' }} onClick={open}>
+        {fmtW(weightG, displayUnit)}
+        <span style={{ color: 'var(--outline)', marginLeft: 2 }}>{displayUnit}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+      <input
+        className={styles.inlineInput}
+        style={{ textAlign: 'right', width: 64 }}
+        type="number" value={draft} autoFocus min="0" step="any"
+        onChange={e => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+      />
+      <select
+        className={styles.inlineInput}
+        style={{ width: 48, padding: '2px 2px' }}
+        value={editUnit}
+        onChange={e => setEditUnit(e.target.value as WeightUnit)}
+        onBlur={save}
+      >
+        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+      </select>
+    </span>
+  );
+}
+
 // ── Add item form (inline row) ────────────────────────────────────────────────
 
 function AddItemRow({ categoryId, unit, onAdd, onCancel }: {
@@ -182,11 +235,10 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
                 </td>
                 <td className={styles.itemNum}>
                   {isAdmin
-                    ? <EditCell value={fmtW(item.weightG, unit)} type="number"
-                        onSave={v => onUpdateItem(item.id, { weightG: parseFloat(v) * TO_G[unit] || 0 })} />
-                    : fmtW(item.weightG, unit)
+                    ? <WeightEditCell weightG={item.weightG} displayUnit={unit}
+                        onSave={grams => onUpdateItem(item.id, { weightG: grams })} />
+                    : <>{fmtW(item.weightG, unit)}<span className={styles.itemNumMuted}> {unit}</span></>
                   }
-                  <span className={styles.itemNumMuted}> {unit}</span>
                 </td>
                 <td className={styles.itemNum}>
                   {isAdmin
