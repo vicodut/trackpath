@@ -17,8 +17,7 @@ export function CopyCoords({ lat, lon }: { lat: number; lon: number }) {
       title="Click to copy"
       style={{
         display: 'inline-block',
-        marginTop: 4,
-        fontSize: '0.95em',
+        fontSize: '1.2em',
         color: copied ? '#52a852' : '#666',
         cursor: 'pointer',
         userSelect: 'none',

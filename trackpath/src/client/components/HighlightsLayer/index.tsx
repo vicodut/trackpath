@@ -122,7 +122,7 @@ export function HighlightsLayer({ layers, onHighlightTap, onHighlightClose, trai
         >
           <Popup>
             <strong>{h.name}</strong>
-
+            <br />
             <CopyCoords lat={h.lat} lon={h.lon} />
             {h.elevation != null && (
               <>
