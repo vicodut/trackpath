@@ -1,4 +1,4 @@
-CREATE TABLE "account" (
+CREATE TABLE IF NOT EXISTS "account" (
 	"id" text PRIMARY KEY NOT NULL,
 	"account_id" text NOT NULL,
 	"provider_id" text NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE "account" (
 	"updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "gear_categories" (
+CREATE TABLE IF NOT EXISTS "gear_categories" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"color" text DEFAULT '#888888' NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE "gear_categories" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "gear_items" (
+CREATE TABLE IF NOT EXISTS "gear_items" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"category_id" integer NOT NULL,
 	"name" text NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE "gear_items" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "session" (
+CREATE TABLE IF NOT EXISTS "session" (
 	"id" text PRIMARY KEY NOT NULL,
 	"expires_at" timestamp NOT NULL,
 	"token" text NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE "session" (
 	CONSTRAINT "session_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
-CREATE TABLE "strava_activities" (
+CREATE TABLE IF NOT EXISTS "strava_activities" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"strava_id" bigint NOT NULL,
 	"name" text,
@@ -61,7 +61,7 @@ CREATE TABLE "strava_activities" (
 	CONSTRAINT "strava_activities_strava_id_unique" UNIQUE("strava_id")
 );
 --> statement-breakpoint
-CREATE TABLE "strava_tokens" (
+CREATE TABLE IF NOT EXISTS "strava_tokens" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"access_token" text NOT NULL,
 	"refresh_token" text NOT NULL,
@@ -70,7 +70,7 @@ CREATE TABLE "strava_tokens" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "tracking_points" (
+CREATE TABLE IF NOT EXISTS "tracking_points" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"garmin_id" text,
 	"latitude" double precision NOT NULL,
@@ -85,7 +85,7 @@ CREATE TABLE "tracking_points" (
 	CONSTRAINT "tracking_points_garmin_id_unique" UNIQUE("garmin_id")
 );
 --> statement-breakpoint
-CREATE TABLE "user" (
+CREATE TABLE IF NOT EXISTS "user" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"email" text NOT NULL,
@@ -96,7 +96,7 @@ CREATE TABLE "user" (
 	CONSTRAINT "user_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
-CREATE TABLE "verification" (
+CREATE TABLE IF NOT EXISTS "verification" (
 	"id" text PRIMARY KEY NOT NULL,
 	"identifier" text NOT NULL,
 	"value" text NOT NULL,
@@ -105,6 +105,6 @@ CREATE TABLE "verification" (
 	"updated_at" timestamp
 );
 --> statement-breakpoint
-ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "gear_items" ADD CONSTRAINT "gear_items_category_id_gear_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."gear_categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "account" ADD CONSTRAINT IF NOT EXISTS "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "gear_items" ADD CONSTRAINT IF NOT EXISTS "gear_items_category_id_gear_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."gear_categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session" ADD CONSTRAINT IF NOT EXISTS "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;
