@@ -112,33 +112,67 @@ function intensityClass(km: number): string {
   return styles.heatmapCell4;
 }
 
-function buildElevationProfile(points: TrackingPoint[]) {
+interface TrailElevationPoint {
+  lat: number;
+  lon: number;
+  elevation: number;
+  distanceKm: number;
+}
+
+function nearestTrailElevation(lat: number, lon: number, trail: TrailElevationPoint[]): number | null {
+  let best: TrailElevationPoint | null = null;
+  let bestDist = Infinity;
+  for (const p of trail) {
+    const d = haversine(lat, lon, p.lat, p.lon);
+    if (d < bestDist) { bestDist = d; best = p; }
+  }
+  return best ? best.elevation : null;
+}
+
+function buildElevationProfile(points: TrackingPoint[], trail: TrailElevationPoint[] | null) {
   const sorted = [...points]
-    .filter(p => p.altitude != null)
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   if (sorted.length < 2) return [];
 
+  // Resolve altitude: prefer GPS, fallback to nearest trail point
+  const withAlt = sorted.map(p => ({
+    ...p,
+    resolvedAlt: p.altitude != null
+      ? p.altitude
+      : trail ? nearestTrailElevation(p.latitude, p.longitude, trail) : null,
+  })).filter(p => p.resolvedAlt != null);
+
+  if (withAlt.length < 2) return [];
+
   let cumDist = 0;
   const profile: { dist: number; alt: number; date: string }[] = [
-    { dist: 0, alt: sorted[0].altitude!, date: sorted[0].timestamp.slice(0, 10) },
+    { dist: 0, alt: withAlt[0].resolvedAlt!, date: withAlt[0].timestamp.slice(0, 10) },
   ];
 
-  for (let i = 1; i < sorted.length; i++) {
+  for (let i = 1; i < withAlt.length; i++) {
     const d = haversine(
-      sorted[i - 1].latitude, sorted[i - 1].longitude,
-      sorted[i].latitude, sorted[i].longitude,
+      withAlt[i - 1].latitude, withAlt[i - 1].longitude,
+      withAlt[i].latitude, withAlt[i].longitude,
     );
     if (d > 100) continue; // skip unrealistic jumps
     cumDist += d;
-    profile.push({ dist: cumDist, alt: sorted[i].altitude!, date: sorted[i].timestamp.slice(0, 10) });
+    profile.push({ dist: cumDist, alt: withAlt[i].resolvedAlt!, date: withAlt[i].timestamp.slice(0, 10) });
   }
 
   return profile;
 }
 
 function ElevationChart({ points }: { points: TrackingPoint[] }) {
-  const profile = useMemo(() => buildElevationProfile(points), [points]);
+  const [trail, setTrail] = useState<TrailElevationPoint[] | null>(null);
+  useEffect(() => {
+    fetch('/at-trail-elevation.json')
+      .then(r => r.json())
+      .then(setTrail)
+      .catch(() => {});
+  }, []);
+
+  const profile = useMemo(() => buildElevationProfile(points, trail), [points, trail]);
   const [hovered, setHovered] = useState<{ alt: number; dist: number; x: number; y: number } | null>(null);
 
   if (profile.length < 2) return <div className={styles.statsEmpty}>NO_ALTITUDE_DATA</div>;
@@ -253,13 +287,6 @@ function ElevationChart({ points }: { points: TrackingPoint[] }) {
       )}
     </div>
   );
-}
-
-interface TrailElevationPoint {
-  lat: number;
-  lon: number;
-  elevation: number;
-  distanceKm: number;
 }
 
 const TRAIL_CHART_HEIGHT = 320;
