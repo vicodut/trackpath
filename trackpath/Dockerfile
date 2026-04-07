@@ -10,7 +10,7 @@ RUN npm run build
 FROM node:22-slim
 WORKDIR /app
 COPY package.json ./
-RUN npm install --omit=dev --ignore-scripts --ignore-engines
+RUN npm install --omit=dev --ignore-engines
 COPY --from=builder /app/dist ./dist
 COPY src ./src
 COPY drizzle ./drizzle
