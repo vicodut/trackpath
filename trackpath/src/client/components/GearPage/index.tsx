@@ -219,9 +219,9 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
           <tr>
             {isAdmin && <th style={{ width: 32 }}></th>}
             <th style={{ width: '40%' }}>Item</th>
-            <th>Weight</th>
-            <th>Qty</th>
-            <th>Total</th>
+            <th style={{ width: 165 }}>Weight</th>
+            <th style={{ width: 52 }}>Qty</th>
+            <th style={{ width: 110 }}>Total</th>
             {isAdmin && <th style={{ width: 36 }}></th>}
           </tr>
         </thead>
