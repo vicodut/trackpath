@@ -15,4 +15,4 @@ COPY --from=builder /app/dist ./dist
 COPY src ./src
 COPY drizzle ./drizzle
 EXPOSE 3000
-CMD ["sh", "-c", "tsx src/db/migrate.ts && npm start"]
+CMD ["sh", "-c", "npm run migrate && npm start"]
