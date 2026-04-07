@@ -1,0 +1,1 @@
+CREATE INDEX "idx_tracking_timestamp" ON "tracking_points" USING btree ("timestamp");

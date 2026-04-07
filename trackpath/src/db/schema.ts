@@ -1,4 +1,4 @@
-import { pgTable, serial, doublePrecision, text, timestamp, boolean, integer, bigint, real } from 'drizzle-orm/pg-core';
+import { pgTable, serial, doublePrecision, text, timestamp, boolean, integer, bigint, real, index } from 'drizzle-orm/pg-core';
 
 export const trackingPoints = pgTable('tracking_points', {
   id: serial('id').primaryKey(),
@@ -12,7 +12,9 @@ export const trackingPoints = pgTable('tracking_points', {
   message: text('message'),
   eventType: text('event_type'),
   createdAt: timestamp('created_at').defaultNow(),
-});
+}, (t) => [
+  index('idx_tracking_timestamp').on(t.timestamp),
+]);
 
 export type TrackingPoint = typeof trackingPoints.$inferSelect;
 export type NewTrackingPoint = typeof trackingPoints.$inferInsert;

@@ -1,10 +1,11 @@
 import 'dotenv/config';
 import type { Request, Response, NextFunction } from 'express';
 import express from 'express';
+import compression from 'compression';
 import { parseString } from 'xml2js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, desc, not, like, count } from 'drizzle-orm';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +16,7 @@ import { trackingPoints, stravaTokens, stravaActivities, gearCategories, gearIte
 import { auth } from './auth.js';
 
 const app = express();
+app.use(compression());
 const PORT = process.env.PORT || 3000;
 
 // --- Ensure tables exist ---
@@ -117,6 +119,32 @@ async function ensureTables() {
       updated_at TIMESTAMP
     )
   `;
+  await pgClient`
+    CREATE TABLE IF NOT EXISTS gear_categories (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL DEFAULT '#888888',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  await pgClient`
+    CREATE TABLE IF NOT EXISTS gear_items (
+      id SERIAL PRIMARY KEY,
+      category_id INTEGER NOT NULL REFERENCES gear_categories(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      weight_g REAL NOT NULL DEFAULT 0,
+      qty INTEGER NOT NULL DEFAULT 1,
+      worn BOOLEAN NOT NULL DEFAULT false,
+      consumable BOOLEAN NOT NULL DEFAULT false,
+      included BOOLEAN NOT NULL DEFAULT true,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  await pgClient`
+    ALTER TABLE gear_items ADD COLUMN IF NOT EXISTS included BOOLEAN NOT NULL DEFAULT true
+  `.catch(() => {});
 }
 // ensureTables() is awaited in startServer() below
 
@@ -179,20 +207,26 @@ async function fetchGarminPoints(mapshareId: string): Promise<NewTrackingPoint[]
 }
 
 async function insertPoints(points: NewTrackingPoint[]): Promise<number> {
-  let newCount = 0;
-  for (const pt of points) {
-    try {
-      await db.insert(trackingPoints).values(pt).onConflictDoNothing();
-      newCount++;
-    } catch {
-      // duplicate garmin_id, skip
-    }
-  }
-  return newCount;
+  if (points.length === 0) return 0;
+  const result = await db.insert(trackingPoints).values(points).onConflictDoNothing().returning({ id: trackingPoints.id });
+  return result.length;
 }
 
 async function getAllPoints() {
   return db.select().from(trackingPoints).orderBy(asc(trackingPoints.timestamp));
+}
+
+async function getLastGarminPoint() {
+  const rows = await db.select().from(trackingPoints)
+    .where(not(like(trackingPoints.garminId, 'manual-%')))
+    .orderBy(desc(trackingPoints.timestamp))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+async function countPoints() {
+  const rows = await db.select({ count: count() }).from(trackingPoints);
+  return rows[0]?.count ?? 0;
 }
 
 // --- Static files (production: serve Vite build) ---
@@ -342,9 +376,7 @@ app.get('/api/blog/posts/:slug', async (req: Request, res: Response) => {
 // --- Weather forecast ---
 app.get('/api/weather', async (_req: Request, res: Response) => {
   try {
-    const points = await getAllPoints();
-    // Find last Garmin tracking point
-    const lastGarmin = [...points].reverse().find(p => !p.garminId?.startsWith('manual-'));
+    const lastGarmin = await getLastGarminPoint();
     if (!lastGarmin) {
       res.json({ error: 'No tracking points available' });
       return;
@@ -497,10 +529,14 @@ async function syncStravaActivities() {
   if (!activitiesRes.ok) return { synced: 0, error: `Strava API error: ${activitiesRes.status}` };
   const activities = await activitiesRes.json();
 
+  // Pre-fetch all existing strava IDs and which ones already have coords — avoids N+1
+  const existingRows = await db.select({ stravaId: stravaActivities.stravaId, coords: stravaActivities.coords }).from(stravaActivities);
+  const existingMap = new Map(existingRows.map(r => [String(r.stravaId), r.coords]));
+
   let synced = 0;
   for (const act of activities) {
-    const existing = await db.select().from(stravaActivities).where(eq(stravaActivities.stravaId, act.id));
-    const hasCoords = existing.length > 0 && existing[0].coords && existing[0].coords !== '[]';
+    const existingCoords = existingMap.get(String(act.id));
+    const hasCoords = existingCoords != null && existingCoords !== '[]';
     if (hasCoords) continue;
 
     let coords: [number, number][] = [];
@@ -519,7 +555,7 @@ async function syncStravaActivities() {
       // No GPS data for this activity
     }
 
-    if (existing.length > 0) {
+    if (existingMap.has(String(act.id))) {
       await db.update(stravaActivities)
         .set({ coords: JSON.stringify(coords) })
         .where(eq(stravaActivities.stravaId, act.id));
@@ -538,7 +574,8 @@ async function syncStravaActivities() {
     synced++;
   }
 
-  return { synced, total: (await db.select().from(stravaActivities)).length };
+  const [{ count: total }] = await db.select({ count: count() }).from(stravaActivities);
+  return { synced, total };
 }
 
 app.post('/api/strava/sync', requireAuth, async (_req: Request, res: Response) => {
@@ -601,17 +638,19 @@ function addSyncLog(source: string, message: string) {
 }
 
 app.get('/api/admin/status', requireAuth, async (_req: Request, res: Response) => {
-  const points = await getAllPoints();
-  const lastGarmin = [...points].reverse().find(p => !p.garminId?.startsWith('manual-'));
-  const activities = await db.select().from(stravaActivities).orderBy(asc(stravaActivities.startDate));
+  const [lastGarmin, totalPoints, activities, tokens] = await Promise.all([
+    getLastGarminPoint(),
+    countPoints(),
+    db.select().from(stravaActivities).orderBy(asc(stravaActivities.startDate)),
+    db.select().from(stravaTokens).limit(1),
+  ]);
   const lastStrava = activities.length > 0 ? activities[activities.length - 1] : null;
-  const tokens = await db.select().from(stravaTokens).limit(1);
 
   res.json({
     garmin: {
       configured: !!process.env.MAPSHARE_ID,
       mapshareId: process.env.MAPSHARE_ID || null,
-      totalPoints: points.length,
+      totalPoints,
       lastPointTime: lastGarmin?.timestamp || null,
       pollIntervalMin: POLL_INTERVAL / 60000,
     },
