@@ -41,6 +41,7 @@ export interface GearItem {
   qty: number;
   worn: boolean;
   consumable: boolean;
+  included: boolean;
   notes: string | null;
   createdAt: string | null;
 }

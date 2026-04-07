@@ -99,6 +99,7 @@ export const gearItems = pgTable('gear_items', {
   qty: integer('qty').notNull().default(1),
   worn: boolean('worn').notNull().default(false),
   consumable: boolean('consumable').notNull().default(false),
+  included: boolean('included').notNull().default(true),
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow(),
 });

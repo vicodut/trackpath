@@ -145,7 +145,7 @@ function AddItemRow({ categoryId, unit, onAdd, onCancel }: {
 
   return (
     <tr className={styles.addItemRow}>
-      <td colSpan={5}>
+      <td colSpan={6}>
         <div className={styles.addItemForm}>
           <input
             type="text" placeholder="Item name" value={name}
@@ -188,14 +188,15 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
 }) {
   const [adding, setAdding] = useState(false);
 
-  const totalG = items.reduce((s, it) => s + it.weightG * it.qty, 0);
+  const includedItems = items.filter(it => it.included);
+  const totalG = includedItems.reduce((s, it) => s + it.weightG * it.qty, 0);
 
   return (
     <div className={styles.section}>
       <div className={styles.sectionHeader}>
         <span className={styles.sectionColorDot} style={{ background: cat.color }} />
         <span className={styles.sectionTitle}>{cat.name}</span>
-        <span className={styles.sectionMeta}>{items.length} item{items.length !== 1 ? 's' : ''} · {fmtW(totalG, unit)} {unit}</span>
+        <span className={styles.sectionMeta}>{includedItems.length}/{items.length} · {fmtW(totalG, unit)} {unit}</span>
         {isAdmin && (
           <div className={styles.sectionActions}>
             {!isFirst && <button className={styles.iconBtn} onClick={onMoveUp} title="Move up">↑</button>}
@@ -208,18 +209,27 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
       <table className={styles.itemTable}>
         <thead>
           <tr>
+            {isAdmin && <th style={{ width: 32 }}></th>}
             <th style={{ width: '40%' }}>Item</th>
             <th>Weight</th>
             <th>Qty</th>
             <th>Total</th>
-            {isAdmin && <th></th>}
+            {isAdmin && <th style={{ width: 36 }}></th>}
           </tr>
         </thead>
         <tbody>
           {items.map(item => {
             const totalItemG = item.weightG * item.qty;
             return (
-              <tr key={item.id} className={styles.itemRow}>
+              <tr key={item.id} className={styles.itemRow} style={{ opacity: item.included ? 1 : 0.35 }}>
+                {isAdmin && (
+                  <td style={{ textAlign: 'center', padding: '0 6px' }}>
+                    <input type="checkbox" checked={item.included}
+                      onChange={e => onUpdateItem(item.id, { included: e.target.checked })}
+                      style={{ cursor: 'pointer', accentColor: 'var(--secondary)' }}
+                    />
+                  </td>
+                )}
                 <td>
                   <div className={styles.itemName}>
                     {isAdmin
@@ -262,6 +272,7 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
 
           {/* Category total */}
           <tr className={styles.totalRow}>
+            {isAdmin && <td></td>}
             <td>SUBTOTAL</td>
             <td></td>
             <td></td>
@@ -272,7 +283,7 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
           {/* Add item */}
           {isAdmin && !adding && (
             <tr className={styles.addItemRow}>
-              <td colSpan={5}>
+              <td colSpan={6}>
                 <button className={styles.addBtn} onClick={() => setAdding(true)}>+ ADD ITEM</button>
               </td>
             </tr>
@@ -350,9 +361,10 @@ export function GearPage({ isAdmin, onClose }: GearPageProps) {
   }, [items]);
 
   // Dashboard totals
-  const totalG = items.reduce((s, it) => s + it.weightG * it.qty, 0);
-  const baseG = items.filter(it => !it.worn && !it.consumable).reduce((s, it) => s + it.weightG * it.qty, 0);
-  const wornG = items.filter(it => it.worn).reduce((s, it) => s + it.weightG * it.qty, 0);
+  const included = items.filter(it => it.included);
+  const totalG = included.reduce((s, it) => s + it.weightG * it.qty, 0);
+  const baseG = included.filter(it => !it.worn && !it.consumable).reduce((s, it) => s + it.weightG * it.qty, 0);
+  const wornG = included.filter(it => it.worn).reduce((s, it) => s + it.weightG * it.qty, 0);
 
   return (
     <div className={styles.gearPage}>
@@ -419,7 +431,7 @@ export function GearPage({ isAdmin, onClose }: GearPageProps) {
               {sorted.length > 0 && totalG > 0 && (
                 <div className={styles.catBars}>
                   {sorted.map(cat => {
-                    const catItems = itemsByCategory[cat.id] ?? [];
+                    const catItems = (itemsByCategory[cat.id] ?? []).filter(it => it.included);
                     const catG = catItems.reduce((s, it) => s + it.weightG * it.qty, 0);
                     const pct = totalG > 0 ? (catG / totalG) * 100 : 0;
                     return (
