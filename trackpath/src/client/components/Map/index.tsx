@@ -382,24 +382,32 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
         <>
           <Marker position={[34.627, -84.194]} icon={flagIcon}>
             <Popup>
-              <strong>Springer Mountain, GA</strong>
-              <br />
-              Southern terminus
+              <strong>Springer Mountain, GA</strong><br />
+              Southern terminus<br />
+              <span style={{ color: '#888', fontSize: '0.85em' }}>34.62700, -84.19400</span>
             </Popup>
           </Marker>
           <Marker position={[45.904, -68.921]} icon={flagIcon}>
             <Popup>
-              <strong>Mt. Katahdin, ME</strong>
-              <br />
-              Northern terminus
+              <strong>Mt. Katahdin, ME</strong><br />
+              Northern terminus<br />
+              <span style={{ color: '#888', fontSize: '0.85em' }}>45.90400, -68.92100</span>
             </Popup>
           </Marker>
           {/* Airport markers */}
           <Marker position={[33.6407, -84.4277]} icon={airplaneIcon}>
-            <Popup><strong>ATL</strong><br />Hartsfield-Jackson Atlanta</Popup>
+            <Popup>
+              <strong>ATL</strong><br />
+              Hartsfield-Jackson Atlanta<br />
+              <span style={{ color: '#888', fontSize: '0.85em' }}>33.64070, -84.42770</span>
+            </Popup>
           </Marker>
           <Marker position={[38.9531, -77.4565]} icon={airplaneIcon}>
-            <Popup><strong>IAD</strong><br />Washington Dulles</Popup>
+            <Popup>
+              <strong>IAD</strong><br />
+              Washington Dulles<br />
+              <span style={{ color: '#888', fontSize: '0.85em' }}>38.95310, -77.45650</span>
+            </Popup>
           </Marker>
           {/* Shuttle route: ATL → Amicalola Falls */}
           <Polyline

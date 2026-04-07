@@ -121,6 +121,8 @@ export function HighlightsLayer({ layers, onHighlightTap, onHighlightClose, trai
         >
           <Popup>
             <strong>{h.name}</strong>
+            <br />
+            <span style={{ color: '#888', fontSize: '0.85em' }}>{h.lat.toFixed(5)}, {h.lon.toFixed(5)}</span>
             {h.elevation != null && (
               <>
                 <br />
