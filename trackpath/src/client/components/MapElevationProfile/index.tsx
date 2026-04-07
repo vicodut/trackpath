@@ -26,6 +26,27 @@ const CHART_HEIGHT = 160;
 const CHART_PADDING = { top: 14, right: 14, bottom: 26, left: 48 };
 const GOAL_KM = 1500;
 
+function findClosestByDistance(
+  data: TrailElevationPoint[],
+  targetDist: number,
+): TrailElevationPoint {
+  let lo = 0;
+  let hi = data.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (data[mid].distanceKm < targetDist) lo = mid + 1;
+    else hi = mid;
+  }
+  if (
+    lo > 0 &&
+    Math.abs(data[lo - 1].distanceKm - targetDist) <=
+      Math.abs(data[lo].distanceKm - targetDist)
+  ) {
+    return data[lo - 1];
+  }
+  return data[lo];
+}
+
 export function MapElevationProfile({
   onHover,
   onHoverEnd,
@@ -47,6 +68,10 @@ export function MapElevationProfile({
   } | null>(null);
   const [svgWidth, setSvgWidth] = useState(800);
   const containerRef = useRef<HTMLDivElement>(null);
+  const cachedRectRef = useRef<DOMRect | null>(null);
+  const rafIdRef = useRef<number | null>(null);
+  const pendingHoverRef = useRef<{ clientX: number; clientY: number; isTouch: boolean } | null>(null);
+  const lastOnHoverRef = useRef(0);
 
   useEffect(() => {
     fetch("/at-trail-elevation.json")
@@ -61,6 +86,7 @@ export function MapElevationProfile({
       for (const entry of entries) {
         const newWidth = entry.contentRect.width;
         setSvgWidth(prev => prev === newWidth ? prev : newWidth);
+        cachedRectRef.current = (entry.target as HTMLElement).getBoundingClientRect();
       }
     });
     observer.observe(containerRef.current);
@@ -69,7 +95,7 @@ export function MapElevationProfile({
 
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const updateHover = useCallback(
+  const processHover = useCallback(
     (clientX: number, clientY: number, isTouch = false) => {
       if (!trailData || trailData.length < 2 || !containerRef.current) return;
 
@@ -77,20 +103,12 @@ export function MapElevationProfile({
       const { left } = CHART_PADDING;
       const plotW = svgWidth - left - CHART_PADDING.right;
 
-      const rect = containerRef.current.getBoundingClientRect();
+      const rect = cachedRectRef.current ?? containerRef.current.getBoundingClientRect();
       const scale = rect.width > 0 ? svgWidth / rect.width : 1;
       const mx = (clientX - rect.left) * scale;
       const dist = ((mx - left) / plotW) * maxDist;
 
-      let closest = trailData[0];
-      let minD = Infinity;
-      for (const p of trailData) {
-        const d = Math.abs(p.distanceKm - dist);
-        if (d < minD) {
-          minD = d;
-          closest = p;
-        }
-      }
+      const closest = findClosestByDistance(trailData, dist);
 
       const nearSummit = ICONIC_SUMMITS.find(
         (s) => Math.abs(s.distanceKm - closest.distanceKm) < maxDist * 0.015,
@@ -104,10 +122,36 @@ export function MapElevationProfile({
         summitName: nearSummit?.name,
       });
 
-      onHover?.(closest.lat, closest.lon);
+      const now = performance.now();
+      if (now - lastOnHoverRef.current >= 32) {
+        lastOnHoverRef.current = now;
+        onHover?.(closest.lat, closest.lon);
+      }
     },
     [trailData, onHover, svgWidth],
   );
+
+  const updateHover = useCallback(
+    (clientX: number, clientY: number, isTouch = false) => {
+      pendingHoverRef.current = { clientX, clientY, isTouch };
+      if (rafIdRef.current !== null) return;
+      rafIdRef.current = requestAnimationFrame(() => {
+        rafIdRef.current = null;
+        const p = pendingHoverRef.current;
+        if (p) {
+          pendingHoverRef.current = null;
+          processHover(p.clientX, p.clientY, p.isTouch);
+        }
+      });
+    },
+    [processHover],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
+    };
+  }, []);
 
   const clearHover = useCallback(() => {
     setHovered(null);

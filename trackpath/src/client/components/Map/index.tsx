@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import L from "leaflet";
 import {
   MapContainer,
@@ -52,6 +52,11 @@ function getTagIcon(tag: string) {
   });
 }
 
+export interface MapHandle {
+  setElevationCursor: (lat: number, lon: number) => void;
+  clearElevationCursor: () => void;
+}
+
 interface MapProps {
   points: TrackingPoint[];
   stravaActivities: StravaActivity[];
@@ -67,7 +72,6 @@ interface MapProps {
   sidebarVisible: boolean;
   layers: LayerVisibility;
   isAdmin: boolean;
-  elevationCursor?: { lat: number; lon: number } | null;
 }
 
 function ATTrailLayer() {
@@ -276,19 +280,19 @@ function InvalidateOnResize({ sidebarVisible }: { sidebarVisible: boolean }) {
 }
 
 function ElevationCursor({
-  cursorPos,
+  onReady,
 }: {
-  cursorPos: { lat: number; lon: number } | null;
+  onReady: (set: (lat: number, lon: number) => void, clear: () => void) => void;
 }) {
   const map = useMap();
   const markerRef = useRef<L.CircleMarker | null>(null);
 
   useEffect(() => {
-    if (cursorPos) {
+    const set = (lat: number, lon: number) => {
       if (markerRef.current) {
-        markerRef.current.setLatLng([cursorPos.lat, cursorPos.lon]);
+        markerRef.current.setLatLng([lat, lon]);
       } else {
-        markerRef.current = L.circleMarker([cursorPos.lat, cursorPos.lon], {
+        markerRef.current = L.circleMarker([lat, lon], {
           radius: 7,
           color: colors.secondary,
           fillColor: colors.secondary,
@@ -296,27 +300,21 @@ function ElevationCursor({
           weight: 2,
         }).addTo(map);
       }
-    } else {
-      if (markerRef.current) {
-        markerRef.current.remove();
-        markerRef.current = null;
-      }
-    }
-  }, [cursorPos, map]);
-
-  useEffect(() => {
-    return () => {
+    };
+    const clear = () => {
       if (markerRef.current) {
         markerRef.current.remove();
         markerRef.current = null;
       }
     };
-  }, []);
+    onReady(set, clear);
+    return () => { clear(); };
+  }, [map, onReady]);
 
   return null;
 }
 
-export function Map({
+export const Map = forwardRef<MapHandle, MapProps>(function Map({
   points,
   stravaActivities,
   selectedPoint,
@@ -331,8 +329,22 @@ export function Map({
   sidebarVisible,
   layers,
   isAdmin,
-  elevationCursor,
-}: MapProps) {
+}, ref) {
+  const setElevCursorRef = useRef<((lat: number, lon: number) => void) | null>(null);
+  const clearElevCursorRef = useRef<(() => void) | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    setElevationCursor: (lat, lon) => setElevCursorRef.current?.(lat, lon),
+    clearElevationCursor: () => clearElevCursorRef.current?.(),
+  }));
+
+  const handleElevCursorReady = useCallback(
+    (set: (lat: number, lon: number) => void, clear: () => void) => {
+      setElevCursorRef.current = set;
+      clearElevCursorRef.current = clear;
+    },
+    [],
+  );
   const isMobile = useIsMobile();
   const pathCoords: [number, number][] = points
     .filter((p) => !p.garminId?.startsWith("manual-"))
@@ -509,7 +521,7 @@ export function Map({
         <LastPositionButton points={points} />
         {isAdmin && <LocateButton />}
       </div>
-      <ElevationCursor cursorPos={elevationCursor ?? null} />
+      <ElevationCursor onReady={handleElevCursorReady} />
     </MapContainer>
   );
-}
+});

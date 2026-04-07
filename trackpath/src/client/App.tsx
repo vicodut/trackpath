@@ -1,6 +1,7 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { Header } from "./components/Header";
 import { Map as TrailMap } from "./components/Map";
+import type { MapHandle } from "./components/Map";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { Weather } from "./components/Weather";
@@ -32,7 +33,7 @@ export function App() {
 
   const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [elevationCursor, setElevationCursor] = useState<{ lat: number; lon: number } | null>(null);
+  const mapRef = useRef<MapHandle>(null);
   const [tappedPoint, setTappedPoint] = useState<TrackingPoint | null>(null);
   const [trailSegment, setTrailSegment] = useState<TrailSegment | null>(null);
   const [highlightTarget, setHighlightTarget] = useState<{ lat: number; lon: number } | null>(null);
@@ -138,6 +139,7 @@ export function App() {
         <div className="map-wrapper">
           <div className="map-area">
             <TrailMap
+              ref={mapRef}
               points={points}
               stravaActivities={stravaActivities}
               selectedPoint={selectedPoint}
@@ -152,7 +154,6 @@ export function App() {
               sidebarVisible={sidebarVisible}
               layers={layers}
               isAdmin={isAdmin}
-              elevationCursor={elevationCursor}
             />
             {layers.weather && <Weather />}
             <LayerToggle layers={layers} onChange={setLayers} />
@@ -164,8 +165,8 @@ export function App() {
             />
           </div>
           <MapElevationProfile
-            onHover={(lat, lon) => setElevationCursor({ lat, lon })}
-            onHoverEnd={() => setElevationCursor(null)}
+            onHover={(lat, lon) => mapRef.current?.setElevationCursor(lat, lon)}
+            onHoverEnd={() => mapRef.current?.clearElevationCursor()}
             segmentMarkers={segmentMarkers}
             campMarkers={campMarkers}
           />
