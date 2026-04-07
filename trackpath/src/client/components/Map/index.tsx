@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useState, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import L from "leaflet";
 import {
   MapContainer,
@@ -38,6 +38,13 @@ const flagIcon = L.divIcon({
   html: '<div style="font-size:28px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5));">🏁</div>',
   iconSize: [28, 28],
   iconAnchor: [4, 28],
+});
+
+const airplaneIcon = L.divIcon({
+  className: "",
+  html: '<div style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5));">✈️</div>',
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
 });
 
 
@@ -330,8 +337,14 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
   layers,
   isAdmin,
 }, ref) {
+  const [selectedStravaId, setSelectedStravaId] = useState<number | null>(null);
   const setElevCursorRef = useRef<((lat: number, lon: number) => void) | null>(null);
   const clearElevCursorRef = useRef<(() => void) | null>(null);
+
+  const shuttleCoords: [number, number][] = useMemo(() => [
+    [33.6407, -84.4277], // ATL airport
+    [34.5597, -84.1929], // Amicalola Falls
+  ], []);
 
   useImperativeHandle(ref, () => ({
     setElevationCursor: (lat, lon) => setElevCursorRef.current?.(lat, lon),
@@ -382,6 +395,20 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
               Northern terminus
             </Popup>
           </Marker>
+          {/* Airport markers */}
+          <Marker position={[33.6407, -84.4277]} icon={airplaneIcon}>
+            <Popup><strong>ATL</strong><br />Hartsfield-Jackson Atlanta</Popup>
+          </Marker>
+          <Marker position={[38.9531, -77.4565]} icon={airplaneIcon}>
+            <Popup><strong>IAD</strong><br />Washington Dulles</Popup>
+          </Marker>
+          {/* Shuttle route: ATL → Amicalola Falls */}
+          <Polyline
+            positions={shuttleCoords}
+            pathOptions={{ color: '#888888', weight: 2, opacity: 0.7, dashArray: '6,6' }}
+          >
+            <Popup>Atlanta airport to Amicalola Falls commute by shuttle</Popup>
+          </Polyline>
         </>
       )}
 
@@ -476,18 +503,25 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
             : "";
           const dist = act.distance ? (act.distance / 1000).toFixed(1) : "?";
           const duration = act.movingTime ? formatDuration(act.movingTime) : "";
+          const isSelected = selectedStravaId === act.id;
           return (
             <Polyline
               key={act.id}
               positions={coords}
-              pathOptions={{ color: colors.strava, weight: 4, opacity: 0.8 }}
+              pathOptions={{ color: isSelected ? '#ff69b4' : colors.strava, weight: isSelected ? 5 : 4, opacity: 0.9 }}
+              eventHandlers={{ click: () => setSelectedStravaId(act.id) }}
             >
-              <Popup>
+              <Popup eventHandlers={{ remove: () => setSelectedStravaId(null) }}>
                 <strong>{act.name}</strong>
                 <br />
                 {date} — {act.type}
                 <br />
                 {dist} km — {duration}
+                <br />
+                <a href={`https://www.strava.com/activities/${act.stravaId}`} target="_blank" rel="noreferrer"
+                  style={{ color: '#fc4c02', fontSize: '0.8em' }}>
+                  View on Strava ↗
+                </a>
               </Popup>
             </Polyline>
           );
