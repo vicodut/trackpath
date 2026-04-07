@@ -684,9 +684,9 @@ app.post('/api/gear/items', requireAuth, async (req: Request, res: Response) => 
 
 app.put('/api/gear/items/:id', requireAuth, async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
-  const { name, weightG, qty, worn, consumable, categoryId, notes } = req.body as Partial<{
+  const { name, weightG, qty, worn, consumable, included, categoryId, notes } = req.body as Partial<{
     name: string; weightG: number; qty: number; worn: boolean;
-    consumable: boolean; categoryId: number; notes: string;
+    consumable: boolean; included: boolean; categoryId: number; notes: string;
   }>;
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
@@ -694,6 +694,7 @@ app.put('/api/gear/items/:id', requireAuth, async (req: Request, res: Response) 
   if (qty !== undefined) updates.qty = qty;
   if (worn !== undefined) updates.worn = worn;
   if (consumable !== undefined) updates.consumable = consumable;
+  if (included !== undefined) updates.included = included;
   if (categoryId !== undefined) updates.categoryId = categoryId;
   if (notes !== undefined) updates.notes = notes;
   await db.update(gearItems).set(updates).where(eq(gearItems.id, id));
