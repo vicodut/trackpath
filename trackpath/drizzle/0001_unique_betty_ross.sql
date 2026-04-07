@@ -1,0 +1,1 @@
+ALTER TABLE "gear_items" ADD COLUMN IF NOT EXISTS "included" boolean DEFAULT true NOT NULL;
