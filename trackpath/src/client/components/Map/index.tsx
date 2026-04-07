@@ -405,7 +405,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
           {/* Shuttle route: ATL → Amicalola Falls */}
           <Polyline
             positions={shuttleCoords}
-            pathOptions={{ color: '#888888', weight: 2, opacity: 0.7, dashArray: '6,6' }}
+            pathOptions={{ color: '#888888', weight: 4, opacity: 0.7, dashArray: '10,8' }}
           >
             <Popup>Atlanta airport to Amicalola Falls commute by shuttle</Popup>
           </Polyline>
