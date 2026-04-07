@@ -13,5 +13,6 @@ COPY package.json ./
 RUN npm install --omit=dev --ignore-scripts --ignore-engines
 COPY --from=builder /app/dist ./dist
 COPY src ./src
+COPY drizzle ./drizzle
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["sh", "-c", "tsx src/db/migrate.ts && npm start"]
