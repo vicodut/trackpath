@@ -50,6 +50,9 @@ function EditCell({ value, type = 'text', onSave, align = 'right' }: {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
 
+  const confirm = () => { setEditing(false); onSave(draft); };
+  const cancel = () => setEditing(false);
+
   if (!editing) {
     return (
       <span style={{ cursor: 'pointer', textAlign: align }} onClick={() => { setDraft(String(value)); setEditing(true); }}>
@@ -58,16 +61,19 @@ function EditCell({ value, type = 'text', onSave, align = 'right' }: {
     );
   }
   return (
-    <input
-      className={styles.inlineInput}
-      style={{ textAlign: align }}
-      type={type}
-      value={draft}
-      autoFocus
-      onChange={e => setDraft(e.target.value)}
-      onBlur={() => { setEditing(false); onSave(draft); }}
-      onKeyDown={e => { if (e.key === 'Enter') { setEditing(false); onSave(draft); } if (e.key === 'Escape') setEditing(false); }}
-    />
+    <span style={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+      <input
+        className={styles.inlineInput}
+        style={{ textAlign: align, flex: 1, minWidth: 0 }}
+        type={type}
+        value={draft}
+        autoFocus
+        onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') confirm(); if (e.key === 'Escape') cancel(); }}
+      />
+      <button className={`${styles.iconBtn} ${styles.confirmBtn}`} onMouseDown={e => { e.preventDefault(); confirm(); }} title="Save">✓</button>
+      <button className={`${styles.iconBtn} ${styles.cancelEditBtn}`} onMouseDown={e => { e.preventDefault(); cancel(); }} title="Cancel">✕</button>
+    </span>
   );
 }
 
@@ -92,6 +98,8 @@ function WeightEditCell({ weightG, displayUnit, onSave }: {
     onSave(isNaN(grams) ? 0 : grams);
   };
 
+  const cancel = () => setEditing(false);
+
   if (!editing) {
     return (
       <span style={{ cursor: 'pointer' }} onClick={open}>
@@ -108,18 +116,18 @@ function WeightEditCell({ weightG, displayUnit, onSave }: {
         style={{ textAlign: 'right', width: 0, flex: 1 }}
         type="number" value={draft} autoFocus min="0" step="any"
         onChange={e => setDraft(e.target.value)}
-        onBlur={save}
-        onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+        onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); }}
       />
       <select
         className={styles.inlineInput}
         style={{ width: 42, padding: '2px 1px', flexShrink: 0 }}
         value={editUnit}
         onChange={e => setEditUnit(e.target.value as WeightUnit)}
-        onBlur={save}
       >
         {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
       </select>
+      <button className={`${styles.iconBtn} ${styles.confirmBtn}`} onMouseDown={e => { e.preventDefault(); save(); }} title="Save">✓</button>
+      <button className={`${styles.iconBtn} ${styles.cancelEditBtn}`} onMouseDown={e => { e.preventDefault(); cancel(); }} title="Cancel">✕</button>
     </span>
   );
 }
@@ -368,145 +376,150 @@ export function GearPage({ isAdmin, onClose }: GearPageProps) {
 
   return (
     <div className={styles.gearPage}>
-      <div className={styles.gearPageHeader}>
-        <h2>GEAR_LIST</h2>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className={styles.unitToggle}>
-            {UNITS.map(u => (
-              <button key={u} className={`${styles.unitBtn} ${unit === u ? styles.unitBtnActive : ''}`}
-                onClick={() => setUnitAndSave(u)}>
-                {u}
-              </button>
-            ))}
-          </div>
-          {isAdmin && (
-            <>
-              <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImport} />
-              <button
-                className={styles.addBtn}
-                onClick={() => fileRef.current?.click()}
-                disabled={importing}
-                style={{ fontSize: '0.65rem' }}
-              >
-                {importing ? 'IMPORTING...' : 'IMPORT CSV'}
-              </button>
-              {importMsg && (
-                <span style={{ fontFamily: 'var(--font-headline)', fontSize: '0.65rem', color: 'var(--outline)' }}>
-                  {importMsg}
-                </span>
+
+      {/* ── Fixed top: header + dashboard ── */}
+      <div className={styles.gearPageSticky}>
+        <div className={styles.gearPageStickyInner}>
+          <div className={styles.gearPageHeader}>
+            <h2>GEAR_LIST</h2>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className={styles.unitToggle}>
+                {UNITS.map(u => (
+                  <button key={u} className={`${styles.unitBtn} ${unit === u ? styles.unitBtnActive : ''}`}
+                    onClick={() => setUnitAndSave(u)}>
+                    {u}
+                  </button>
+                ))}
+              </div>
+              {isAdmin && (
+                <>
+                  <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImport} />
+                  <button className={styles.addBtn} onClick={() => fileRef.current?.click()}
+                    disabled={importing} style={{ fontSize: '0.65rem' }}>
+                    {importing ? 'IMPORTING...' : 'IMPORT CSV'}
+                  </button>
+                  {importMsg && (
+                    <span style={{ fontFamily: 'var(--font-headline)', fontSize: '0.65rem', color: 'var(--outline)' }}>
+                      {importMsg}
+                    </span>
+                  )}
+                </>
               )}
-            </>
-          )}
-          <button onClick={onClose} style={{
-            fontFamily: 'var(--font-headline)', fontSize: '0.7rem', fontWeight: 700,
-            letterSpacing: '0.1em', padding: '6px 12px', background: 'none',
-            border: 'var(--ghost-border)', color: 'var(--outline)', cursor: 'pointer',
-          }}>CLOSE</button>
+              <button onClick={onClose} style={{
+                fontFamily: 'var(--font-headline)', fontSize: '0.7rem', fontWeight: 700,
+                letterSpacing: '0.1em', padding: '6px 12px', background: 'none',
+                border: 'var(--ghost-border)', color: 'var(--outline)', cursor: 'pointer',
+              }}>CLOSE</button>
+            </div>
+          </div>
+
+          {/* Dashboard */}
+          <div className={styles.dashboard}>
+            <div className={styles.dashCards}>
+              <div className={`${styles.dashCard} ${styles.dashCardAccent}`}>
+                <span className={styles.dashLabel}>BASE_WEIGHT</span>
+                <span className={styles.dashValue}>{fmtW(baseG, unit)}<span className={styles.dashUnit}>{unit}</span></span>
+              </div>
+              <div className={styles.dashCard}>
+                <span className={styles.dashLabel}>WORN</span>
+                <span className={styles.dashValue}>{fmtW(wornG, unit)}<span className={styles.dashUnit}>{unit}</span></span>
+              </div>
+              <div className={styles.dashCard}>
+                <span className={styles.dashLabel}>TOTAL</span>
+                <span className={styles.dashValue}>{fmtW(totalG, unit)}<span className={styles.dashUnit}>{unit}</span></span>
+              </div>
+            </div>
+
+            {/* Category breakdown bars */}
+            {sorted.length > 0 && totalG > 0 && (
+              <div className={styles.catBars}>
+                {sorted.map(cat => {
+                  const catItems = (itemsByCategory[cat.id] ?? []).filter(it => it.included);
+                  const catG = catItems.reduce((s, it) => s + it.weightG * it.qty, 0);
+                  const pct = totalG > 0 ? (catG / totalG) * 100 : 0;
+                  return (
+                    <div key={cat.id} className={styles.catBarRow}>
+                      <span className={styles.catBarLabel}>{cat.name}</span>
+                      <div className={styles.catBarTrack}>
+                        <div className={styles.catBarFill} style={{ width: `${pct}%`, background: cat.color }} />
+                      </div>
+                      <span className={styles.catBarWeight}>{fmtW(catG, unit)} {unit}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className={styles.gearPageContent}>
-        {loading ? (
-          <div className={styles.empty}>LOADING...</div>
-        ) : (
-          <>
-            {/* Dashboard */}
-            <div className={styles.dashboard}>
-              <div className={styles.dashCards}>
-                <div className={`${styles.dashCard} ${styles.dashCardAccent}`}>
-                  <span className={styles.dashLabel}>BASE_WEIGHT</span>
-                  <span className={styles.dashValue}>{fmtW(baseG, unit)}<span className={styles.dashUnit}>{unit}</span></span>
-                </div>
-                <div className={styles.dashCard}>
-                  <span className={styles.dashLabel}>WORN</span>
-                  <span className={styles.dashValue}>{fmtW(wornG, unit)}<span className={styles.dashUnit}>{unit}</span></span>
-                </div>
-                <div className={styles.dashCard}>
-                  <span className={styles.dashLabel}>TOTAL</span>
-                  <span className={styles.dashValue}>{fmtW(totalG, unit)}<span className={styles.dashUnit}>{unit}</span></span>
-                </div>
-              </div>
+      {/* ── Scrollable list ── */}
+      <div className={styles.gearPageScroll}>
+        <div className={styles.gearPageContent}>
+          {loading ? (
+            <div className={styles.empty}>LOADING...</div>
+          ) : (
+            <>
+              {sorted.length === 0 ? (
+                <div className={styles.empty}>NO GEAR YET — ADD A CATEGORY TO GET STARTED</div>
+              ) : (
+                sorted.map((cat, idx) => (
+                  <CategorySection
+                    key={cat.id}
+                    cat={cat}
+                    items={itemsByCategory[cat.id] ?? []}
+                    unit={unit}
+                    isAdmin={isAdmin}
+                    isFirst={idx === 0}
+                    isLast={idx === sorted.length - 1}
+                    onMoveUp={() => moveCategoryUp(cat.id)}
+                    onMoveDown={() => moveCategoryDown(cat.id)}
+                    onDeleteCat={() => deleteCategory(cat.id)}
+                    onAddItem={addItem}
+                    onUpdateItem={(id, data) => updateItem(id, data as Parameters<typeof updateItem>[1])}
+                    onDeleteItem={deleteItem}
+                  />
+                ))
+              )}
 
-              {/* Category breakdown bars */}
-              {sorted.length > 0 && totalG > 0 && (
-                <div className={styles.catBars}>
-                  {sorted.map(cat => {
-                    const catItems = (itemsByCategory[cat.id] ?? []).filter(it => it.included);
-                    const catG = catItems.reduce((s, it) => s + it.weightG * it.qty, 0);
-                    const pct = totalG > 0 ? (catG / totalG) * 100 : 0;
-                    return (
-                      <div key={cat.id} className={styles.catBarRow}>
-                        <span className={styles.catBarLabel}>{cat.name}</span>
-                        <div className={styles.catBarTrack}>
-                          <div className={styles.catBarFill} style={{ width: `${pct}%`, background: cat.color }} />
-                        </div>
-                        <span className={styles.catBarWeight}>{fmtW(catG, unit)} {unit}</span>
+              {/* Add category */}
+              {isAdmin && (
+                <div>
+                  {!showAddCat ? (
+                    <button className={styles.addBtn} onClick={() => setShowAddCat(true)}>+ ADD CATEGORY</button>
+                  ) : (
+                    <div className={styles.addCategoryArea}>
+                      <input
+                        type="text" placeholder="Category name" value={newCatName}
+                        onChange={e => setNewCatName(e.target.value)}
+                        onKeyDown={e => e.key === 'Escape' && setShowAddCat(false)}
+                        autoFocus
+                      />
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {PRESET_COLORS.map(c => (
+                          <button key={c} onClick={() => setNewCatColor(c)} style={{
+                            width: 22, height: 22, background: c,
+                            border: newCatColor === c ? '2px solid var(--on-surface)' : '1px solid transparent',
+                            cursor: 'pointer', padding: 0,
+                          }} />
+                        ))}
+                        <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)}
+                          className={styles.colorPicker} title="Custom color" />
                       </div>
-                    );
-                  })}
+                      <button className={styles.addBtn} onClick={async () => {
+                        if (!newCatName.trim()) return;
+                        await addCategory(newCatName.trim(), newCatColor);
+                        setNewCatName('');
+                        setShowAddCat(false);
+                      }}>CREATE</button>
+                      <button className={styles.cancelBtn} onClick={() => setShowAddCat(false)}>CANCEL</button>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-
-            {/* Categories */}
-            {sorted.length === 0 ? (
-              <div className={styles.empty}>NO GEAR YET — ADD A CATEGORY TO GET STARTED</div>
-            ) : (
-              sorted.map((cat, idx) => (
-                <CategorySection
-                  key={cat.id}
-                  cat={cat}
-                  items={itemsByCategory[cat.id] ?? []}
-                  unit={unit}
-                  isAdmin={isAdmin}
-                  isFirst={idx === 0}
-                  isLast={idx === sorted.length - 1}
-                  onMoveUp={() => moveCategoryUp(cat.id)}
-                  onMoveDown={() => moveCategoryDown(cat.id)}
-                  onDeleteCat={() => deleteCategory(cat.id)}
-                  onAddItem={addItem}
-                  onUpdateItem={(id, data) => updateItem(id, data as Parameters<typeof updateItem>[1])}
-                  onDeleteItem={deleteItem}
-                />
-              ))
-            )}
-
-            {/* Add category */}
-            {isAdmin && (
-              <div>
-                {!showAddCat ? (
-                  <button className={styles.addBtn} onClick={() => setShowAddCat(true)}>+ ADD CATEGORY</button>
-                ) : (
-                  <div className={styles.addCategoryArea}>
-                    <input
-                      type="text" placeholder="Category name" value={newCatName}
-                      onChange={e => setNewCatName(e.target.value)}
-                      onKeyDown={e => e.key === 'Escape' && setShowAddCat(false)}
-                      autoFocus
-                    />
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {PRESET_COLORS.map(c => (
-                        <button key={c} onClick={() => setNewCatColor(c)} style={{
-                          width: 22, height: 22, background: c, border: newCatColor === c ? '2px solid var(--on-surface)' : '1px solid transparent',
-                          cursor: 'pointer', padding: 0,
-                        }} />
-                      ))}
-                      <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)}
-                        className={styles.colorPicker} title="Custom color" />
-                    </div>
-                    <button className={styles.addBtn} onClick={async () => {
-                      if (!newCatName.trim()) return;
-                      await addCategory(newCatName.trim(), newCatColor);
-                      setNewCatName('');
-                      setShowAddCat(false);
-                    }}>CREATE</button>
-                    <button className={styles.cancelBtn} onClick={() => setShowAddCat(false)}>CANCEL</button>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
