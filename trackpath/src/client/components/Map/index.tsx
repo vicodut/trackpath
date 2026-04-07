@@ -432,6 +432,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
         if (!isTag && !layers.garminPoints) return null;
 
         const isLatest = idx === points.length - 1;
+        const time = new Date(pt.timestamp).toLocaleString();
         return (
           <Marker
             key={pt.id}
@@ -441,13 +442,23 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
               (isLatest ? latestIcon : pointIcon)
             }
             zIndexOffset={isLatest ? 1000 : 0}
-            eventHandlers={onPointTap ? {
-              click: (e) => {
-                L.DomEvent.stopPropagation(e.originalEvent);
-                onPointTap(pt);
-              },
-            } : undefined}
           >
+            <Popup>
+              <strong>{time}</strong>
+              <br />
+              {pt.latitude.toFixed(5)}, {pt.longitude.toFixed(5)}
+              {pt.altitude != null && (
+                <><br />Alt: {pt.altitude.toFixed(0)}m</>
+              )}
+              {pt.velocity ? (
+                <><br />Speed: {pt.velocity} km/h</>
+              ) : pt.calculatedSpeedKmh ? (
+                <><br />Speed: ~{pt.calculatedSpeedKmh.toFixed(1)} km/h</>
+              ) : null}
+              {pt.message && (
+                <><br /><em>{pt.message}</em></>
+              )}
+            </Popup>
           </Marker>
         );
       })}
