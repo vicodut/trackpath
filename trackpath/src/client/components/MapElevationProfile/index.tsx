@@ -20,6 +20,7 @@ interface MapElevationProfileProps {
   onHoverEnd: () => void;
   segmentMarkers?: SegmentMarkers | null;
   campMarkers?: number[];
+  currentDistKm?: number | null;
 }
 
 const CHART_HEIGHT = 160;
@@ -52,6 +53,7 @@ export function MapElevationProfile({
   onHoverEnd,
   segmentMarkers,
   campMarkers,
+  currentDistKm,
 }: MapElevationProfileProps) {
   const { unit, fmtDist } = useUnit();
   const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(
@@ -429,6 +431,22 @@ export function MapElevationProfile({
                 />
               );
             })}
+            {/* Current position sasquatch */}
+            {currentDistKm != null && trailData && (() => {
+              const pt = findClosestByDistance(trailData, currentDistKm);
+              const cx = toX(pt.distanceKm);
+              const cy = toY(pt.elevation);
+              const size = 32;
+              return (
+                <foreignObject x={cx - size / 2} y={cy - size} width={size} height={size} style={{ pointerEvents: 'none' }}>
+                  <img
+                    src="/sasquatch.gif"
+                    alt=""
+                    style={{ width: size, height: size, imageRendering: 'pixelated', filter: 'drop-shadow(0 0 4px rgba(254,107,0,0.7))' }}
+                  />
+                </foreignObject>
+              );
+            })()}
             {/* Hover crosshair */}
             {hovered && (
               <>

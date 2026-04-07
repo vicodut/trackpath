@@ -169,6 +169,7 @@ export function App() {
             onHoverEnd={() => mapRef.current?.clearElevationCursor()}
             segmentMarkers={segmentMarkers}
             campMarkers={campMarkers}
+            currentDistKm={lastGarminPoint ? getTrailKm(lastGarminPoint.latitude, lastGarminPoint.longitude) : null}
           />
         </div>
         {sidebarVisible && (
