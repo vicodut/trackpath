@@ -18,6 +18,7 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import { TAG_EMOJIS } from "../../lib/constants";
 import type { TrailSegment } from "../../hooks/useTrailDistance";
 import styles from "./Map.module.css";
+import { CopyCoords } from "../CopyCoords";
 
 const pointIcon = L.divIcon({
   className: "",
@@ -384,14 +385,14 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
             <Popup>
               <strong>Springer Mountain, GA</strong><br />
               Southern terminus<br />
-              <span style={{ color: '#888', fontSize: '0.85em' }}>34.62700, -84.19400</span>
+              <CopyCoords lat={34.627} lon={-84.194} />
             </Popup>
           </Marker>
           <Marker position={[45.904, -68.921]} icon={flagIcon}>
             <Popup>
               <strong>Mt. Katahdin, ME</strong><br />
               Northern terminus<br />
-              <span style={{ color: '#888', fontSize: '0.85em' }}>45.90400, -68.92100</span>
+              <CopyCoords lat={45.904} lon={-68.921} />
             </Popup>
           </Marker>
           {/* Airport markers */}
@@ -399,14 +400,14 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
             <Popup>
               <strong>ATL</strong><br />
               Hartsfield-Jackson Atlanta<br />
-              <span style={{ color: '#888', fontSize: '0.85em' }}>33.64070, -84.42770</span>
+              <CopyCoords lat={33.6407} lon={-84.4277} />
             </Popup>
           </Marker>
           <Marker position={[38.9531, -77.4565]} icon={airplaneIcon}>
             <Popup>
               <strong>IAD</strong><br />
               Washington Dulles<br />
-              <span style={{ color: '#888', fontSize: '0.85em' }}>38.95310, -77.45650</span>
+              <CopyCoords lat={38.9531} lon={-77.4565} />
             </Popup>
           </Marker>
           {/* Shuttle route: ATL → Amicalola Falls */}
@@ -454,7 +455,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
             <Popup>
               <strong>{time}</strong>
               <br />
-              {pt.latitude.toFixed(5)}, {pt.longitude.toFixed(5)}
+              <CopyCoords lat={pt.latitude} lon={pt.longitude} />
               {pt.altitude != null && (
                 <><br />Alt: {pt.altitude.toFixed(0)}m</>
               )}

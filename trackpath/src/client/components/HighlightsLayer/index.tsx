@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { CopyCoords } from '../CopyCoords';
 import L from 'leaflet';
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import type { LayerVisibility } from '../LayerToggle';
@@ -121,8 +122,8 @@ export function HighlightsLayer({ layers, onHighlightTap, onHighlightClose, trai
         >
           <Popup>
             <strong>{h.name}</strong>
-            <br />
-            <span style={{ color: '#888', fontSize: '0.85em' }}>{h.lat.toFixed(5)}, {h.lon.toFixed(5)}</span>
+
+            <CopyCoords lat={h.lat} lon={h.lon} />
             {h.elevation != null && (
               <>
                 <br />
