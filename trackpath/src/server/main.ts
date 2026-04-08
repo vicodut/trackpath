@@ -34,7 +34,7 @@ async function bootstrap() {
     const clientDir = join(__dirname, '../../dist/client');
     const expressApp = app.getHttpAdapter().getInstance() as express.Application;
     expressApp.use(express.static(clientDir));
-    expressApp.get('*', (_req: express.Request, res: express.Response) => {
+    expressApp.get('/{*path}', (_req: express.Request, res: express.Response) => {
       res.sendFile(join(clientDir, 'index.html'));
     });
   }
