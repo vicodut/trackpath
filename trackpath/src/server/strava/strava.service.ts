@@ -31,6 +31,7 @@ export class StravaService {
    * multiple simultaneous UPDATE statements when several requests race.
    */
   private refreshPromise: Promise<string | null> | null = null;
+  private readonly syncLogs: Array<{ source: string; time: string; message: string }> = [];
 
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleClient) {
     this.clientId = process.env.STRAVA_CLIENT_ID ?? null;
@@ -45,6 +46,19 @@ export class StravaService {
   async isConnected(): Promise<boolean> {
     const rows = await this.db.select({ id: stravaTokens.id }).from(stravaTokens).limit(1);
     return rows.length > 0;
+  }
+
+  /** Returns the first token row for admin status display (athleteId). */
+  async getTokenMeta(): Promise<{ athleteId: string } | null> {
+    const rows = await this.db
+      .select({ athleteId: stravaTokens.athleteId })
+      .from(stravaTokens)
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  getSyncLogs(): Array<{ source: string; time: string; message: string }> {
+    return this.syncLogs;
   }
 
   getActivities() {
@@ -187,12 +201,21 @@ export class StravaService {
       const result = await this.syncActivities();
       if ('error' in result) {
         this.logger.warn(`Daily Strava sync skipped: ${result.error}`);
+        this.addSyncLog(`Skipped: ${result.error}`);
       } else if (result.synced > 0) {
         this.logger.log(`Daily Strava sync: ${result.synced} new activities`);
+        this.addSyncLog(`${result.synced} new activities synced`);
       }
     } catch (err) {
-      this.logger.error(`Daily Strava sync error: ${(err as Error).message}`);
+      const msg = (err as Error).message;
+      this.logger.error(`Daily Strava sync error: ${msg}`);
+      this.addSyncLog(`Error: ${msg}`);
     }
+  }
+
+  private addSyncLog(message: string): void {
+    this.syncLogs.unshift({ source: 'strava', time: new Date().toISOString(), message });
+    if (this.syncLogs.length > 50) this.syncLogs.length = 50;
   }
 
   // ---------------------------------------------------------------------------
