@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import { Header } from "./components/Header";
 import { Map as TrailMap } from "./components/Map";
 import type { MapHandle } from "./components/Map";
@@ -6,15 +6,15 @@ import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { Weather } from "./components/Weather";
 import { Stats } from "./components/Stats";
-import { AdminPage } from "./components/AdminPage";
-import { StatsPage } from "./components/StatsPage";
-import { GearPage } from "./components/GearPage";
+const AdminPage = lazy(() => import("./components/AdminPage").then(m => ({ default: m.AdminPage })));
+const StatsPage = lazy(() => import("./components/StatsPage").then(m => ({ default: m.StatsPage })));
+const GearPage = lazy(() => import("./components/GearPage").then(m => ({ default: m.GearPage })));
+const TrailLogPage = lazy(() => import("./components/TrailLogPage").then(m => ({ default: m.TrailLogPage })));
+const Blog = lazy(() => import("./components/Blog").then(m => ({ default: m.Blog })));
 import type { LayerVisibility } from "./components/LayerToggle";
 import { LayerToggle } from "./components/LayerToggle";
 import { MapElevationProfile } from "./components/MapElevationProfile";
 import { PointPopup } from "./components/PointPopup";
-import { TrailLogPage } from "./components/TrailLogPage";
-import { Blog } from "./components/Blog";
 import { usePoints } from "./hooks/usePoints";
 import { useAdmin } from "./hooks/useAdmin";
 import { useStrava } from "./hooks/useStrava";
@@ -190,43 +190,41 @@ export function App() {
         )}
       </div>
       <StatusBar message={status.message} type={status.type} />
-      {showStats && (
-        <StatsPage
-          points={points}
-          stravaActivities={stravaActivities}
-          totalDistanceKm={totalDistanceKm}
-          totalElevationGain={totalElevationGain}
-          isAdmin={isAdmin}
-          onClose={closeModal}
-        />
-      )}
-      {showAdmin && (
-        <AdminPage
-          onClose={closeModal}
-          onStravaConnect={stravaConnect}
-          onStravaSync={stravaSync}
-          onGarminSync={handleSync}
-          syncing={syncing}
-        />
-      )}
-      {showTrailLog && (
-        <TrailLogPage
-          points={points}
-          totalDistanceKm={totalDistanceKm}
-          totalElevationGain={totalElevationGain}
-          stravaActivities={stravaActivities}
-          onSelectPoint={setSelectedPoint}
-          onDeletePoint={removePoint}
-          isAdmin={isAdmin}
-          onClose={closeModal}
-        />
-      )}
-      {showBlog && (
-        <Blog onClose={closeModal} />
-      )}
-      {showGear && (
-        <GearPage isAdmin={isAdmin} onClose={closeModal} />
-      )}
+      <Suspense fallback={null}>
+        {showStats && (
+          <StatsPage
+            points={points}
+            stravaActivities={stravaActivities}
+            totalDistanceKm={totalDistanceKm}
+            totalElevationGain={totalElevationGain}
+            isAdmin={isAdmin}
+            onClose={closeModal}
+          />
+        )}
+        {showAdmin && (
+          <AdminPage
+            onClose={closeModal}
+            onStravaConnect={stravaConnect}
+            onStravaSync={stravaSync}
+            onGarminSync={handleSync}
+            syncing={syncing}
+          />
+        )}
+        {showTrailLog && (
+          <TrailLogPage
+            points={points}
+            totalDistanceKm={totalDistanceKm}
+            totalElevationGain={totalElevationGain}
+            stravaActivities={stravaActivities}
+            onSelectPoint={setSelectedPoint}
+            onDeletePoint={removePoint}
+            isAdmin={isAdmin}
+            onClose={closeModal}
+          />
+        )}
+        {showBlog && <Blog onClose={closeModal} />}
+        {showGear && <GearPage isAdmin={isAdmin} onClose={closeModal} />}
+      </Suspense>
       {tappedPoint && (
         <PointPopup
           point={tappedPoint}

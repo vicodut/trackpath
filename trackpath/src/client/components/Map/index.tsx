@@ -359,9 +359,20 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
     },
     [],
   );
-  const pathCoords: [number, number][] = points
-    .filter((p) => !p.garminId?.startsWith("manual-"))
-    .map((p) => [p.latitude, p.longitude]);
+  const pathCoords = useMemo<[number, number][]>(
+    () => points
+      .filter((p) => !p.garminId?.startsWith("manual-"))
+      .map((p) => [p.latitude, p.longitude]),
+    [points],
+  );
+
+  const parsedActivities = useMemo(
+    () => stravaActivities.map((a) => ({
+      ...a,
+      parsedCoords: a.coords ? (JSON.parse(a.coords) as [number, number][]) : [] as [number, number][],
+    })),
+    [stravaActivities],
+  );
 
   return (
     <MapContainer
@@ -474,9 +485,8 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
 
       {/* Strava activities */}
       {layers.strava &&
-        stravaActivities.map((act) => {
-          if (!act.coords) return null;
-          const coords: [number, number][] = JSON.parse(act.coords);
+        parsedActivities.map((act) => {
+          const coords = act.parsedCoords;
           if (coords.length === 0) return null;
           const date = act.startDate
             ? new Date(act.startDate).toLocaleDateString()

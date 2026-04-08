@@ -47,6 +47,13 @@ drizzle/          # Generated SQL migrations — commit these
 - **React state:** prefer `useMemo`/`useCallback` for expensive derivations. Use imperative handles (`useImperativeHandle`) for cross-component calls that would otherwise cause full re-renders (e.g. map cursor updates from elevation profile hover).
 - **Modal pages** (AdminPage, StatsPage, GearPage, TrailLogPage, Blog) are lazy-loaded — keep them out of the initial bundle.
 - **CSS:** CSS Modules per component (`ComponentName.module.css`). No global styles except `index.css`.
+- **TypeScript Strictness:** Never use `any` or `@ts-ignore`. If a type is missing, define it in `src/client/types.ts` or infer it from the Drizzle schema.
+- **Routing:** Do not add new routes directly to `server/index.ts`. Create or update a router in `server/routes/` and mount it in `index.ts`.
+- **Package Management:** Use standard Node/Vite/React APIs first. Ask for permission before running `npm install` for any new dependency.
+
+## Domain Rules (The Trail Reality)
+- **Spotty Connectivity:** Assume Garmin MapShare pings or user-generated logs might arrive out of order, in batches, or delayed by several days. Always rely on the device timestamp, not the server ingestion time.
+- **Data Integrity:** Coordinate data (latitude/longitude/elevation) is the source of truth. Never mutate historical coordinate data once written.
 
 ## Environment variables
 
@@ -67,3 +74,7 @@ drizzle/          # Generated SQL migrations — commit these
 - Use `getAllPoints()` for endpoints that only need count or the latest point
 - Add `--no-verify` to git commands or skip migration on deploy
 - Import modal page components statically in App.tsx
+- Push directly
+- Hallucinate or install new npm packages without explicit permission.
+- Write raw SQL queries; always use the Drizzle ORM query builder or relational queries.
+- Delete existing comments or JSDoc strings when modifying a function.

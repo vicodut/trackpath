@@ -104,11 +104,24 @@ export function usePoints() {
     return total;
   }, [garminPoints]);
 
-  // Auto-refresh every 30s
+  // Auto-refresh every 30s, paused when tab is hidden
   useEffect(() => {
     loadPoints();
-    const interval = setInterval(loadPoints, 30000);
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | null = setInterval(loadPoints, 30000);
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (interval) { clearInterval(interval); interval = null; }
+      } else {
+        loadPoints();
+        interval = setInterval(loadPoints, 30000);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [loadPoints]);
 
   return { points: pointsWithSpeed, loading, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain, loadPoints };
