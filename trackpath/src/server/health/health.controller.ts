@@ -1,11 +1,8 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { count } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as schema from '../../db/schema.js';
 import { trackingPoints } from '../../db/schema.js';
 import { DRIZZLE } from '../database/drizzle.constants.js';
-
-type DrizzleClient = PostgresJsDatabase<typeof schema>;
+import type { DrizzleClient } from '../database/drizzle.types.js';
 
 @Controller('health')
 export class HealthController {
