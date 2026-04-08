@@ -8,12 +8,11 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../auth/admin.guard.js';
 import { GarminService } from './garmin.service.js';
 import type { ManualPointBody } from './garmin.types.js';
-
-// TODO: protect mutating endpoints with an AuthGuard once the AuthModule is
-// migrated (mirrors requireAuth middleware on the Express server).
 
 @Controller()
 export class GarminController {
@@ -28,6 +27,7 @@ export class GarminController {
   /** Triggers a manual pull from the Garmin MapShare KML feed. */
   @Post('sync')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AdminGuard)
   manualSync() {
     return this.garminService.syncFromMapShare();
   }
@@ -35,6 +35,7 @@ export class GarminController {
   /** Creates a manual waypoint (prefixed "manual-" to distinguish from device points). */
   @Post('points')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AdminGuard)
   addManualPoint(@Body() body: ManualPointBody) {
     return this.garminService.addManualPoint(body);
   }
@@ -42,6 +43,7 @@ export class GarminController {
   /** Deletes a tracking point by its database ID. */
   @Delete('points/:id')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AdminGuard)
   deletePoint(@Param('id', ParseIntPipe) id: number) {
     return this.garminService.deletePoint(id).then(() => ({ ok: true }));
   }
