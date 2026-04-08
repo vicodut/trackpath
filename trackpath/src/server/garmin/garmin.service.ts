@@ -7,6 +7,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { asc, desc, not, like, count, eq } from 'drizzle-orm';
 import { parseString } from 'xml2js';
 import { trackingPoints } from '../../db/schema.js';
@@ -26,8 +27,8 @@ import type {
 /** Fetch timeout for spotty satellite connectivity (30 s). */
 const FETCH_TIMEOUT_MS = 30_000;
 
-/** Garmin MapShare KML feed base URL. */
 const MAPSHARE_BASE = 'https://share.garmin.com/Feed/Share';
+const INTERVAL_NAME = 'garmin-auto-sync';
 
 @Injectable()
 export class GarminService implements OnModuleInit, OnModuleDestroy {
@@ -36,12 +37,13 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
   private readonly mapshareId: string | null;
   private readonly pollIntervalMs: number;
 
-  private pollTimer: NodeJS.Timeout | null = null;
-
   private lastSyncStatus: SyncStatus = { time: null, newCount: 0, error: null };
   private readonly syncLogs: SyncLog[] = [];
 
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleClient) {
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleClient,
+    private readonly schedulerRegistry: SchedulerRegistry,
+  ) {
     this.mapshareId = process.env.MAPSHARE_ID ?? null;
     this.pollIntervalMs =
       (parseInt(process.env.POLL_INTERVAL_MIN ?? '5', 10) || 5) * 60_000;
@@ -56,18 +58,25 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn('MAPSHARE_ID not set — auto-sync disabled');
       return;
     }
-    // Fire an initial sync, then repeat on the configured interval.
+
+    // Register with SchedulerRegistry so the interval is visible to NestJS
+    // diagnostics and is cleaned up correctly on shutdown.
+    const interval = setInterval(() => void this.autoSync(), this.pollIntervalMs);
+    this.schedulerRegistry.addInterval(INTERVAL_NAME, interval);
+
+    // Fire an initial sync immediately rather than waiting for the first tick.
     void this.autoSync();
-    this.pollTimer = setInterval(() => void this.autoSync(), this.pollIntervalMs);
+
     this.logger.log(
       `Auto-sync started: every ${this.pollIntervalMs / 60_000} min (mapshareId=${this.mapshareId})`,
     );
   }
 
   onModuleDestroy(): void {
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
+    try {
+      this.schedulerRegistry.deleteInterval(INTERVAL_NAME);
+    } catch {
+      // Interval was never registered (MAPSHARE_ID absent) — nothing to clean up.
     }
   }
 
@@ -110,19 +119,17 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ---------------------------------------------------------------------------
-  // Manual point creation
+  // Manual point CRUD
   // ---------------------------------------------------------------------------
 
   async addManualPoint(body: ManualPointBody): Promise<TrackingPoint> {
     this.validateManualPointBody(body);
 
     const point: NewTrackingPoint = {
-      // Prefix "manual-" lets the rest of the app distinguish device vs user points.
       garminId: `manual-${Date.now()}`,
       latitude: body.latitude,
       longitude: body.longitude,
       altitude: body.altitude ?? null,
-      // Use server time for manual points — there is no device timestamp.
       timestamp: new Date().toISOString(),
       velocity: null,
       course: null,
@@ -130,11 +137,7 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
       eventType: body.tag ?? 'manual',
     };
 
-    const [inserted] = await this.db
-      .insert(trackingPoints)
-      .values(point)
-      .returning();
-
+    const [inserted] = await this.db.insert(trackingPoints).values(point).returning();
     return inserted;
   }
 
@@ -143,7 +146,7 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ---------------------------------------------------------------------------
-  // MapShare sync (called by controller and by the auto-poll timer)
+  // MapShare sync
   // ---------------------------------------------------------------------------
 
   async syncFromMapShare(): Promise<{ synced: number; total: number; points: TrackingPoint[] }> {
@@ -194,21 +197,12 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Fetches the Garmin MapShare KML feed and converts placemarks into
-   * NewTrackingPoint rows.
+   * Fetches the MapShare KML feed with a 30 s AbortController timeout.
    *
-   * Connectivity rules:
-   *  - Hard timeout of 30 s via AbortController; the satellite link can stall.
-   *  - Non-2xx responses are treated as transient errors and propagated to the
-   *    caller, which decides whether to log-and-continue (auto-sync) or 500
-   *    (manual sync).
-   *
-   * Timestamp rule:
-   *  - The device-assigned "Time UTC" field is the canonical timestamp. The
-   *    device clock is accurate even when the satellite uplink is delayed, so
-   *    it correctly reflects when the fix was recorded — not when it arrived.
-   *    We only fall back to the server clock when the field is absent, which
-   *    should never happen in practice.
+   * Timestamp rule: "Time UTC" from the device is the canonical timestamp.
+   * The device clock reflects when the GPS fix was recorded, not when the
+   * satellite uplink delivered it — critical for correct track ordering when
+   * points arrive in bursts after connectivity gaps.
    */
   private async fetchGarminPoints(mapshareId: string): Promise<NewTrackingPoint[]> {
     const controller = new AbortController();
@@ -225,8 +219,7 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
       clearTimeout(timer);
     }
 
-    const kml = await this.parseKml(xml);
-    return this.extractPoints(kml);
+    return this.extractPoints(await this.parseKml(xml));
   }
 
   private parseKml(xml: string): Promise<KmlRoot> {
@@ -251,24 +244,16 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
 
     for (const pm of placemarks) {
       const coords = pm.Point?.coordinates;
-      if (!coords) continue; // placemark has no GPS fix — skip
+      if (!coords) continue;
 
       const [lng, lat, alt] = coords.split(',').map(Number);
       if (isNaN(lat) || isNaN(lng)) continue;
 
       const ext = this.normaliseExtData(pm);
 
-      // Altitude: prefer the coordinate triple value; fall back to the
-      // explicit Elevation field (some firmware versions omit it from coords).
       const elevation = ext['Elevation'] != null ? parseFloat(ext['Elevation']) : null;
       const finalAlt = alt != null && !isNaN(alt) ? alt : elevation;
-
-      // Canonical timestamp comes from the device clock ("Time UTC").
-      // See fetchGarminPoints JSDoc for the rationale.
       const timestamp = ext['Time UTC'] ?? new Date().toISOString();
-
-      // Garmin assigns a unique Id per transmission; use it as the idempotency
-      // key. The composite fallback handles old firmware that omits the field.
       const garminId = ext['Id'] ?? `${lat}-${lng}-${timestamp}`;
 
       points.push({
@@ -287,7 +272,6 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
     return points;
   }
 
-  /** Flatten xml2js Data array (or single node) into a plain key→value map. */
   private normaliseExtData(pm: KmlPlacemark): GarminExtData {
     const ext: GarminExtData = {};
     if (!pm.ExtendedData?.Data) return ext;
@@ -296,13 +280,10 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
       ? pm.ExtendedData.Data
       : [pm.ExtendedData.Data];
 
-    for (const d of entries) {
-      ext[d.$.name] = d.value;
-    }
+    for (const d of entries) ext[d.$.name] = d.value;
     return ext;
   }
 
-  /** Batch-insert; duplicate garminIds are silently skipped (idempotent). */
   private async insertPoints(points: NewTrackingPoint[]): Promise<number> {
     if (points.length === 0) return 0;
     const inserted = await this.db
@@ -320,22 +301,16 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
 
   private validateManualPointBody(body: ManualPointBody): void {
     const { latitude, longitude, altitude, message, tag } = body;
-
     if (
       typeof latitude !== 'number' || typeof longitude !== 'number' ||
       latitude < -90 || latitude > 90 ||
       longitude < -180 || longitude > 180
-    ) {
-      throw new BadRequestException('Invalid latitude/longitude');
-    }
-    if (altitude != null && typeof altitude !== 'number') {
+    ) throw new BadRequestException('Invalid latitude/longitude');
+    if (altitude != null && typeof altitude !== 'number')
       throw new BadRequestException('altitude must be a number');
-    }
-    if (message != null && typeof message !== 'string') {
+    if (message != null && typeof message !== 'string')
       throw new BadRequestException('message must be a string');
-    }
-    if (tag != null && typeof tag !== 'string') {
+    if (tag != null && typeof tag !== 'string')
       throw new BadRequestException('tag must be a string');
-    }
   }
 }
