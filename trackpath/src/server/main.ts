@@ -15,29 +15,29 @@ async function bootstrap() {
   // bodies itself before any JSON parser runs.
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
-  // Mount better-auth before body-parsing middleware. Express app.use() does
-  // prefix matching, so this catches /api/auth and /api/auth/* without needing
-  // wildcard gymnastics.
+  // better-auth must intercept /api/auth/* before body-parsing.
   app.use('/api/auth', toNodeHandler(auth));
 
-  // Re-enable body parsing for all other routes.
+  if (process.env.NODE_ENV === 'production') {
+    const clientDir = join(__dirname, '../../dist/client');
+
+    // Serve hashed static assets (JS/CSS/images) — only fires when the file exists.
+    app.use(express.static(clientDir));
+
+    // SPA fallback: serve index.html for any non-API path so that client-side
+    // routing works. Registered before NestJS routes so it wins over NestJS's
+    // own 404 handler for unmatched routes.
+    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(join(clientDir, 'index.html'));
+    });
+  }
+
+  // Body parsing for all other routes.
   app.use(json());
   app.use(urlencoded({ extended: true }));
 
   app.setGlobalPrefix('api');
-
-  // Explicitly init so all NestJS routes are registered before we add the
-  // SPA catch-all below (which must come last in the middleware chain).
-  await app.init();
-
-  if (process.env.NODE_ENV === 'production') {
-    const clientDir = join(__dirname, '../../dist/client');
-    const expressApp = app.getHttpAdapter().getInstance() as express.Application;
-    expressApp.use(express.static(clientDir));
-    expressApp.get('/{*path}', (_req: express.Request, res: express.Response) => {
-      res.sendFile(join(clientDir, 'index.html'));
-    });
-  }
 
   // Railway sets PORT; fall back to NEST_PORT for local dev.
   const port = process.env.PORT ?? process.env.NEST_PORT ?? 3001;
