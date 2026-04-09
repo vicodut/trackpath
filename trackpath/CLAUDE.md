@@ -1,19 +1,19 @@
 # Trackpath — Claude Code Guide
 
 ## Project overview
-Appalachian Trail hike tracker. Express API + React SPA, deployed on Railway.
+Appalachian Trail hike tracker. NestJS API + React SPA, deployed on Railway.
 
-- **Backend:** Node.js + Express 5, TypeScript (tsx), Drizzle ORM, PostgreSQL
+- **Backend:** Node.js + NestJS 11, TypeScript (SWC), Drizzle ORM, PostgreSQL
 - **Frontend:** React 19, Vite, react-leaflet, CSS Modules
-- **Auth:** better-auth (email/OAuth)
+- **Auth:** better-auth (GitHub OAuth)
 - **Deploy:** Railway via Dockerfile; runs `npm run migrate && npm start`
 
 ## Commands
 
 ```bash
-npm run dev          # concurrently: vite (port 5173) + tsx watch server
-npm run build        # vite build → dist/client/
-npm start            # NODE_ENV=production tsx src/server/index.ts
+npm run dev          # concurrently: nest --watch (port 3001) + vite (port 5173)
+npm run build        # vite build → dist/client/ && nest build → dist/server/
+npm start            # NODE_ENV=production node dist/server/main.js
 npm run migrate      # drizzle-orm migrator (runs all pending migrations)
 npm run db:generate  # drizzle-kit generate → creates SQL in drizzle/
 npm run lint         # eslint src/
@@ -31,14 +31,32 @@ src/
     lib/          # Pure utilities (geo, math)
     types.ts      # Shared client types
   server/
-    index.ts      # All Express routes + helpers
-    auth.ts       # better-auth config
+    main.ts             # NestJS bootstrap (static files, auth handler, validation)
+    app.module.ts       # Root module — imports all feature modules
+    auth/               # AuthService (better-auth), AdminGuard
+    garmin/             # GarminService (MapShare sync), GarminController
+    strava/             # StravaService (OAuth + activity sync), StravaController
+    blog/               # BlogService (Ghost CMS proxy), BlogController
+    weather/            # WeatherService (Open-Meteo, 30-min cache), WeatherController
+    gear/               # GearService + GearController (categories + items)
+    admin/              # AdminService (dashboard aggregation), AdminController
+    health/             # HealthController (/api/health, /api/health/db)
+    config/             # ConfigModule — Zod-validated env vars
+    database/           # DatabaseModule — global Drizzle + SQL_CLIENT providers
   db/
     index.ts      # Drizzle client + raw postgres-js client
     schema.ts     # All table definitions
     migrate.ts    # Migration runner (used by npm run migrate)
 drizzle/          # Generated SQL migrations — commit these
 ```
+
+## Adding a new API route
+
+1. Create or update the relevant `src/server/<module>/` directory.
+2. Add a DTO class in `<module>.dto.ts` with `class-validator` decorators.
+3. Inject `DRIZZLE` (typed `DrizzleClient`) via `@Inject(DRIZZLE)` for DB access.
+4. Guard admin routes with `@UseGuards(AdminGuard)`.
+5. Import the module in `app.module.ts`.
 
 ## Key conventions
 
@@ -48,7 +66,9 @@ drizzle/          # Generated SQL migrations — commit these
 - **Modal pages** (AdminPage, StatsPage, GearPage, TrailLogPage, Blog) are lazy-loaded — keep them out of the initial bundle.
 - **CSS:** CSS Modules per component (`ComponentName.module.css`). No global styles except `index.css`.
 - **TypeScript Strictness:** Never use `any` or `@ts-ignore`. If a type is missing, define it in `src/client/types.ts` or infer it from the Drizzle schema.
-- **Routing:** Do not add new routes directly to `server/index.ts`. Create or update a router in `server/routes/` and mount it in `index.ts`.
+- **Routing:** Do not add new routes directly to `main.ts`. Create a NestJS module with a controller and register it in `app.module.ts`.
+- **Validation:** Use `class-validator` DTO classes for all request bodies. The global `ValidationPipe` (whitelist + transform) is active — unknown fields are stripped automatically.
+- **Rate limiting:** Sync/write endpoints use `@Throttle({ default: { ttl: 60_000, limit: 5 } })`. The global default is 120 req/min.
 - **Package Management:** Use standard Node/Vite/React APIs first. Ask for permission before running `npm install` for any new dependency.
 
 ## Domain Rules (The Trail Reality)
@@ -67,6 +87,7 @@ drizzle/          # Generated SQL migrations — commit these
 | `BETTER_AUTH_SECRET` | Session signing secret |
 | `GHOST_URL` / `GHOST_KEY` | Ghost CMS for blog |
 | `POLL_INTERVAL_MIN` | Garmin auto-sync interval (default 5) |
+| `NEST_PORT` | NestJS port for local dev (default 3001) |
 
 ## Do not
 

@@ -9,6 +9,7 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { StravaService } from './strava.service.js';
 
@@ -51,6 +52,7 @@ export class StravaController {
   @Post('sync')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AdminGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   async manualSync() {
     const result = await this.stravaService.syncActivities();
     if ('error' in result) throw new BadRequestException(result.error);

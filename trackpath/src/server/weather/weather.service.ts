@@ -13,9 +13,18 @@ const DAILY_FIELDS = [
   'windgusts_10m_max',
 ].join(',');
 
+/** Cache the forecast for 30 minutes — weather doesn't change faster than that. */
+const CACHE_TTL_MS = 30 * 60 * 1000;
+
+interface CacheEntry {
+  result: WeatherResponse;
+  expiresAt: number;
+}
+
 @Injectable()
 export class WeatherService {
   private readonly logger = new Logger(WeatherService.name);
+  private cache: CacheEntry | null = null;
 
   constructor(private readonly garminService: GarminService) {}
 
@@ -26,6 +35,17 @@ export class WeatherService {
     }
 
     const { latitude, longitude } = lastPoint;
+
+    // Return cached result if still fresh and for the same coordinates.
+    if (
+      this.cache &&
+      Date.now() < this.cache.expiresAt &&
+      this.cache.result.latitude === latitude &&
+      this.cache.result.longitude === longitude
+    ) {
+      return this.cache.result;
+    }
+
     const url =
       `${OPEN_METEO_BASE}` +
       `?latitude=${latitude}&longitude=${longitude}` +
@@ -36,12 +56,17 @@ export class WeatherService {
     const res = await fetch(url);
     const weather = (await res.json()) as OpenMeteoResponse;
 
-    return {
+    const result: WeatherResponse = {
       latitude,
       longitude,
       pointTimestamp: lastPoint.timestamp,
       forecast: weather.daily,
       timezone: weather.timezone,
     };
+
+    this.cache = { result, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.logger.debug(`Weather cache updated for ${latitude},${longitude}`);
+
+    return result;
   }
 }

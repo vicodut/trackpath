@@ -13,7 +13,13 @@ import {
 } from '@nestjs/common';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { GearService } from './gear.service.js';
-import type { CreateCategoryBody, CreateItemBody, ImportRow, UpdateCategoryBody, UpdateItemBody } from './gear.types.js';
+import {
+  CreateCategoryDto,
+  UpdateCategoryDto,
+  CreateItemDto,
+  UpdateItemDto,
+  ImportRowDto,
+} from './gear.dto.js';
 
 @Controller('gear')
 export class GearController {
@@ -28,7 +34,7 @@ export class GearController {
 
   @Post('categories')
   @UseGuards(AdminGuard)
-  createCategory(@Body() body: CreateCategoryBody) {
+  createCategory(@Body() body: CreateCategoryDto) {
     return this.gearService.createCategory(body);
   }
 
@@ -37,7 +43,7 @@ export class GearController {
   @UseGuards(AdminGuard)
   updateCategory(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: UpdateCategoryBody,
+    @Body() body: UpdateCategoryDto,
   ) {
     return this.gearService.updateCategory(id, body).then(() => ({ ok: true }));
   }
@@ -53,7 +59,7 @@ export class GearController {
 
   @Post('items')
   @UseGuards(AdminGuard)
-  createItem(@Body() body: CreateItemBody) {
+  createItem(@Body() body: CreateItemDto) {
     return this.gearService.createItem(body);
   }
 
@@ -62,7 +68,7 @@ export class GearController {
   @UseGuards(AdminGuard)
   updateItem(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: UpdateItemBody,
+    @Body() body: UpdateItemDto,
   ) {
     return this.gearService.updateItem(id, body).then(() => ({ ok: true }));
   }
@@ -78,7 +84,7 @@ export class GearController {
 
   @Post('import')
   @UseGuards(AdminGuard)
-  importItems(@Body() rows: ImportRow[]) {
+  importItems(@Body() rows: ImportRowDto[]) {
     return this.gearService.importItems(rows);
   }
 }

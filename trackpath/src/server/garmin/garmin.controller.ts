@@ -10,9 +10,10 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { GarminService } from './garmin.service.js';
-import type { ManualPointBody } from './garmin.types.js';
+import { ManualPointDto } from './garmin.dto.js';
 
 @Controller()
 export class GarminController {
@@ -28,6 +29,7 @@ export class GarminController {
   @Post('sync')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AdminGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   manualSync() {
     return this.garminService.syncFromMapShare();
   }
@@ -36,7 +38,7 @@ export class GarminController {
   @Post('points')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AdminGuard)
-  addManualPoint(@Body() body: ManualPointBody) {
+  addManualPoint(@Body() body: ManualPointDto) {
     return this.garminService.addManualPoint(body);
   }
 

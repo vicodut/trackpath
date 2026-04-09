@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule } from './config/config.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -15,6 +16,9 @@ import { HealthController } from './health/health.controller.js';
   imports: [
     ConfigModule,
     ScheduleModule.forRoot(),
+    // Global rate-limiter: 120 requests per minute per IP by default.
+    // Sync endpoints apply a tighter limit via @Throttle() decorator.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     DatabaseModule,
     AuthModule,
     GarminModule,

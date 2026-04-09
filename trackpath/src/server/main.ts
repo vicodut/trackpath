@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import express, { json, urlencoded } from 'express';
 import { toNodeHandler } from 'better-auth/node';
 import { join, dirname } from 'path';
@@ -36,6 +37,9 @@ async function bootstrap() {
   // Body parsing for all other routes.
   app.use(json());
   app.use(urlencoded({ extended: true }));
+
+  // Strip unknown fields and auto-coerce primitives (e.g. query strings to numbers).
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   app.setGlobalPrefix('api');
 
