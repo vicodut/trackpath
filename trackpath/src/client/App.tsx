@@ -39,27 +39,27 @@ export function App() {
   const [highlightTarget, setHighlightTarget] = useState<{ lat: number; lon: number } | null>(null);
   const { getSegment, getTrailKm } = useTrailDistance();
 
-  const [layers, setLayers] = useState<LayerVisibility>({
-    garminPath: true,
-    garminPoints: true,
-    strava: true,
-    atTrail: true,
-    weather: true,
-    tags: {
-      resupply: true, poop: true, hostel: true, camp: true,
-      shelter: true, water: true, viewpoint: true,
-    },
-    highlights: {
-      shelter: window.innerWidth > 768,
-      summit: window.innerWidth > 768,
-      campsite: window.innerWidth > 768,
-      town: window.innerWidth > 768,
-      'road-crossing': window.innerWidth > 768,
-      landmark: true,
-      'state-border': true,
-      'water-source': false,
-    },
+  const [layers, setLayers] = useState<LayerVisibility>(() => {
+    const isMobile = window.innerWidth <= 768;
+    const defaults: LayerVisibility = {
+      garminPath: true, garminPoints: true, strava: true, atTrail: true, weather: true,
+      tags: { resupply: true, poop: true, hostel: true, camp: true, shelter: true, water: true, viewpoint: true },
+      highlights: {
+        shelter: !isMobile, summit: !isMobile, campsite: !isMobile, town: !isMobile,
+        'road-crossing': !isMobile, landmark: true, 'state-border': true, 'water-source': false,
+      },
+    };
+    try {
+      const saved = localStorage.getItem('trackpath:layers');
+      if (saved) return { ...defaults, ...JSON.parse(saved) };
+    } catch { /* ignore */ }
+    return defaults;
   });
+
+  const handleLayersChange = useCallback((next: LayerVisibility) => {
+    setLayers(next);
+    try { localStorage.setItem('trackpath:layers', JSON.stringify(next)); } catch { /* ignore */ }
+  }, []);
 
   const handleSync = useCallback(async () => {
     setSyncing(true);
@@ -115,13 +115,19 @@ export function App() {
     return { fromDistKm: fromKm, toDistKm: toKm };
   }, [tappedPoint, highlightTarget, lastGarminPoint, getTrailKm]);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--surface)' }}>
-        <span className="spinner" style={{ width: 24, height: 24 }} />
-      </div>
-    );
-  }
+  const trailProgressKm = lastGarminPoint
+    ? getTrailKm(lastGarminPoint.latitude, lastGarminPoint.longitude)
+    : null;
+
+  const nearbyAltitudes = useMemo(() => {
+    if (!tappedPoint) return [];
+    const idx = points.findIndex(p => p.id === tappedPoint.id);
+    if (idx === -1) return [];
+    return points
+      .slice(Math.max(0, idx - 10), idx + 11)
+      .map(p => p.altitude)
+      .filter((a): a is number => a != null);
+  }, [tappedPoint, points]);
 
   return (
     <div className="app">
@@ -156,7 +162,7 @@ export function App() {
               isAdmin={isAdmin}
             />
             {layers.weather && <Weather />}
-            <LayerToggle layers={layers} onChange={setLayers} />
+            <LayerToggle layers={layers} onChange={handleLayersChange} />
             <Stats
               points={points}
               stravaActivities={stravaActivities}
@@ -175,8 +181,10 @@ export function App() {
         {sidebarVisible && (
           <Sidebar
             points={points}
+            loading={loading}
             totalDistanceKm={totalDistanceKm}
             totalElevationGain={totalElevationGain}
+            trailProgressKm={trailProgressKm}
             stravaActivities={stravaActivities}
             onSelectPoint={setSelectedPoint}
             onDeletePoint={removePoint}
@@ -230,6 +238,7 @@ export function App() {
           point={tappedPoint}
           trailDistanceKm={trailSegment?.distanceKm ?? null}
           trailElevationGain={trailSegment?.elevationGain ?? null}
+          nearbyAltitudes={nearbyAltitudes}
           onClose={handlePointClose}
         />
       )}

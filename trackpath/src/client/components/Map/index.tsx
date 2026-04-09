@@ -29,7 +29,10 @@ const pointIcon = L.divIcon({
 
 const latestIcon = L.divIcon({
   className: "",
-  html: '<img src="/sasquatch.gif" style="width:60px;height:60px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />',
+  html: `<div style="position:relative;width:60px;height:60px;">
+    <div class="current-pos-pulse"></div>
+    <img src="/sasquatch.gif" style="width:60px;height:60px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />
+  </div>`,
   iconSize: [60, 60],
   iconAnchor: [30, 60],
 });
@@ -48,6 +51,18 @@ const airplaneIcon = L.divIcon({
   iconAnchor: [11, 11],
 });
 
+
+const STRAVA_COLORS: Record<string, string> = {
+  Hike:        '#fe6b00',
+  Run:         '#f0c040',
+  Walk:        '#52c96e',
+  Ride:        '#52b0c9',
+  VirtualRide: '#a078d8',
+  Swim:        '#5ab4f0',
+};
+function getStravaColor(type: string | null): string {
+  return (type && STRAVA_COLORS[type]) ?? colors.strava;
+}
 
 function getTagIcon(tag: string) {
   const emoji = TAG_EMOJIS[tag];
@@ -498,7 +513,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
             <Polyline
               key={act.id}
               positions={coords}
-              pathOptions={{ color: isSelected ? '#ff69b4' : colors.strava, weight: isSelected ? 5 : 4, opacity: 0.9 }}
+              pathOptions={{ color: isSelected ? '#ff69b4' : getStravaColor(act.type), weight: isSelected ? 5 : 4, opacity: 0.9 }}
               eventHandlers={{ click: () => setSelectedStravaId(act.id) }}
             >
               <Popup eventHandlers={{ remove: () => setSelectedStravaId(null) }}>

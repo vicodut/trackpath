@@ -118,6 +118,36 @@ button.primary:hover { opacity: 0.9; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Current-position pulse ring (rendered inside Leaflet divIcon HTML) */
+@keyframes ping-pulse {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(3.5); opacity: 0; }
+}
+.current-pos-pulse {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(254, 107, 0, 0.5);
+  border: 1.5px solid #fe6b00;
+  pointer-events: none;
+  animation: ping-pulse 2s ease-out infinite;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-container-high) 50%, var(--surface-container) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 0;
+}
+
 /* Mobile */
 @media (max-width: 768px) {
   .main-container {

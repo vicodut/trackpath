@@ -44,12 +44,61 @@
   letter-spacing: 0.1em;
 }
 
+.pointPopupTimeRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
 .pointPopupTime {
   font-family: var(--font-headline);
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--on-surface);
-  margin-bottom: 4px;
+}
+
+.pointPopupRelTime {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  letter-spacing: 0.04em;
+}
+
+/* Sparkline */
+.sparklineWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  padding: 6px 0;
+  border-top: var(--ghost-border);
+  border-bottom: var(--ghost-border);
+}
+
+.sparklineLabel {
+  font-family: var(--font-headline);
+  font-size: 0.55rem;
+  color: var(--outline);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.sparkline {
+  flex: 1;
+  display: block;
+}
+
+.sparklineFill {
+  fill: rgba(254, 107, 0, 0.1);
+}
+
+.sparklineLine {
+  fill: none;
+  stroke: var(--secondary);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .pointPopupCoords {

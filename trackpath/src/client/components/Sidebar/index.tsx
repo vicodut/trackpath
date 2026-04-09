@@ -8,6 +8,8 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { useUnit } from '../../hooks/useUnit';
 import styles from './Sidebar.module.css';
 
+const AT_TOTAL_KM = 3507;
+
 const TAG_FILTERS = [
   { key: 'inreach', label: 'INREACH', emoji: '📡' },
   { key: 'resupply', label: 'RESUPPLY', emoji: '🛒' },
@@ -21,8 +23,10 @@ const TAG_FILTERS = [
 
 interface SidebarProps {
   points: TrackingPoint[];
+  loading?: boolean;
   totalDistanceKm: number;
   totalElevationGain: number;
+  trailProgressKm?: number | null;
   stravaActivities: StravaActivity[];
   onSelectPoint: (point: TrackingPoint) => void;
   onDeletePoint: (id: number) => void;
@@ -34,8 +38,37 @@ interface SidebarProps {
   forceFormOpen?: boolean;
 }
 
+function SkeletonCards() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} style={{ padding: '10px 12px', borderBottom: 'var(--ghost-border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div className="skeleton" style={{ height: 10, width: '55%' }} />
+          <div className="skeleton" style={{ height: 8, width: '35%' }} />
+        </div>
+      ))}
+    </>
+  );
+}
+
+function TrailProgress({ trailProgressKm }: { trailProgressKm: number }) {
+  const pct = Math.min((trailProgressKm / AT_TOTAL_KM) * 100, 100);
+  return (
+    <div className={styles.trailProgress}>
+      <div className={styles.trailProgressHeader}>
+        <span className={styles.trailProgressLabel}>AT_PROGRESS</span>
+        <span className={styles.trailProgressValue}>{trailProgressKm.toFixed(0)} / {AT_TOTAL_KM} km</span>
+      </div>
+      <div className={styles.trailProgressBar}>
+        <div className={styles.trailProgressFill} style={{ width: `${pct}%` }} />
+      </div>
+      <div className={styles.trailProgressPct}>{pct.toFixed(1)}%</div>
+    </div>
+  );
+}
+
 function SidebarContent({
-  points, totalDistanceKm, totalElevationGain, stravaActivities,
+  points, loading, totalDistanceKm, totalElevationGain, trailProgressKm, stravaActivities,
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, onAddSuccess, pickedCoords, isAdmin, forceFormOpen,
 }: SidebarProps) {
   const [activeFilters, setActiveFilters] = useState(new Set());
@@ -44,11 +77,8 @@ function SidebarContent({
   const toggleFilter = (key: string) => {
     setActiveFilters(prev => {
       const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -72,6 +102,9 @@ function SidebarContent({
 
   return (
     <>
+      {trailProgressKm != null && trailProgressKm > 0 && (
+        <TrailProgress trailProgressKm={trailProgressKm} />
+      )}
       <div className={styles.sidebarHeader}>
         <h2>TRAIL_LOG</h2>
         <div className={styles.stats}>
@@ -101,19 +134,22 @@ function SidebarContent({
         />
       )}
       <div className={styles.pointsList}>
-        {[...filteredPoints].reverse().map((pt) => (
-          <PointCard
-            key={pt.id}
-            point={pt}
-            onSelect={onSelectPoint}
-            onDelete={isAdmin ? onDeletePoint : undefined}
-          />
-        ))}
+        {loading ? (
+          <SkeletonCards />
+        ) : (
+          [...filteredPoints].reverse().map((pt) => (
+            <PointCard
+              key={pt.id}
+              point={pt}
+              onSelect={onSelectPoint}
+              onDelete={isAdmin ? onDeletePoint : undefined}
+            />
+          ))
+        )}
       </div>
     </>
   );
 }
-
 
 function MobileAddDrawer({ snap, setSnap, onAddPoint, onAddSuccess, onFormToggle, pickedCoords }: {
   snap: number | string | null;
@@ -152,6 +188,7 @@ function MobileAddDrawer({ snap, setSnap, onAddPoint, onAddSuccess, onFormToggle
   return (
     <Drawer.Root
       open
+      onOpenChange={(open) => { if (!open) handleClose(); }}
       modal={false}
       snapPoints={[0.45, 0.85]}
       activeSnapPoint={snap}
@@ -212,11 +249,8 @@ export function Sidebar(props: SidebarProps) {
   const isMobile = useIsMobile();
   const [snap, setSnap] = useState<number | string | null>(0.85);
 
-  // Auto-expand drawer when form is forced open (map tap)
   useEffect(() => {
-    if (props.forceFormOpen && isMobile) {
-      setSnap(0.85);
-    }
+    if (props.forceFormOpen && isMobile) setSnap(0.85);
   }, [props.forceFormOpen, isMobile]);
 
   if (!isMobile) {
@@ -227,7 +261,6 @@ export function Sidebar(props: SidebarProps) {
     );
   }
 
-  // On mobile, drawer only shows the add form (not the full point list)
   if (!props.forceFormOpen || !props.isAdmin) return null;
 
   return (
