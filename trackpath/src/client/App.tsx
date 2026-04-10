@@ -194,7 +194,6 @@ export function App() {
             pickedCoords={pickedCoords}
             isAdmin={isAdmin}
             forceFormOpen={formOpen}
-            getTrailKm={getTrailKm}
           />
         )}
       </div>
