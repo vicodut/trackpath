@@ -31,8 +31,10 @@ export const envSchema = z.object({
   GHOST_CONTENT_API_KEY: z.string().optional(),
 
   // ── Server ────────────────────────────────────────────────────────────────
-  PORT: z.coerce.number().int().positive().default(3000),
-  NEST_PORT: z.coerce.number().int().positive().default(3001),
+  // PORT and NEST_PORT are intentionally excluded — they are resolved in
+  // main.ts only, not by application modules. Including them here would cause
+  // @nestjs/config to overwrite process.env with schema defaults and interfere
+  // with the port selection logic.
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 

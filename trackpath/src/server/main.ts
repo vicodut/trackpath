@@ -44,7 +44,9 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // Railway sets PORT; fall back to NEST_PORT for local dev.
-  const port = process.env.PORT ?? process.env.NEST_PORT ?? 3001;
+  // NEST_PORT (set in .env for local dev) takes priority over PORT.
+  // In production Railway sets PORT; NEST_PORT is not set there so PORT wins.
+  const port = process.env.NEST_PORT ?? process.env.PORT ?? 3001;
   await app.listen(port);
   console.log(`NestJS listening on :${port}`);
 }
