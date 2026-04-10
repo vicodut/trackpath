@@ -42,7 +42,7 @@ export function App() {
   const [layers, setLayers] = useState<LayerVisibility>(() => {
     const isMobile = window.innerWidth <= 768;
     const defaults: LayerVisibility = {
-      garminPath: true, garminPoints: true, strava: true, atTrail: true, weather: true,
+      garminPath: true, garminPoints: true, strava: true, atTrail: true, weather: true, tileStyle: 'osm' as const,
       tags: { resupply: true, poop: true, hostel: true, camp: true, shelter: true, water: true, viewpoint: true },
       highlights: {
         shelter: !isMobile, summit: !isMobile, campsite: !isMobile, town: !isMobile,

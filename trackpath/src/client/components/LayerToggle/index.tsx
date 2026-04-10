@@ -25,6 +25,7 @@ export interface LayerVisibility {
   strava: boolean;
   atTrail: boolean;
   weather: boolean;
+  tileStyle: 'osm' | 'topo';
   tags: Record<string, boolean>;
   highlights: Record<string, boolean>;
 }
@@ -34,7 +35,7 @@ interface LayerToggleProps {
   onChange: (layers: LayerVisibility) => void;
 }
 
-const LAYER_LABELS: { key: keyof Omit<LayerVisibility, 'tags' | 'highlights'>; label: string }[] = [
+const LAYER_LABELS: { key: keyof Omit<LayerVisibility, 'tags' | 'highlights' | 'tileStyle'>; label: string }[] = [
   { key: 'atTrail', label: 'AT Trail' },
   { key: 'garminPath', label: 'Garmin path' },
   { key: 'garminPoints', label: 'Garmin points' },
@@ -55,6 +56,20 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
       </div>
       {open && (
         <div className={styles.layerToggleBody}>
+          <div className={styles.mapStyleSection}>
+            <span className={styles.mapStyleLabel}>Map style</span>
+            <div className={styles.tileStyleRow}>
+              {(['osm', 'topo'] as const).map((key) => (
+                <button
+                  key={key}
+                  className={`${styles.tileStyleBtn} ${layers.tileStyle === key ? styles.tileStyleActive : ''}`}
+                  onClick={() => onChange({ ...layers, tileStyle: key })}
+                >
+                  {key === 'osm' ? 'Street' : 'Topo'}
+                </button>
+              ))}
+            </div>
+          </div>
           {LAYER_LABELS.map(({ key, label }) => (
             <label key={key} className={styles.layerToggleRow}>
               <input

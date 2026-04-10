@@ -56,6 +56,50 @@
   accent-color: var(--secondary);
 }
 
+.mapStyleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+  margin-bottom: 6px;
+  border-bottom: var(--ghost-border);
+}
+
+.mapStyleLabel {
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tileStyleRow {
+  display: flex;
+  gap: 4px;
+}
+
+.tileStyleBtn {
+  flex: 1;
+  padding: 4px 0;
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-high);
+  color: var(--outline);
+  transition: background 0.15s, color 0.15s;
+}
+
+.tileStyleActive {
+  background: var(--secondary);
+  color: var(--on-secondary);
+  border-color: var(--secondary);
+}
+
 .layerToggleGroup {
   margin-top: 4px;
   padding-top: 6px;
