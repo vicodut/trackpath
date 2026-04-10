@@ -11,7 +11,7 @@ import { useStateMilestones } from '../../hooks/useStateMilestones';
 import { useTrailDistance } from '../../hooks/useTrailDistance';
 import styles from './Sidebar.module.css';
 
-const AT_TOTAL_KM = 3507;
+const GOAL_KM = 1500;
 
 const TAG_FILTERS = [
   { key: 'inreach', label: 'INREACH', emoji: '📡' },
@@ -56,12 +56,12 @@ function SkeletonCards() {
 }
 
 function TrailProgress({ trailProgressKm }: { trailProgressKm: number }) {
-  const pct = Math.min((trailProgressKm / AT_TOTAL_KM) * 100, 100);
+  const pct = Math.min((trailProgressKm / GOAL_KM) * 100, 100);
   return (
     <div className={styles.trailProgress}>
       <div className={styles.trailProgressHeader}>
-        <span className={styles.trailProgressLabel}>AT_PROGRESS</span>
-        <span className={styles.trailProgressValue}>{trailProgressKm.toFixed(0)} / {AT_TOTAL_KM} km</span>
+        <span className={styles.trailProgressLabel}>GOAL</span>
+        <span className={styles.trailProgressValue}>{trailProgressKm.toFixed(0)} / {GOAL_KM} km</span>
       </div>
       <div className={styles.trailProgressBar}>
         <div className={styles.trailProgressFill} style={{ width: `${pct}%` }} />
