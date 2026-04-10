@@ -9,7 +9,12 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Sse,
+  Res,
+  MessageEvent,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import { Observable } from 'rxjs';
 import { Throttle } from '@nestjs/throttler';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { GarminService } from './garmin.service.js';
@@ -54,5 +59,22 @@ export class GarminController {
   @Get('sync-status')
   getSyncStatus() {
     return this.garminService.getSyncStatus();
+  }
+
+  /** SSE stream: pushes all points on connect and after each sync that adds new points. */
+  @Get('stream')
+  @Sse()
+  stream(): Observable<MessageEvent> {
+    return this.garminService.getPointsStream() as Observable<MessageEvent>;
+  }
+
+  /** Downloads all tracking points as a GPX 1.1 file. */
+  @Get('export.gpx')
+  async exportGpx(@Res() res: Response) {
+    const points = await this.garminService.getAllPoints();
+    const xml = this.garminService.buildGpx(points);
+    res.setHeader('Content-Type', 'application/gpx+xml');
+    res.setHeader('Content-Disposition', 'attachment; filename="trackpath.gpx"');
+    res.send(xml);
   }
 }

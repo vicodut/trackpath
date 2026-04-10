@@ -14,7 +14,8 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "types": ["node", "jest"]
   },
   "include": ["src/server/**/*.ts", "src/db/**/*.ts"],
   "exclude": ["node_modules", "dist"]

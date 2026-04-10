@@ -98,6 +98,63 @@
   color: var(--secondary);
 }
 
+/* Header actions row */
+.sidebarHeaderActions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 16px;
+  border-bottom: var(--ghost-border);
+}
+
+.gpxDownload {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--outline);
+  text-decoration: none;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border: 1px solid var(--outline-variant);
+}
+
+.gpxDownload:hover {
+  color: var(--secondary);
+  border-color: var(--secondary);
+}
+
+/* Day grouping */
+.dayGroup {
+  border-bottom: var(--ghost-border);
+}
+
+.dayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface-container-low);
+  border-bottom: var(--ghost-border);
+}
+
+.dayLabel {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dayStat {
+  font-family: var(--font-headline);
+  font-size: 0.55rem;
+  color: var(--outline);
+  letter-spacing: 0.06em;
+}
+
 /* Tag filters */
 .tagFilters {
   display: flex;

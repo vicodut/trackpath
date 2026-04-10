@@ -10,6 +10,7 @@ import {
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { asc, desc, not, like, count, eq } from 'drizzle-orm';
 import { parseString } from 'xml2js';
+import { Subject, Observable, from, startWith, switchMap, map } from 'rxjs';
 import { trackingPoints } from '../../db/schema.js';
 import type { NewTrackingPoint, TrackingPoint } from '../../db/schema.js';
 import { DRIZZLE } from '../database/drizzle.constants.js';
@@ -39,6 +40,7 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
 
   private lastSyncStatus: SyncStatus = { time: null, newCount: 0, error: null };
   private readonly syncLogs: SyncLog[] = [];
+  private readonly pointsChanged$ = new Subject<void>();
 
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleClient,
@@ -118,6 +120,34 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
     return this.syncLogs;
   }
 
+  /** SSE stream: emits all points on connect and after each sync that adds new points. */
+  getPointsStream(): Observable<{ data: TrackingPoint[] }> {
+    return this.pointsChanged$.pipe(
+      startWith(undefined),
+      switchMap(() => from(this.getAllPoints())),
+      map(points => ({ data: points })),
+    );
+  }
+
+  /** Builds a GPX 1.1 XML string from all tracking points. */
+  buildGpx(points: TrackingPoint[]): string {
+    const trkpts = points
+      .map(p => `    <trkpt lat="${p.latitude}" lon="${p.longitude}">
+      <ele>${p.altitude ?? 0}</ele>
+      <time>${new Date(p.timestamp).toISOString()}</time>
+    </trkpt>`)
+      .join('\n');
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="trackpath" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Appalachian Trail</name>
+    <trkseg>
+${trkpts}
+    </trkseg>
+  </trk>
+</gpx>`;
+  }
+
   // ---------------------------------------------------------------------------
   // Manual point CRUD
   // ---------------------------------------------------------------------------
@@ -138,11 +168,13 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
     };
 
     const [inserted] = await this.db.insert(trackingPoints).values(point).returning();
+    this.pointsChanged$.next();
     return inserted;
   }
 
   async deletePoint(id: number): Promise<void> {
     await this.db.delete(trackingPoints).where(eq(trackingPoints.id, id));
+    this.pointsChanged$.next();
   }
 
   // ---------------------------------------------------------------------------
@@ -167,6 +199,7 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
     const all = await this.getAllPoints();
 
     this.addSyncLog(`Manual sync: ${newCount} new points (${all.length} total)`);
+    if (newCount > 0) this.pointsChanged$.next();
     return { synced: newCount, total: all.length, points: all };
   }
 
@@ -186,6 +219,7 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
       if (newCount > 0) {
         this.logger.log(`Auto-sync: ${newCount} new points`);
         this.addSyncLog(`${newCount} new points synced`);
+        this.pointsChanged$.next();
       }
     } catch (err) {
       const msg = (err as Error).message;

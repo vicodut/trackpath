@@ -11,28 +11,61 @@ export function usePoints() {
     type: '',
   });
 
-  const loadPoints = useCallback(async () => {
-    try {
-      const pts = await api.getPoints();
-      const safePoints = Array.isArray(pts) ? pts : [];
-      setPoints(safePoints);
-      const lastTime = safePoints.length > 0
-        ? new Date(safePoints[safePoints.length - 1].timestamp).toLocaleString()
-        : null;
-      setStatus({ message: `Ready${lastTime ? ` — last: ${lastTime}` : ''}`, type: '' });
-    } catch (err) {
-      console.error('Failed to load points:', err);
-    } finally {
-      setLoading(false);
-    }
+  const applyPoints = useCallback((pts: TrackingPoint[]) => {
+    const safePoints = Array.isArray(pts) ? pts : [];
+    setPoints(safePoints);
+    const lastTime = safePoints.length > 0
+      ? new Date(safePoints[safePoints.length - 1].timestamp).toLocaleString()
+      : null;
+    setStatus({ message: `Ready${lastTime ? ` — last: ${lastTime}` : ''}`, type: '' });
+    setLoading(false);
   }, []);
+
+  // SSE stream — reconnects automatically; falls back to REST on persistent failure
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let backoffMs = 2000;
+    let backoffTimer: ReturnType<typeof setTimeout> | null = null;
+    let dead = false;
+
+    function connect() {
+      es = new EventSource('/api/garmin/stream');
+
+      es.onmessage = (event) => {
+        try {
+          const pts: TrackingPoint[] = JSON.parse(event.data);
+          applyPoints(pts);
+          backoffMs = 2000; // reset on success
+        } catch {
+          // ignore parse errors
+        }
+      };
+
+      es.onerror = () => {
+        es?.close();
+        es = null;
+        if (dead) return;
+        backoffTimer = setTimeout(() => {
+          if (!dead) connect();
+        }, backoffMs);
+        backoffMs = Math.min(backoffMs * 2, 30_000);
+      };
+    }
+
+    connect();
+
+    return () => {
+      dead = true;
+      es?.close();
+      if (backoffTimer) clearTimeout(backoffTimer);
+    };
+  }, [applyPoints]);
 
   const sync = useCallback(async () => {
     setStatus({ message: 'Syncing with inReach...', type: 'syncing' });
     try {
       const data = await api.syncPoints();
       const safePoints = Array.isArray(data?.points) ? data.points : [];
-      setPoints(safePoints);
       const lastTime = safePoints.length > 0
         ? new Date(safePoints[safePoints.length - 1].timestamp).toLocaleString()
         : null;
@@ -48,13 +81,12 @@ export function usePoints() {
     try {
       await api.addPoint(data);
       setStatus({ message: 'Point added!', type: 'success' });
-      await loadPoints();
       return true;
     } catch (err) {
       setStatus({ message: `Failed: ${(err as Error).message}`, type: '' });
       return false;
     }
-  }, [loadPoints]);
+  }, []);
 
   const removePoint = useCallback(async (id: number) => {
     setPoints((prev) => prev.filter((p) => p.id !== id));
@@ -104,25 +136,5 @@ export function usePoints() {
     return total;
   }, [garminPoints]);
 
-  // Auto-refresh every 30s, paused when tab is hidden
-  useEffect(() => {
-    loadPoints();
-    let interval: ReturnType<typeof setInterval> | null = setInterval(loadPoints, 30000);
-
-    const onVisibility = () => {
-      if (document.hidden) {
-        if (interval) { clearInterval(interval); interval = null; }
-      } else {
-        loadPoints();
-        interval = setInterval(loadPoints, 30000);
-      }
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      if (interval) clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [loadPoints]);
-
-  return { points: pointsWithSpeed, loading, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain, loadPoints };
+  return { points: pointsWithSpeed, loading, status, setStatus, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain };
 }

@@ -4,8 +4,11 @@ import type { TrackingPoint, StravaActivity } from '../../types';
 import { TAGS, TAG_EMOJIS } from '../../lib/constants';
 import { AddPointForm } from '../AddPointForm';
 import { PointCard } from '../PointCard';
+import { StateMilestoneCard } from '../StateMilestoneCard';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useUnit } from '../../hooks/useUnit';
+import { useStateMilestones } from '../../hooks/useStateMilestones';
+import { useTrailDistance } from '../../hooks/useTrailDistance';
 import styles from './Sidebar.module.css';
 
 const AT_TOTAL_KM = 3507;
@@ -36,6 +39,7 @@ interface SidebarProps {
   pickedCoords: { lat: number; lng: number } | null;
   isAdmin: boolean;
   forceFormOpen?: boolean;
+  getTrailKm?: (lat: number, lon: number) => number | null;
 }
 
 function SkeletonCards() {
@@ -70,9 +74,14 @@ function TrailProgress({ trailProgressKm }: { trailProgressKm: number }) {
 function SidebarContent({
   points, loading, totalDistanceKm, totalElevationGain, trailProgressKm, stravaActivities,
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, onAddSuccess, pickedCoords, isAdmin, forceFormOpen,
+  getTrailKm: getTrailKmProp,
 }: SidebarProps) {
   const [activeFilters, setActiveFilters] = useState(new Set());
   const { fmtDist } = useUnit();
+  const { getTrailKm: getTrailKmLocal, loaded: trailLoaded } = useTrailDistance();
+  const getTrailKm = getTrailKmProp ?? getTrailKmLocal;
+
+  const milestones = useStateMilestones(getTrailKm, trailLoaded);
 
   const toggleFilter = (key: string) => {
     setActiveFilters(prev => {
@@ -100,6 +109,49 @@ function SidebarContent({
     });
   }, [points, activeFilters]);
 
+  // Current trail km of the hiker (last non-manual point)
+  const currentKm = useMemo(() => {
+    const lastGarmin = [...points].reverse().find(p => !p.garminId?.startsWith('manual-'));
+    if (!lastGarmin) return null;
+    return getTrailKm(lastGarmin.latitude, lastGarmin.longitude);
+  }, [points, getTrailKm]);
+
+  // Crossed milestones only
+  const crossedMilestones = useMemo(() => {
+    if (currentKm == null) return [];
+    return milestones.filter(m => m.distanceKm <= currentKm);
+  }, [milestones, currentKm]);
+
+  // Group points by day (newest day first)
+  const groupedByDay = useMemo(() => {
+    const map = new Map<string, TrackingPoint[]>();
+    for (const pt of [...filteredPoints].reverse()) {
+      const key = new Date(pt.timestamp).toDateString();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(pt);
+    }
+    return [...map.entries()];
+  }, [filteredPoints]);
+
+  // Which milestone to show before each day group
+  // A milestone is shown before the day where the first point after the border crossing is
+  const dayMilestones = useMemo(() => {
+    const result = new Map<string, typeof crossedMilestones[number][]>();
+    if (!trailLoaded || crossedMilestones.length === 0) return result;
+    for (const m of crossedMilestones) {
+      // Find the first point that is at or beyond this milestone
+      const crossingPoint = [...filteredPoints].find(p => {
+        const km = getTrailKm(p.latitude, p.longitude);
+        return km != null && km >= m.distanceKm;
+      });
+      if (!crossingPoint) continue;
+      const dayKey = new Date(crossingPoint.timestamp).toDateString();
+      if (!result.has(dayKey)) result.set(dayKey, []);
+      result.get(dayKey)!.push(m);
+    }
+    return result;
+  }, [crossedMilestones, filteredPoints, getTrailKm, trailLoaded]);
+
   return (
     <>
       {trailProgressKm != null && trailProgressKm > 0 && (
@@ -112,6 +164,15 @@ function SidebarContent({
           <span>DIST: <strong>{fmtDist(totalDistanceKm)}</strong></span>
           <span>ELEV: <strong>{Math.round(totalElev)}</strong> m</span>
         </div>
+      </div>
+      <div className={styles.sidebarHeaderActions}>
+        <a
+          className={styles.gpxDownload}
+          href="/api/garmin/export.gpx"
+          download="trackpath.gpx"
+        >
+          ↓ GPX
+        </a>
       </div>
       <div className={styles.tagFilters}>
         {TAG_FILTERS.map(({ key, emoji }) => (
@@ -137,13 +198,24 @@ function SidebarContent({
         {loading ? (
           <SkeletonCards />
         ) : (
-          [...filteredPoints].reverse().map((pt) => (
-            <PointCard
-              key={pt.id}
-              point={pt}
-              onSelect={onSelectPoint}
-              onDelete={isAdmin ? onDeletePoint : undefined}
-            />
+          groupedByDay.map(([day, dayPoints]) => (
+            <div key={day} className={styles.dayGroup}>
+              {dayMilestones.get(day)?.map(m => (
+                <StateMilestoneCard key={m.name} milestone={m} />
+              ))}
+              <div className={styles.dayHeader}>
+                <span className={styles.dayLabel}>{day}</span>
+                <span className={styles.dayStat}>{dayPoints.length} pts</span>
+              </div>
+              {dayPoints.map(pt => (
+                <PointCard
+                  key={pt.id}
+                  point={pt}
+                  onSelect={onSelectPoint}
+                  onDelete={isAdmin ? onDeletePoint : undefined}
+                />
+              ))}
+            </div>
           ))
         )}
       </div>
