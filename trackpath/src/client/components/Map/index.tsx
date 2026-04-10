@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
+import { useEffect, useState, useRef, useCallback, forwardRef, useImperativeHandle, useMemo, memo } from "react";
 import L from "leaflet";
 import {
   MapContainer,
@@ -337,6 +337,45 @@ function ElevationCursor({
   return null;
 }
 
+const TILE_OPTIONS = [
+  { key: 'osm' as const,  label: 'Street' },
+  { key: 'topo' as const, label: 'Topo' },
+];
+
+const TileStyleSwitcher = memo(function TileStyleSwitcher({
+  current, onChange,
+}: { current: 'osm' | 'topo'; onChange: (s: 'osm' | 'topo') => void }) {
+  return (
+    <div style={{
+      position: 'absolute', bottom: 28, right: 12, zIndex: 1000,
+      display: 'flex', gap: 2,
+    }}>
+      {TILE_OPTIONS.map(({ key, label }) => (
+        <button
+          key={key}
+          onClick={() => onChange(key)}
+          style={{
+            padding: '4px 10px',
+            fontFamily: 'var(--font-headline)',
+            fontSize: '0.6rem',
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            border: '1px solid var(--outline-variant)',
+            background: current === key ? 'var(--secondary)' : 'rgba(var(--surface-rgb), 0.88)',
+            color: current === key ? 'var(--on-secondary)' : 'var(--outline)',
+            backdropFilter: 'blur(12px)',
+            transition: 'background 0.15s, color 0.15s',
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+});
+
 export const Map = forwardRef<MapHandle, MapProps>(function Map({
   points,
   stravaActivities,
@@ -353,6 +392,9 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
   layers,
   isAdmin,
 }, ref) {
+  const [tileStyle, setTileStyle] = useState<'osm' | 'topo'>(() => {
+    try { return (localStorage.getItem('trackpath:tile') as 'osm' | 'topo') ?? 'osm'; } catch { return 'osm'; }
+  });
   const [selectedStravaId, setSelectedStravaId] = useState<number | null>(null);
   const setElevCursorRef = useRef<((lat: number, lon: number) => void) | null>(null);
   const clearElevCursorRef = useRef<(() => void) | null>(null);
@@ -396,10 +438,25 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
       id="map"
       style={{ width: "100%" }}
     >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        maxZoom={19}
-        attribution="&copy; OpenStreetMap contributors"
+      {tileStyle === 'osm' ? (
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={19}
+          attribution="&copy; OpenStreetMap contributors"
+        />
+      ) : (
+        <TileLayer
+          url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+          maxZoom={17}
+          attribution='&copy; <a href="https://opentopomap.org">OpenTopoMap</a> &copy; OpenStreetMap contributors'
+        />
+      )}
+      <TileStyleSwitcher
+        current={tileStyle}
+        onChange={(s) => {
+          setTileStyle(s);
+          try { localStorage.setItem('trackpath:tile', s); } catch { /* ignore */ }
+        }}
       />
       {layers.atTrail && <ATTrailLayer />}
       <HighlightsLayer layers={layers} onHighlightTap={onHighlightTap} onHighlightClose={onHighlightClose} trailSegment={trailSegment} />
