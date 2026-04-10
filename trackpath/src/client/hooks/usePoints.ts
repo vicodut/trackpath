@@ -29,7 +29,7 @@ export function usePoints() {
     let dead = false;
 
     function connect() {
-      es = new EventSource('/api/garmin/stream');
+      es = new EventSource('/api/stream');
 
       es.onmessage = (event) => {
         try {

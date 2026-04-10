@@ -168,7 +168,7 @@ function SidebarContent({
       <div className={styles.sidebarHeaderActions}>
         <a
           className={styles.gpxDownload}
-          href="/api/garmin/export.gpx"
+          href="/api/export.gpx"
           download="trackpath.gpx"
         >
           ↓ GPX
