@@ -31,7 +31,7 @@ const makeLatestIcon = (fart: boolean) => L.divIcon({
   className: "",
   html: `<div style="position:relative;width:60px;height:60px;">
     <div class="current-pos-pulse"></div>
-    <img src="${fart ? '/sasquatch_fart.gif' : '/sasquatch.gif'}" style="width:60px;height:60px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />
+    <img src="${getSasquatchGif(fart)}" style="width:60px;height:60px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />
   </div>`,
   iconSize: [60, 60],
   iconAnchor: [30, 60],
@@ -259,9 +259,16 @@ function LocateButton() {
 }
 
 const AMICALOLA_FALLS: [number, number] = [34.5590, -84.1946];
-const FART_WALK_MS = 15_000;   // normal sasquatch duration
+const FART_WALK_MS = 15_000;    // normal sasquatch duration
 const FART_DURATION_MS = 7_500; // fart duration
 const FART_CYCLE_MS = FART_WALK_MS + FART_DURATION_MS;
+
+function getSasquatchGif(fart: boolean): string {
+  if (fart) return '/sasquatch_fart.gif';
+  const now = new Date();
+  if (now.getMonth() === 4 && now.getDate() === 1) return '/sasquatch_1st_may.gif';
+  return '/sasquatch.gif';
+}
 
 function LastPositionButton({ points, fart }: { points: TrackingPoint[]; fart: boolean }) {
   const map = useMap();
@@ -278,7 +285,7 @@ function LastPositionButton({ points, fart }: { points: TrackingPoint[]; fart: b
   return (
     <button className={styles.lastposBtn} onClick={handleClick} title="LAST_POSITION">
       <img
-        src={fart ? "/sasquatch_fart.gif" : "/sasquatch.gif"}
+        src={getSasquatchGif(fart)}
         alt=""
         style={{ width: 22, height: 22, imageRendering: "pixelated" }}
       />
