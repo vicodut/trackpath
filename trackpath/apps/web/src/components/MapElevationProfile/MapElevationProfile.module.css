@@ -1,0 +1,86 @@
+/* Map elevation profile */
+.mapElevProfile {
+  background: var(--surface-container-low);
+  border-top: var(--ghost-border);
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.mapElevProfileCollapsed {
+  /* collapsed state */
+}
+
+.mapElevToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 12px;
+  background: none;
+  border: none;
+  color: var(--outline);
+  font-family: var(--font-headline);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.mapElevToggle:hover {
+  color: var(--on-surface);
+}
+
+.mapElevChart {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.mapElevSvg {
+  display: block;
+}
+
+.mapElevLabel {
+  font-family: var(--font-headline);
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--outline);
+}
+
+.zoomReset {
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  z-index: 10;
+  padding: 2px 8px;
+  background: var(--surface-container-highest);
+  border: 1px solid var(--outline-variant);
+  color: var(--outline);
+  font-family: var(--font-headline);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.zoomReset:hover {
+  color: var(--on-surface);
+  border-color: var(--secondary);
+}
+
+.mapElevTooltip {
+  pointer-events: none;
+  z-index: 10000;
+  background: var(--surface-container-highest);
+  border: 1px solid var(--outline-variant);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  display: flex;
+  gap: 8px;
+  color: var(--on-surface);
+  font-family: var(--font-headline);
+}
