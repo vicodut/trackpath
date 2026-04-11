@@ -21,6 +21,8 @@ COPY packages/db/package.json ./packages/db/
 RUN npm ci --omit=dev --ignore-engines
 # Built API + frontend (web builds into api/dist/client)
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+# DB compiled output (imported by the API at runtime)
+COPY --from=builder /app/packages/db/dist ./packages/db/dist
 # DB source + migrations needed for migrate script (runs via tsx at startup)
 COPY packages/db/src ./packages/db/src
 COPY packages/db/drizzle ./packages/db/drizzle
