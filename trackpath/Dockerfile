@@ -6,7 +6,7 @@ COPY package.json package-lock.json turbo.json ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY packages/db/package.json ./packages/db/
-RUN npm install --ignore-engines
+RUN rm -f package-lock.json && npm install --ignore-engines
 # Copy all source
 COPY . .
 RUN npm run build
