@@ -500,6 +500,95 @@
   letter-spacing: 0.15em;
 }
 
+/* Daily log */
+.dailyLog {
+  display: flex;
+  flex-direction: column;
+}
+
+.dailyLogRow {
+  display: grid;
+  grid-template-columns: 80px 1fr 64px;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--outline-variant);
+}
+.dailyLogRow:last-child { border-bottom: none; }
+
+.dailyLogMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dailyLogDay {
+  font-family: var(--font-headline);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--secondary);
+  line-height: 1;
+}
+
+.dailyLogDate {
+  font-family: var(--font-headline);
+  font-size: 0.55rem;
+  color: var(--outline);
+  letter-spacing: 0.07em;
+}
+
+.dailyLogBar {
+  height: 6px;
+  background: var(--surface-container-highest);
+}
+
+.dailyLogBarFill {
+  height: 100%;
+  background: var(--secondary);
+  opacity: 0.75;
+}
+
+.dailyLogStats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.dailyLogKm {
+  font-family: var(--font-headline);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  white-space: nowrap;
+}
+
+.dailyLogElev {
+  font-family: var(--font-headline);
+  font-size: 0.58rem;
+  color: var(--outline);
+}
+
+.dailyLogMessages {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 80px;
+}
+
+.dailyLogMessage {
+  font-size: 0.78rem;
+  color: var(--primary);
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .dailyLogMessages { padding-left: 0; }
+  .dailyLogRow { grid-template-columns: 68px 1fr 56px; }
+}
+
 @media (min-width: 640px) {
   .statsBento {
     grid-template-columns: repeat(3, 1fr);

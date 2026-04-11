@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSession, authClient } from '../../lib/auth-client';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useUnit } from '../../hooks/useUnit';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -20,6 +21,7 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
   const [menuOpen, setMenuOpen] = useState(false);
   const isMobile = useIsMobile();
   const menuRef = useRef<HTMLDivElement>(null);
+  const { unit, toggleUnit } = useUnit();
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -43,6 +45,7 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
 
   const actions = (
     <>
+      <button className={styles.unitToggle} onClick={() => toggleUnit()}>{unit.toUpperCase()}</button>
       <button onClick={() => closeAndDo(onStats)}>STATS</button>
       <button onClick={() => closeAndDo(onGear)}>GEAR</button>
       <button onClick={() => closeAndDo(onPolls)}>POLLS</button>

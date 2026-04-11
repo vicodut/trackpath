@@ -1,0 +1,50 @@
+.banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-container-highest);
+  border: var(--ghost-border);
+  padding: 5px 14px;
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.bannerHighlight {
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+}
+
+.bannerText {
+  font-weight: 600;
+  color: var(--outline);
+  text-transform: uppercase;
+}
+
+.bannerValue {
+  font-weight: 800;
+  color: var(--on-surface);
+  text-transform: uppercase;
+}
+
+.bannerDot {
+  color: var(--outline-variant);
+}
+
+@media (max-width: 768px) {
+  .banner {
+    font-size: 0.58rem;
+    padding: 4px 10px;
+    gap: 5px;
+    top: 8px;
+  }
+}

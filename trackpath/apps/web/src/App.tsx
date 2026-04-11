@@ -12,6 +12,7 @@ const GearPage = lazy(() => import("./components/GearPage").then(m => ({ default
 const TrailLogPage = lazy(() => import("./components/TrailLogPage").then(m => ({ default: m.TrailLogPage })));
 const Blog = lazy(() => import("./components/Blog").then(m => ({ default: m.Blog })));
 const PollsPage = lazy(() => import("./components/PollsPage").then(m => ({ default: m.PollsPage })));
+import { LocationBanner } from "./components/LocationBanner";
 import type { LayerVisibility } from "./components/LayerToggle";
 import { LayerToggle } from "./components/LayerToggle";
 import { MapElevationProfile } from "./components/MapElevationProfile";
@@ -165,6 +166,7 @@ export function App() {
               layers={layers}
               isAdmin={isAdmin}
             />
+            <LocationBanner points={points} trailProgressKm={trailProgressKm} />
             {layers.weather && <Weather />}
             <LayerToggle layers={layers} onChange={handleLayersChange} />
             <Stats

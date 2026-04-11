@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TrackingPoint, StravaActivity } from '../../types';
 import { ICONIC_SUMMITS } from '../../data/iconic-summits';
 import { haversine } from '../../lib/geo';
+import { useUnit } from '../../hooks/useUnit';
 import styles from './StatsPage.module.css';
 
 interface StatsPageProps {
@@ -51,6 +52,25 @@ function buildDailyKm(points: TrackingPoint[], stravaActivities: StravaActivity[
   }
 
   return dailyKm;
+}
+
+function buildDailyElev(points: TrackingPoint[]): Record<string, number> {
+  const dailyElev: Record<string, number> = {};
+  const sorted = [...points]
+    .filter(p => !p.garminId?.startsWith('manual-'))
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  for (let i = 1; i < sorted.length; i++) {
+    const alt = sorted[i].altitude;
+    const prevAlt = sorted[i - 1].altitude;
+    if (alt != null && prevAlt != null) {
+      const gain = alt - prevAlt;
+      if (gain > 0 && gain < 500) {
+        const day = sorted[i].timestamp.slice(0, 10);
+        dailyElev[day] = (dailyElev[day] || 0) + gain;
+      }
+    }
+  }
+  return dailyElev;
 }
 
 // Monday=0 .. Sunday=6
@@ -469,6 +489,167 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
           <span>{hovered.dist.toFixed(1)} km</span>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Daily Distance Bar Chart ─────────────────────────────────────────────────
+
+function DailyBarChart({ dailyKm, dailyElev }: { dailyKm: Record<string, number>; dailyElev: Record<string, number> }) {
+  const { fmtDist } = useUnit();
+  const [hovered, setHovered] = useState<{ date: string; km: number; elev: number; x: number; y: number } | null>(null);
+
+  const entries = useMemo(() =>
+    Object.entries(dailyKm)
+      .filter(([date, km]) => km > 0 && date >= HIKE_START && date <= HIKE_END)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, km]) => ({ date, km, elev: dailyElev[date] ?? 0 }))
+  , [dailyKm, dailyElev]);
+
+  if (entries.length === 0) return <div className={styles.statsEmpty}>NO_DAILY_DATA_YET</div>;
+
+  const maxKm = Math.max(...entries.map(e => e.km));
+  const avgKm = entries.reduce((s, e) => s + e.km, 0) / entries.length;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const W = 800; const H = 160;
+  const PAD = { top: 20, right: 40, bottom: 36, left: 44 };
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+
+  const n = entries.length;
+  const slot = plotW / n;
+  const barW = Math.max(Math.min(slot * 0.72, 28), 4);
+  const toX = (i: number) => PAD.left + i * slot + (slot - barW) / 2;
+  const toY = (km: number) => PAD.top + plotH - (km / maxKm) * plotH;
+  const avgY = toY(avgKm);
+
+  const yStep = maxKm > 40 ? 20 : maxKm > 20 ? 10 : 5;
+  const yTicks = Array.from({ length: Math.ceil(maxKm / yStep) + 1 }, (_, i) => i * yStep).filter(v => v <= maxKm + yStep * 0.5);
+  const labelEvery = Math.ceil(n / 10);
+
+  return (
+    <div className={styles.elevChartWrapper}>
+      <svg viewBox={`0 0 ${W} ${H}`} className={styles.elevChartSvg} onMouseLeave={() => setHovered(null)}>
+        {yTicks.map(v => (
+          <line key={`yg${v}`} x1={PAD.left} x2={W - PAD.right} y1={toY(v)} y2={toY(v)}
+            stroke="var(--outline-variant)" strokeWidth="0.5" opacity="0.3" />
+        ))}
+        <line x1={PAD.left} x2={W - PAD.right} y1={avgY} y2={avgY}
+          stroke="var(--outline)" strokeWidth="1" strokeDasharray="4,3" opacity="0.45" />
+        <text x={W - PAD.right + 4} y={avgY + 3} className={styles.elevChartLabel} style={{ fontSize: 10 }}>AVG</text>
+
+        {entries.map((e, i) => {
+          const x = toX(i);
+          const y = toY(e.km);
+          const barH = plotH - (y - PAD.top);
+          const isToday = e.date === today;
+          const isBest = e.km === maxKm;
+          return (
+            <g key={e.date}
+              onMouseEnter={(evt) => setHovered({ date: e.date, km: e.km, elev: e.elev, x: evt.clientX, y: evt.clientY })}
+            >
+              <rect x={x} y={y} width={barW} height={barH}
+                fill={isToday ? 'var(--primary)' : 'var(--secondary)'} opacity={isToday ? 1 : 0.75} />
+              {(isBest || isToday) && (
+                <text x={x + barW / 2} y={y - 3} textAnchor="middle" className={styles.elevChartLabel} style={{ fontSize: 9 }}>
+                  {fmtDist(e.km, 1)}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {yTicks.map(v => (
+          <text key={`yl${v}`} x={PAD.left - 4} y={toY(v) + 3} textAnchor="end" className={styles.elevChartLabel}>{v}</text>
+        ))}
+        <text x={PAD.left - 4} y={PAD.top - 4} textAnchor="end" className={styles.elevChartLabel} style={{ fontSize: 9 }}>KM</text>
+
+        {entries.map((e, i) => {
+          if (i % labelEvery !== 0 && e.date !== today) return null;
+          const d = new Date(e.date + 'T00:00:00');
+          return (
+            <text key={`xl${i}`} x={toX(i) + barW / 2} y={H - 4} textAnchor="middle" className={styles.elevChartLabel}>
+              {`${d.getMonth() + 1}/${d.getDate()}`}
+            </text>
+          );
+        })}
+      </svg>
+      {hovered && (
+        <div className={styles.heatmapTooltip} style={{ position: 'fixed', left: hovered.x, top: hovered.y - 12, transform: 'translate(-50%, -100%)' }}>
+          <strong>{fmtDist(hovered.km, 1)}</strong>
+          {hovered.elev > 0 && <span>↑{Math.round(hovered.elev)}m</span>}
+          <span>{hovered.date}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Daily Log ─────────────────────────────────────────────────────────────────
+
+function DailyLog({ points, dailyKm, dailyElev }: {
+  points: TrackingPoint[];
+  dailyKm: Record<string, number>;
+  dailyElev: Record<string, number>;
+}) {
+  const { fmtDist } = useUnit();
+
+  const entries = useMemo(() => {
+    const messages: Record<string, string[]> = {};
+    for (const pt of points) {
+      if (pt.message?.trim()) {
+        const day = pt.timestamp.slice(0, 10);
+        (messages[day] ??= []).push(pt.message.trim());
+      }
+    }
+
+    const hikeStart = new Date(HIKE_START + 'T00:00:00');
+    const allDays = new Set([
+      ...Object.keys(dailyKm).filter(d => dailyKm[d] > 0 && d >= HIKE_START),
+    ]);
+
+    return Array.from(allDays)
+      .sort((a, b) => b.localeCompare(a))
+      .map(date => {
+        const d = new Date(date + 'T00:00:00');
+        const dayNum = Math.floor((d.getTime() - hikeStart.getTime()) / 86400000) + 1;
+        return {
+          date, dayNum,
+          km: dailyKm[date] ?? 0,
+          elev: dailyElev[date] ?? 0,
+          messages: messages[date] ?? [],
+          label: d.toLocaleDateString('default', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase(),
+        };
+      });
+  }, [dailyKm, dailyElev, points]);
+
+  if (entries.length === 0) return <div className={styles.statsEmpty}>NO_ACTIVITY_YET</div>;
+
+  const maxKm = Math.max(...entries.map(e => e.km));
+
+  return (
+    <div className={styles.dailyLog}>
+      {entries.map(e => (
+        <div key={e.date} className={styles.dailyLogRow}>
+          <div className={styles.dailyLogMeta}>
+            <span className={styles.dailyLogDay}>D{e.dayNum}</span>
+            <span className={styles.dailyLogDate}>{e.label}</span>
+          </div>
+          <div className={styles.dailyLogBar}>
+            <div className={styles.dailyLogBarFill} style={{ width: `${(e.km / maxKm) * 100}%` }} />
+          </div>
+          <div className={styles.dailyLogStats}>
+            <span className={styles.dailyLogKm}>{fmtDist(e.km, 1)}</span>
+            {e.elev > 0 && <span className={styles.dailyLogElev}>↑{Math.round(e.elev)}m</span>}
+          </div>
+          {e.messages.length > 0 && (
+            <div className={styles.dailyLogMessages}>
+              {e.messages.map((msg, i) => <span key={i} className={styles.dailyLogMessage}>"{msg}"</span>)}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1148,6 +1329,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
   }, [points, stravaActivities, totalDistanceKm, totalElevationGain]);
 
   const dailyKm = useMemo(() => buildDailyKm(points, stravaActivities), [points, stravaActivities]);
+  const dailyElev = useMemo(() => buildDailyElev(points), [points]);
   const { weeks, months } = useMemo(() => getFixedWeeksGrid(dailyKm), [dailyKm]);
   const activeDays = Object.entries(dailyKm).filter(([date, km]) => {
     return km > 0 && date >= HIKE_START && date <= HIKE_END;
@@ -1228,6 +1410,18 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
             <span className={styles.statsLabel}>STRAVA_DIST</span>
             <div className={styles.statsBentoNumber}>{stats.stravaDist.toFixed(1)}<span className={styles.statsBentoUnit}>KM</span></div>
           </div>
+        </section>
+
+        {/* Daily distance bar chart */}
+        <section className={styles.statsSection}>
+          <h3 className={styles.statsSectionTitle}>DAILY_DISTANCE</h3>
+          <DailyBarChart dailyKm={dailyKm} dailyElev={dailyElev} />
+        </section>
+
+        {/* Daily log */}
+        <section className={styles.statsSection}>
+          <h3 className={styles.statsSectionTitle}>DAILY_LOG</h3>
+          <DailyLog points={points} dailyKm={dailyKm} dailyElev={dailyElev} />
         </section>
 
         {/* Road to Mordor */}

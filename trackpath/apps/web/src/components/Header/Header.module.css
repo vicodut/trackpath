@@ -26,6 +26,14 @@
   align-items: center;
 }
 
+.unitToggle {
+  font-weight: 800 !important;
+  color: var(--primary) !important;
+  border: 1px solid var(--outline-variant) !important;
+  padding: 3px 8px !important;
+  letter-spacing: 0.08em;
+}
+
 .authUser {
   font-family: var(--font-headline);
   font-size: 0.7rem;
