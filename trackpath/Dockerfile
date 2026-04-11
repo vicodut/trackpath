@@ -6,7 +6,7 @@ COPY package.json package-lock.json turbo.json ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY packages/db/package.json ./packages/db/
-RUN npm ci --ignore-engines
+RUN npm ci --ignore-engines && npm install --no-save @rolldown/binding-linux-x64-gnu
 # Copy all source
 COPY . .
 RUN npm run build
