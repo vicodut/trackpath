@@ -377,7 +377,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
   );
   const pathCoords = useMemo<[number, number][]>(
     () => points
-      .filter((p) => !p.garminId?.startsWith("manual-"))
+      .filter((p) => !p.garminId?.startsWith("manual-") && !(p.eventType && p.eventType in TAG_EMOJIS))
       .map((p) => [p.latitude, p.longitude]),
     [points],
   );

@@ -290,6 +290,11 @@ ${trkpts}
       const timestamp = ext['Time UTC'] ?? new Date().toISOString();
       const garminId = ext['Id'] ?? `${lat}-${lng}-${timestamp}`;
 
+      const messageText = ext['Text'] ?? pm.description ?? null;
+      const eventType = /poop/i.test(messageText ?? '')
+        ? 'poop'
+        : (ext['Event'] ?? null);
+
       points.push({
         garminId,
         latitude: lat,
@@ -298,8 +303,8 @@ ${trkpts}
         timestamp,
         velocity: ext['Velocity'] != null ? parseFloat(ext['Velocity']) : null,
         course: ext['Course'] != null ? parseFloat(ext['Course']) : null,
-        message: ext['Text'] ?? pm.description ?? null,
-        eventType: ext['Event'] ?? null,
+        message: messageText,
+        eventType,
       });
     }
 
