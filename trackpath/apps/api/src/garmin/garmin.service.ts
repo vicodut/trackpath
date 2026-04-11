@@ -15,6 +15,7 @@ import { trackingPoints } from '@trackpath/db/schema';
 import type { NewTrackingPoint, TrackingPoint } from '@trackpath/db/schema';
 import { DRIZZLE } from '../database/drizzle.constants.js';
 import type { DrizzleClient } from '../database/drizzle.types.js';
+import { TRIP_START } from '../constants.js';
 import type {
   GarminExtData,
   KmlDataEntry,
@@ -90,7 +91,7 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
     return this.db
       .select()
       .from(trackingPoints)
-      .where(gte(trackingPoints.timestamp, '2025-04-15'))
+      .where(gte(trackingPoints.timestamp, TRIP_START))
       .orderBy(asc(trackingPoints.timestamp));
   }
 

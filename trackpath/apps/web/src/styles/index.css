@@ -175,5 +175,5 @@ button.primary:hover { opacity: 0.9; }
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
 }

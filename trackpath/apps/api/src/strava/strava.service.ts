@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { asc, eq, count, gte } from 'drizzle-orm';
 import { stravaActivities, stravaTokens } from '@trackpath/db/schema';
 import { DRIZZLE } from '../database/drizzle.constants.js';
+import { TRIP_START } from '../constants.js';
 import type { DrizzleClient } from '../database/drizzle.types.js';
 import type {
   StravaActivityRaw,
@@ -65,7 +66,7 @@ export class StravaService {
     return this.db
       .select()
       .from(stravaActivities)
-      .where(gte(stravaActivities.startDate, '2025-04-15'))
+      .where(gte(stravaActivities.startDate, TRIP_START))
       .orderBy(asc(stravaActivities.startDate));
   }
 

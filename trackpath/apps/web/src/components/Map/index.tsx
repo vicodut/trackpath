@@ -468,6 +468,13 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
         />
       )}
 
+      {/* Sasquatch at Amicalola Falls when no tracking points yet */}
+      {points.length === 0 && layers.garminPoints && (
+        <Marker position={[34.5590, -84.1946]} icon={latestIcon} zIndexOffset={1000}>
+          <Popup><strong>Amicalola Falls</strong><br />Trip starts here 🥾</Popup>
+        </Marker>
+      )}
+
       {/* Point markers */}
       {points.map((pt, idx) => {
         const isTag =

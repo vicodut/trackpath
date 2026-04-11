@@ -13,4 +13,4 @@ export const TAGS = ['resupply', 'poop', 'hostel', 'camp', 'shelter', 'water', '
 export const MOBILE_BREAKPOINT = 768;
 
 /** Trip start date — all points and activities before this are filtered out. */
-export const TRIP_START = new Date('2025-04-15T00:00:00Z');
+export const TRIP_START = new Date('2026-04-15T00:00:00Z');
