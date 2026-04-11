@@ -259,6 +259,9 @@ function LocateButton() {
 }
 
 const AMICALOLA_FALLS: [number, number] = [34.5590, -84.1946];
+const FART_WALK_MS = 15_000;   // normal sasquatch duration
+const FART_DURATION_MS = 7_500; // fart duration
+const FART_CYCLE_MS = FART_WALK_MS + FART_DURATION_MS;
 
 function LastPositionButton({ points, fart }: { points: TrackingPoint[]; fart: boolean }) {
   const map = useMap();
@@ -365,8 +368,8 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
   useEffect(() => {
     const id = setInterval(() => {
       setFart(true);
-      setTimeout(() => setFart(false), 7500);
-    }, 37500);
+      setTimeout(() => setFart(false), FART_DURATION_MS);
+    }, FART_CYCLE_MS);
     return () => clearInterval(id);
   }, []);
 
@@ -482,7 +485,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
 
       {/* Sasquatch at Amicalola Falls when no tracking points yet */}
       {points.length === 0 && layers.garminPoints && (
-        <Marker position={[34.5590, -84.1946]} icon={makeLatestIcon(fart)} zIndexOffset={1000}>
+        <Marker position={AMICALOLA_FALLS} icon={makeLatestIcon(fart)} zIndexOffset={1000}>
           <Popup><strong>Amicalola Falls</strong><br />Trip starts here 🥾</Popup>
         </Marker>
       )}
