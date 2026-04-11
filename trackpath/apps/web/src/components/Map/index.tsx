@@ -27,11 +27,11 @@ const pointIcon = L.divIcon({
   iconAnchor: [6, 6],
 });
 
-const latestIcon = L.divIcon({
+const makeLatestIcon = (fart: boolean) => L.divIcon({
   className: "",
   html: `<div style="position:relative;width:60px;height:60px;">
     <div class="current-pos-pulse"></div>
-    <img src="/sasquatch.gif" style="width:60px;height:60px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />
+    <img src="${fart ? '/sasquatch_fart.gif' : '/sasquatch.gif'}" style="width:60px;height:60px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />
   </div>`,
   iconSize: [60, 60],
   iconAnchor: [30, 60],
@@ -260,18 +260,8 @@ function LocateButton() {
 
 const AMICALOLA_FALLS: [number, number] = [34.5590, -84.1946];
 
-function LastPositionButton({ points }: { points: TrackingPoint[] }) {
+function LastPositionButton({ points, fart }: { points: TrackingPoint[]; fart: boolean }) {
   const map = useMap();
-  const [fart, setFart] = useState(false);
-
-  useEffect(() => {
-    // Every 35s cycle: show fart at t=30s, hide at t=35s
-    const id = setInterval(() => {
-      setFart(true);
-      setTimeout(() => setFart(false), 5000);
-    }, 35000);
-    return () => clearInterval(id);
-  }, []);
 
   const handleClick = useCallback(() => {
     if (points.length === 0) {
@@ -368,8 +358,17 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
   isAdmin,
 }, ref) {
   const [selectedStravaId, setSelectedStravaId] = useState<number | null>(null);
+  const [fart, setFart] = useState(false);
   const setElevCursorRef = useRef<((lat: number, lon: number) => void) | null>(null);
   const clearElevCursorRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFart(true);
+      setTimeout(() => setFart(false), 5000);
+    }, 35000);
+    return () => clearInterval(id);
+  }, []);
 
   const shuttleCoords: [number, number][] = useMemo(() => [
     [33.6407, -84.4277], // ATL airport
@@ -483,7 +482,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
 
       {/* Sasquatch at Amicalola Falls when no tracking points yet */}
       {points.length === 0 && layers.garminPoints && (
-        <Marker position={[34.5590, -84.1946]} icon={latestIcon} zIndexOffset={1000}>
+        <Marker position={[34.5590, -84.1946]} icon={makeLatestIcon(fart)} zIndexOffset={1000}>
           <Popup><strong>Amicalola Falls</strong><br />Trip starts here 🥾</Popup>
         </Marker>
       )}
@@ -503,7 +502,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
             position={[pt.latitude, pt.longitude]}
             icon={
               (pt.eventType && getTagIcon(pt.eventType)) ||
-              (isLatest ? latestIcon : pointIcon)
+              (isLatest ? makeLatestIcon(fart) : pointIcon)
             }
             zIndexOffset={isLatest ? 1000 : 0}
           >
@@ -586,7 +585,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
             +
           </button>
         )}
-        <LastPositionButton points={points} />
+        <LastPositionButton points={points} fart={fart} />
         {isAdmin && <LocateButton />}
       </div>
       <ElevationCursor onReady={handleElevCursorReady} />
