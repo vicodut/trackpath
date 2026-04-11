@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { asc, eq, count } from 'drizzle-orm';
+import { asc, eq, count, gte } from 'drizzle-orm';
 import { stravaActivities, stravaTokens } from '@trackpath/db/schema';
 import { DRIZZLE } from '../database/drizzle.constants.js';
 import type { DrizzleClient } from '../database/drizzle.types.js';
@@ -65,6 +65,7 @@ export class StravaService {
     return this.db
       .select()
       .from(stravaActivities)
+      .where(gte(stravaActivities.startDate, '2025-04-15'))
       .orderBy(asc(stravaActivities.startDate));
   }
 

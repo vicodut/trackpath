@@ -8,7 +8,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { asc, desc, not, like, count, eq } from 'drizzle-orm';
+import { asc, desc, not, like, count, eq, gte } from 'drizzle-orm';
 import { parseString } from 'xml2js';
 import { Subject, Observable, from, startWith, switchMap, map } from 'rxjs';
 import { trackingPoints } from '@trackpath/db/schema';
@@ -90,6 +90,7 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
     return this.db
       .select()
       .from(trackingPoints)
+      .where(gte(trackingPoints.timestamp, '2025-04-15'))
       .orderBy(asc(trackingPoints.timestamp));
   }
 
