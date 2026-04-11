@@ -262,6 +262,12 @@ const AMICALOLA_FALLS: [number, number] = [34.5590, -84.1946];
 
 function LastPositionButton({ points }: { points: TrackingPoint[] }) {
   const map = useMap();
+  const [fart, setFart] = useState(false);
+
+  useEffect(() => {
+    const id = setInterval(() => setFart(f => !f), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleClick = useCallback(() => {
     if (points.length === 0) {
@@ -275,7 +281,7 @@ function LastPositionButton({ points }: { points: TrackingPoint[] }) {
   return (
     <button className={styles.lastposBtn} onClick={handleClick} title="LAST_POSITION">
       <img
-        src="/sasquatch.gif"
+        src={fart ? "/sasquatch_fart.gif" : "/sasquatch.gif"}
         alt=""
         style={{ width: 22, height: 22, imageRendering: "pixelated" }}
       />
