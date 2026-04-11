@@ -265,7 +265,11 @@ function LastPositionButton({ points }: { points: TrackingPoint[] }) {
   const [fart, setFart] = useState(false);
 
   useEffect(() => {
-    const id = setInterval(() => setFart(f => !f), 30000);
+    // Every 35s cycle: show fart at t=30s, hide at t=35s
+    const id = setInterval(() => {
+      setFart(true);
+      setTimeout(() => setFart(false), 5000);
+    }, 35000);
     return () => clearInterval(id);
   }, []);
 
