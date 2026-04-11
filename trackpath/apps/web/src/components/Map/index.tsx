@@ -258,16 +258,19 @@ function LocateButton() {
   );
 }
 
+const AMICALOLA_FALLS: [number, number] = [34.5590, -84.1946];
+
 function LastPositionButton({ points }: { points: TrackingPoint[] }) {
   const map = useMap();
 
   const handleClick = useCallback(() => {
-    if (points.length === 0) return;
+    if (points.length === 0) {
+      map.setView(AMICALOLA_FALLS, 14);
+      return;
+    }
     const last = points[points.length - 1];
     map.setView([last.latitude, last.longitude], 14);
   }, [map, points]);
-
-  if (points.length === 0) return null;
 
   return (
     <button className={styles.lastposBtn} onClick={handleClick} title="LAST_POSITION">

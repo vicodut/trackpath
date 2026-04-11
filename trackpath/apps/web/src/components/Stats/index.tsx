@@ -15,7 +15,7 @@ interface StatsProps {
 
 export function Stats({ points, stravaActivities, totalDistanceKm, totalElevationGain }: StatsProps) {
   const [open, setOpen] = useState(false);
-  const { unit, toggleUnit, fmtDist } = useUnit();
+  const { fmtDist } = useUnit();
 
   const stats = useMemo(() => {
     const stravaDistanceKm = stravaActivities.reduce((sum, a) => sum + ((a.distance || 0) / 1000), 0);
@@ -73,13 +73,6 @@ export function Stats({ points, stravaActivities, totalDistanceKm, totalElevatio
     <div className={styles.statsWidget} onClick={() => setOpen(!open)}>
       <div className={styles.statsWidgetHeader}>
         <span className={styles.statsWidgetTitle}>Stats</span>
-        <button
-          className={styles.unitToggle}
-          onClick={(e) => { e.stopPropagation(); toggleUnit(); }}
-          title="Toggle km/mi"
-        >
-          {unit}
-        </button>
         <span className={styles.statsWidgetToggle}>{open ? '▾' : '▸'}</span>
       </div>
       {open && (
