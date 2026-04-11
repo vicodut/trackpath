@@ -23,7 +23,8 @@ interface MapElevationProfileProps {
   currentDistKm?: number | null;
 }
 
-const CHART_HEIGHT = 160;
+const CHART_HEIGHT_DESKTOP = 160;
+const CHART_HEIGHT_MOBILE = 110;
 const CHART_PADDING = { top: 14, right: 14, bottom: 26, left: 48 };
 const GOAL_KM = 1500;
 const MIN_ZOOM_RANGE_KM = 20;
@@ -68,6 +69,9 @@ export function MapElevationProfile({
     summitName?: string;
   } | null>(null);
   const [svgWidth, setSvgWidth] = useState(800);
+  const [chartHeight, setChartHeight] = useState(() =>
+    window.innerWidth <= 768 ? CHART_HEIGHT_MOBILE : CHART_HEIGHT_DESKTOP,
+  );
   const [viewStart, setViewStart] = useState(0);
   const [viewEnd, setViewEnd] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -108,6 +112,8 @@ export function MapElevationProfile({
         const newWidth = entry.contentRect.width;
         setSvgWidth(prev => prev === newWidth ? prev : newWidth);
         cachedRectRef.current = (entry.target as HTMLElement).getBoundingClientRect();
+        const targetHeight = newWidth <= 768 ? CHART_HEIGHT_MOBILE : CHART_HEIGHT_DESKTOP;
+        setChartHeight(prev => prev === targetHeight ? prev : targetHeight);
       }
     });
     observer.observe(containerRef.current);
@@ -301,7 +307,7 @@ export function MapElevationProfile({
   const zoomLevel = fullRange / visibleRange;
 
   const w = svgWidth;
-  const h = CHART_HEIGHT;
+  const h = chartHeight;
   const { top, right, bottom, left } = CHART_PADDING;
   const plotW = w - left - right;
   const plotH = h - top - bottom;
