@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { StravaActivity } from '../types';
+import { TRIP_START } from '../lib/constants';
+
+function filterActivities(data: unknown): StravaActivity[] {
+  return (Array.isArray(data) ? data : []).filter(
+    (a: StravaActivity) => a.startDate && new Date(a.startDate) >= TRIP_START,
+  );
+}
 
 export function useStrava() {
   const [activities, setActivities] = useState<StravaActivity[]>([]);
@@ -12,7 +19,7 @@ export function useStrava() {
       .catch(() => setConnected(false));
     fetch('/api/strava/activities')
       .then((r) => r.json())
-      .then((data) => setActivities(Array.isArray(data) ? data : []))
+      .then((data) => setActivities(filterActivities(data)))
       .catch((err: unknown) => console.error('Failed to load Strava activities:', err));
   }, []);
 
@@ -34,7 +41,7 @@ export function useStrava() {
     try {
       const res = await fetch('/api/strava/sync', { method: 'POST' });
       const data = await res.json() as { activities?: StravaActivity[] };
-      if (data.activities) setActivities(data.activities);
+      if (data.activities) setActivities(filterActivities(data.activities));
     } catch (err) {
       console.error('Strava sync failed:', err);
     }

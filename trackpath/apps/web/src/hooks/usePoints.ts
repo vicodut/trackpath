@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { TrackingPoint } from '../types';
 import * as api from '../api/points';
 import { haversine } from '../lib/geo';
+import { TRIP_START } from '../lib/constants';
 
 export function usePoints() {
   const [points, setPoints] = useState<TrackingPoint[]>([]);
@@ -12,7 +13,9 @@ export function usePoints() {
   });
 
   const applyPoints = useCallback((pts: TrackingPoint[]) => {
-    const safePoints = Array.isArray(pts) ? pts : [];
+    const safePoints = (Array.isArray(pts) ? pts : []).filter(
+      (p) => new Date(p.timestamp) >= TRIP_START,
+    );
     setPoints(safePoints);
     const lastTime = safePoints.length > 0
       ? new Date(safePoints[safePoints.length - 1].timestamp).toLocaleString()
