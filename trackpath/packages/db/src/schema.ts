@@ -109,6 +109,38 @@ export const gearItems = pgTable('gear_items', {
 export type GearCategory = typeof gearCategories.$inferSelect;
 export type GearItem = typeof gearItems.$inferSelect;
 
+// --- Polls ---
+
+export const polls = pgTable('polls', {
+  id: serial('id').primaryKey(),
+  question: text('question').notNull(),
+  closed: boolean('closed').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const pollOptions = pgTable('poll_options', {
+  id: serial('id').primaryKey(),
+  pollId: integer('poll_id').notNull().references(() => polls.id, { onDelete: 'cascade' }),
+  text: text('text').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+});
+
+export const pollVotes = pgTable('poll_votes', {
+  id: serial('id').primaryKey(),
+  pollId: integer('poll_id').notNull().references(() => polls.id, { onDelete: 'cascade' }),
+  optionId: integer('option_id').notNull().references(() => pollOptions.id, { onDelete: 'cascade' }),
+  ipAddress: text('ip_address').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const pollSuggestions = pgTable('poll_suggestions', {
+  id: serial('id').primaryKey(),
+  question: text('question').notNull(),
+  options: text('options').notNull(), // JSON array of strings
+  ipAddress: text('ip_address').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),

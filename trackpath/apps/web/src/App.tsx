@@ -11,6 +11,7 @@ const StatsPage = lazy(() => import("./components/StatsPage").then(m => ({ defau
 const GearPage = lazy(() => import("./components/GearPage").then(m => ({ default: m.GearPage })));
 const TrailLogPage = lazy(() => import("./components/TrailLogPage").then(m => ({ default: m.TrailLogPage })));
 const Blog = lazy(() => import("./components/Blog").then(m => ({ default: m.Blog })));
+const PollsPage = lazy(() => import("./components/PollsPage").then(m => ({ default: m.PollsPage })));
 import type { LayerVisibility } from "./components/LayerToggle";
 import { LayerToggle } from "./components/LayerToggle";
 import { MapElevationProfile } from "./components/MapElevationProfile";
@@ -18,6 +19,7 @@ import { PointPopup } from "./components/PointPopup";
 import { usePoints } from "./hooks/usePoints";
 import { useAdmin } from "./hooks/useAdmin";
 import { useStrava } from "./hooks/useStrava";
+import { usePolls } from "./hooks/usePolls";
 import { useModals } from "./hooks/useModals";
 import { useAddPoint } from "./hooks/useAddPoint";
 import type { TrailSegment } from "./hooks/useTrailDistance";
@@ -28,7 +30,8 @@ export function App() {
   const { points, loading, status, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain } = usePoints();
   const { isAdmin } = useAdmin();
   const { activities: stravaActivities, connect: stravaConnect, syncActivities: stravaSync } = useStrava();
-  const { showAdmin, showStats, showTrailLog, showBlog, showGear, openAdmin, openStats, openTrailLog, openBlog, openGear, closeModal } = useModals();
+  const { polls, suggestions, vote: votePoll, create: createPoll, close: closePoll, remove: deletePoll, suggest: suggestPoll, loadSuggestions, accept: acceptSuggestion, reject: rejectSuggestion } = usePolls();
+  const { showAdmin, showStats, showTrailLog, showBlog, showGear, showPolls, openAdmin, openStats, openTrailLog, openBlog, openGear, openPolls, closeModal } = useModals();
   const { formOpen, setFormOpen, pickedCoords, sidebarVisible, setSidebarVisible, handleMapClick, handleLongPress, handleSubmit, handleSuccess, openForm } = useAddPoint(addPoint, isAdmin);
 
   const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(null);
@@ -140,6 +143,7 @@ export function App() {
         onTrailLog={openTrailLog}
         onBlog={openBlog}
         onGear={openGear}
+        onPolls={openPolls}
       />
       <div className="main-container">
         <div className="map-wrapper">
@@ -194,6 +198,11 @@ export function App() {
             pickedCoords={pickedCoords}
             isAdmin={isAdmin}
             forceFormOpen={formOpen}
+            polls={polls.slice(0, 1)}
+            onVote={votePoll}
+            onCreatePoll={createPoll}
+            onClosePoll={closePoll}
+            onDeletePoll={deletePoll}
           />
         )}
       </div>
@@ -216,6 +225,14 @@ export function App() {
             onStravaSync={stravaSync}
             onGarminSync={handleSync}
             syncing={syncing}
+            polls={polls}
+            onCreatePoll={createPoll}
+            onClosePoll={closePoll}
+            onDeletePoll={deletePoll}
+            suggestions={suggestions}
+            onLoadSuggestions={loadSuggestions}
+            onAcceptSuggestion={acceptSuggestion}
+            onRejectSuggestion={rejectSuggestion}
           />
         )}
         {showTrailLog && (
@@ -232,6 +249,15 @@ export function App() {
         )}
         {showBlog && <Blog onClose={closeModal} />}
         {showGear && <GearPage isAdmin={isAdmin} onClose={closeModal} />}
+        {showPolls && (
+          <PollsPage
+            polls={polls}
+            isAdmin={isAdmin}
+            onVote={votePoll}
+            onSuggest={suggestPoll}
+            onClose={closeModal}
+          />
+        )}
       </Suspense>
       {tappedPoint && (
         <PointPopup

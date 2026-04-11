@@ -12,9 +12,10 @@ interface HeaderProps {
   onTrailLog: () => void;
   onBlog: () => void;
   onGear: () => void;
+  onPolls: () => void;
 }
 
-export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onStats, onTrailLog, onBlog, onGear }: HeaderProps) {
+export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onStats, onTrailLog, onBlog, onGear, onPolls }: HeaderProps) {
   const { data: session, isPending } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -44,6 +45,7 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
     <>
       <button onClick={() => closeAndDo(onStats)}>STATS</button>
       <button onClick={() => closeAndDo(onGear)}>GEAR</button>
+      <button onClick={() => closeAndDo(onPolls)}>POLLS</button>
       <button onClick={() => closeAndDo(onBlog)}>JOURNAL</button>
       {isAdmin && <button onClick={() => closeAndDo(onAdmin)}>ADMIN</button>}
       {isMobile ? (

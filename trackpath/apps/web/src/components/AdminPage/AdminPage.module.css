@@ -133,3 +133,195 @@
 }
 
 .logMessage { color: var(--on-surface); }
+
+/* ── Polls panel ─────────────────────────────────────────────────────────── */
+
+.pollRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  margin-bottom: 8px;
+}
+
+.pollRowMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pollRowQuestion {
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  flex: 1;
+}
+
+.pollRowStatus {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 2px 7px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.pollRowOpen { background: var(--primary-container); color: var(--primary); }
+.pollRowClosed { background: var(--outline-variant); color: var(--outline); }
+
+.pollRowVotes {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  flex-shrink: 0;
+}
+
+.pollRowOptions { display: flex; flex-direction: column; gap: 4px; }
+
+.pollOptionRow {
+  display: grid;
+  grid-template-columns: 1fr 100px 32px;
+  align-items: center;
+  gap: 8px;
+}
+
+.pollOptionText {
+  font-size: 0.72rem;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pollOptionBar {
+  height: 5px;
+  background: var(--outline-variant);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pollOptionBarFill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.pollOptionPct {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--outline);
+  text-align: right;
+}
+
+.pollRowActions {
+  display: flex;
+  gap: 6px;
+}
+
+.pollActionBtn {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  background: none;
+  border: 1px solid var(--outline-variant);
+  border-radius: 3px;
+  color: var(--outline);
+  cursor: pointer;
+}
+.pollActionBtn:hover { border-color: var(--primary); color: var(--primary); }
+.pollDeleteBtn:hover { border-color: #e05252; color: #e05252; }
+
+.pollCreateForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--outline-variant);
+  margin-top: 4px;
+}
+
+.pollCreateInput {
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: 4px;
+  color: var(--on-surface);
+  width: 100%;
+  box-sizing: border-box;
+}
+.pollCreateInput:focus { outline: none; border-color: var(--primary); }
+
+.pollCreateOptions { display: flex; flex-direction: column; gap: 4px; }
+
+.pollAddOption {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  text-align: left;
+  padding: 2px 0;
+}
+
+.pollSubmitDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Suggestions ─────────────────────────────────────────────────────────── */
+
+.suggestionRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  margin-bottom: 6px;
+}
+
+.suggestionMeta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.suggestionQuestion {
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.suggestionDate {
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  color: var(--outline);
+  flex-shrink: 0;
+}
+
+.suggestionOptions {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.suggestionOptions li {
+  font-size: 0.72rem;
+  color: var(--on-surface-variant);
+}

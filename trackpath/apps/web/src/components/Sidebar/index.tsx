@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Drawer } from 'vaul';
 import type { TrackingPoint, StravaActivity } from '../../types';
+import type { Poll } from '../../api/polls';
 import { TAGS, TAG_EMOJIS } from '../../lib/constants';
 import { AddPointForm } from '../AddPointForm';
 import { PointCard } from '../PointCard';
@@ -36,6 +37,11 @@ interface SidebarProps {
   pickedCoords: { lat: number; lng: number } | null;
   isAdmin: boolean;
   forceFormOpen?: boolean;
+  polls?: Poll[];
+  onVote?: (pollId: number, optionId: number) => void;
+  onCreatePoll?: (question: string, options: string[]) => void;
+  onClosePoll?: (pollId: number) => void;
+  onDeletePoll?: (pollId: number) => void;
 }
 
 function SkeletonCards() {
@@ -67,9 +73,154 @@ function TrailProgress({ trailProgressKm }: { trailProgressKm: number }) {
   );
 }
 
+function PollsSection({
+  polls, isAdmin, onVote, onCreatePoll, onClosePoll, onDeletePoll,
+}: {
+  polls: Poll[];
+  isAdmin: boolean;
+  onVote?: (pollId: number, optionId: number) => void;
+  onCreatePoll?: (question: string, options: string[]) => void;
+  onClosePoll?: (pollId: number) => void;
+  onDeletePoll?: (pollId: number) => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [question, setQuestion] = useState('');
+  const [options, setOptions] = useState(['', '']);
+
+  const canSubmit = question.trim().length > 0 && options.filter((o) => o.trim()).length >= 2;
+
+  const handleCreate = () => {
+    if (!canSubmit) return;
+    const trimmedOpts = options.map((o) => o.trim()).filter(Boolean);
+    onCreatePoll?.(question.trim(), trimmedOpts);
+    setQuestion('');
+    setOptions(['', '']);
+    setShowForm(false);
+  };
+
+  const setOption = (i: number, val: string) =>
+    setOptions((prev) => prev.map((o, idx) => (idx === i ? val : o)));
+
+  if (polls.length === 0 && !isAdmin) return null;
+
+  return (
+    <div className={styles.pollsSection}>
+      <div className={styles.pollHeader}>
+        <span className={styles.pollHeaderLabel}>POLL</span>
+        {isAdmin && (
+          <button className={styles.pollNewBtn} onClick={() => setShowForm((s) => !s)}>
+            {showForm ? '✕' : '+ New'}
+          </button>
+        )}
+      </div>
+
+      {showForm && (
+        <div className={styles.pollForm}>
+          <input
+            className={styles.pollFormInput}
+            placeholder="Question…"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+          />
+          <div className={styles.pollFormOptions}>
+            {options.map((o, i) => (
+              <input
+                key={i}
+                className={styles.pollFormInput}
+                placeholder={`Option ${i + 1}`}
+                value={o}
+                onChange={(e) => setOption(i, e.target.value)}
+              />
+            ))}
+          </div>
+          {options.length < 6 && (
+            <button
+              className={styles.pollAddOptionBtn}
+              onClick={() => setOptions((prev) => [...prev, ''])}
+            >
+              + add option
+            </button>
+          )}
+          <div className={styles.pollFormActions}>
+            <button
+              className={`${styles.pollSubmitBtn} ${canSubmit ? styles.pollSubmitReady : ''}`}
+              onClick={handleCreate}
+              disabled={!canSubmit}
+            >
+              Create
+            </button>
+            <button className={styles.pollCancelBtn} onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {polls.map((poll) => {
+        const voted = poll.votedOptionId != null;
+        const showResults = voted || poll.closed;
+        const maxVotes = Math.max(...poll.options.map((o) => o.voteCount), 1);
+
+        return (
+          <div key={poll.id} className={`${styles.pollItem} ${poll.closed ? styles.pollClosed : ''}`}>
+            <p className={styles.pollQuestion}>{poll.question}</p>
+            {!showResults ? (
+              <div className={styles.pollOptions}>
+                {poll.options.map((opt) => (
+                  <button
+                    key={opt.id}
+                    className={styles.pollOptionBtn}
+                    onClick={() => onVote?.(poll.id, opt.id)}
+                  >
+                    {opt.text}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.pollResults}>
+                {poll.options.map((opt) => {
+                  const pct = poll.totalVotes > 0
+                    ? Math.round((opt.voteCount / poll.totalVotes) * 100)
+                    : 0;
+                  const isVoted = opt.id === poll.votedOptionId;
+                  return (
+                    <div key={opt.id} className={`${styles.pollResultRow} ${isVoted ? styles.pollResultVoted : ''}`}>
+                      <span className={styles.pollResultLabel}>{opt.text}</span>
+                      <div className={styles.pollBar}>
+                        <div
+                          className={styles.pollBarFill}
+                          style={{ width: `${(opt.voteCount / maxVotes) * 100}%` }}
+                        />
+                      </div>
+                      <span className={styles.pollPct}>{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className={styles.pollMeta}>
+              <span>{poll.totalVotes} vote{poll.totalVotes !== 1 ? 's' : ''}</span>
+              {poll.closed && <span className={styles.pollClosedBadge}>CLOSED</span>}
+              {isAdmin && !poll.closed && (
+                <button className={styles.pollCloseBtn} onClick={() => onClosePoll?.(poll.id)}>
+                  Close
+                </button>
+              )}
+              {isAdmin && (
+                <button className={styles.pollDeleteBtn} onClick={() => onDeletePoll?.(poll.id)}>
+                  Delete
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function SidebarContent({
   points, loading, totalDistanceKm, totalElevationGain, trailProgressKm, stravaActivities,
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, onAddSuccess, pickedCoords, isAdmin, forceFormOpen,
+  polls, onVote, onCreatePoll, onClosePoll, onDeletePoll,
 }: SidebarProps) {
   const [activeFilters, setActiveFilters] = useState(new Set());
   const { fmtDist } = useUnit();
@@ -113,6 +264,16 @@ function SidebarContent({
 
   return (
     <>
+      {(polls && polls.length > 0 || isAdmin) && (
+        <PollsSection
+          polls={polls ?? []}
+          isAdmin={isAdmin}
+          onVote={onVote}
+          onCreatePoll={onCreatePoll}
+          onClosePoll={onClosePoll}
+          onDeletePoll={onDeletePoll}
+        />
+      )}
       {trailProgressKm != null && trailProgressKm > 0 && (
         <TrailProgress trailProgressKm={trailProgressKm} />
       )}

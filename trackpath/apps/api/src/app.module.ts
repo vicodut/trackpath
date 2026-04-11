@@ -10,6 +10,7 @@ import { BlogModule } from './blog/blog.module.js';
 import { WeatherModule } from './weather/weather.module.js';
 import { GearModule } from './gear/gear.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { PollsModule } from './polls/polls.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -27,6 +28,7 @@ import { HealthController } from './health/health.controller.js';
     WeatherModule,
     GearModule,
     AdminModule,
+    PollsModule,
   ],
   controllers: [HealthController],
 })
