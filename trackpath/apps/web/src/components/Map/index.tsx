@@ -365,8 +365,8 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
   useEffect(() => {
     const id = setInterval(() => {
       setFart(true);
-      setTimeout(() => setFart(false), 5000);
-    }, 35000);
+      setTimeout(() => setFart(false), 7500);
+    }, 37500);
     return () => clearInterval(id);
   }, []);
 
