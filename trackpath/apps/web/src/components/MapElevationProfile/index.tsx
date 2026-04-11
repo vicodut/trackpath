@@ -339,10 +339,14 @@ export function MapElevationProfile({
     Math.round(minElev + (elevRange * i) / (yTicks - 1)),
   );
 
+  const minTickSpacingPx = 44;
+  const maxTicks = Math.max(2, Math.floor(plotW / minTickSpacingPx));
+  const rawStep = visibleRange / maxTicks;
   const tickStep =
-    visibleRange < 50 ? 5 :
-    visibleRange < 100 ? 10 :
-    visibleRange < 300 ? 25 : 100;
+    rawStep <= 5 ? 5 :
+    rawStep <= 10 ? 10 :
+    rawStep <= 25 ? 25 :
+    rawStep <= 50 ? 50 : 100;
   const xTickValues: number[] = [];
   for (let km = Math.ceil(viewStart / tickStep) * tickStep; km <= effectiveViewEnd + 0.01; km += tickStep) {
     xTickValues.push(km);
