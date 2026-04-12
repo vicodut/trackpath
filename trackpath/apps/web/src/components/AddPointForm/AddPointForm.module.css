@@ -140,5 +140,60 @@
 }
 
 .addFormCoordsLabel {
-  /* placeholder for coords display on mobile */
+  font-family: var(--font-headline);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--secondary);
+  letter-spacing: 0.08em;
+  padding: 6px 0;
+}
+
+/* Mobile full-screen modal */
+.mobileModal {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.mobileModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: var(--ghost-border);
+  background: var(--surface-container-low);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.mobileModalTitle {
+  font-family: var(--font-headline);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.mobileModalClose {
+  background: none;
+  border: none;
+  color: var(--outline);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.mobileModalBody {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }

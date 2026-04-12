@@ -66,6 +66,60 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
     }
   }
 
+  const mobileFields = (
+    <>
+      {lat && lng ? (
+        <div className={styles.addFormCoordsLabel}>
+          📍 {parseFloat(lat).toFixed(5)}, {parseFloat(lng).toFixed(5)}
+        </div>
+      ) : (
+        <p className={`${styles.pickHint} ${styles.pickHintActive}`}>TAP_MAP_TO_SET_COORDINATES</p>
+      )}
+      <div className={styles.addFormTagGrid}>
+        {TAGS.map((t) => (
+          <button
+            key={t}
+            className={`${styles.addFormTagBtn} ${tag === t ? styles.addFormTagBtnActive : ''}`}
+            onClick={() => setTag(tag === t ? '' : t)}
+          >
+            <span className={styles.addFormTagEmoji}>{TAG_EMOJIS[t]}</span>
+            <span className={styles.addFormTagLabel}>{t}</span>
+          </button>
+        ))}
+      </div>
+      <textarea
+        placeholder="Message (optional)"
+        value={msg}
+        onChange={(e) => setMsg(e.target.value)}
+        rows={3}
+      />
+      <div className={styles.addFormActions}>
+        <button className="primary" onClick={handleSubmit} disabled={!lat || !lng}>SUBMIT_POINT</button>
+      </div>
+    </>
+  );
+
+  if (isMobile && open) {
+    return (
+      <>
+        <div className={styles.addForm}>
+          <button className={styles.addFormToggle} onClick={toggleOpen}>
+            + ADD_TRACKING_POINT
+          </button>
+        </div>
+        <div className={styles.mobileModal}>
+          <div className={styles.mobileModalHeader}>
+            <span className={styles.mobileModalTitle}>+ ADD_TRACKING_POINT</span>
+            <button className={styles.mobileModalClose} onClick={toggleOpen}>✕</button>
+          </div>
+          <div className={styles.mobileModalBody}>
+            {mobileFields}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className={styles.addForm}>
       <button className={styles.addFormToggle} onClick={toggleOpen}>
@@ -73,40 +127,7 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
       </button>
       {open && (
         <div className={styles.addFormFields}>
-          {isMobile ? (
-            <>
-              {lat && lng ? (
-                <div className={styles.addFormCoordsLabel}>
-                  {parseFloat(lat).toFixed(4)}, {parseFloat(lng).toFixed(4)}
-                </div>
-              ) : (
-                <p className={`${styles.pickHint} ${styles.pickHintActive}`}>TAP_MAP_TO_SET_COORDINATES</p>
-              )}
-              <div className={styles.addFormTagGrid}>
-                {TAGS.map((t) => (
-                  <button
-                    key={t}
-                    className={`${styles.addFormTagBtn} ${tag === t ? styles.addFormTagBtnActive : ''}`}
-                    onClick={() => setTag(tag === t ? '' : t)}
-                  >
-                    <span className={styles.addFormTagEmoji}>{TAG_EMOJIS[t]}</span>
-                    <span className={styles.addFormTagLabel}>{t}</span>
-                  </button>
-                ))}
-              </div>
-              <textarea
-                placeholder="Message (optional)"
-                value={msg}
-                onChange={(e) => setMsg(e.target.value)}
-                rows={2}
-              />
-              <div className={styles.addFormActions}>
-                <button className="primary" onClick={handleSubmit} disabled={!lat || !lng}>SUBMIT_POINT</button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className={styles.coordRow}>
+          <div className={styles.coordRow}>
                 <div>
                   <label>Latitude</label>
                   <input
@@ -153,10 +174,9 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
               <div className={styles.addFormActions}>
                 <button className="primary" onClick={handleSubmit}>SUBMIT_POINT</button>
               </div>
-            </>
-          )}
         </div>
       )}
     </div>
   );
 }
+
