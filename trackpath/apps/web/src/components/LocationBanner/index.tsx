@@ -47,12 +47,20 @@ export function LocationBanner({ points, trailProgressKm }: LocationBannerProps)
     );
   }
 
+  const isRestDay = info.todayKm < 0.1;
+
   return (
     <div className={styles.banner}>
       <span className={styles.bannerHighlight}>DAY {info.dayOnTrail}</span>
       <span className={styles.bannerDot}>·</span>
-      <span className={styles.bannerText}>TODAY</span>
-      <span className={styles.bannerValue}>{fmtDist(info.todayKm)}</span>
+      {isRestDay ? (
+        <span className={styles.bannerText}>REST DAY 💤</span>
+      ) : (
+        <>
+          <span className={styles.bannerText}>TODAY</span>
+          <span className={styles.bannerValue}>{fmtDist(info.todayKm)}</span>
+        </>
+      )}
       {trailProgressKm != null && trailProgressKm > 0 && (
         <>
           <span className={styles.bannerDot}>·</span>

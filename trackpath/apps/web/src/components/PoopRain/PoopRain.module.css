@@ -1,0 +1,19 @@
+.rain {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.poop {
+  position: absolute;
+  top: -60px;
+  animation: poopFall linear forwards;
+  user-select: none;
+}
+
+@keyframes poopFall {
+  from { transform: translateY(0) rotate(0deg); }
+  to   { transform: translateY(110vh) rotate(480deg); }
+}

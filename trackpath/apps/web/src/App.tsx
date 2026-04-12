@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, lazy, Suspense } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from "react";
 import { Header } from "./components/Header";
 import { Map as TrailMap } from "./components/Map";
 import type { MapHandle } from "./components/Map";
@@ -13,6 +13,7 @@ const TrailLogPage = lazy(() => import("./components/TrailLogPage").then(m => ({
 const Blog = lazy(() => import("./components/Blog").then(m => ({ default: m.Blog })));
 const PollsPage = lazy(() => import("./components/PollsPage").then(m => ({ default: m.PollsPage })));
 import { LocationBanner } from "./components/LocationBanner";
+import { PoopRain } from "./components/PoopRain";
 import type { LayerVisibility } from "./components/LayerToggle";
 import { LayerToggle } from "./components/LayerToggle";
 import { MapElevationProfile } from "./components/MapElevationProfile";
@@ -34,6 +35,22 @@ export function App() {
   const { polls, suggestions, vote: votePoll, create: createPoll, close: closePoll, remove: deletePoll, suggest: suggestPoll, loadSuggestions, accept: acceptSuggestion, reject: rejectSuggestion } = usePolls();
   const { showAdmin, showStats, showTrailLog, showBlog, showGear, showPolls, openAdmin, openStats, openTrailLog, openBlog, openGear, openPolls, closeModal } = useModals();
   const { formOpen, setFormOpen, pickedCoords, sidebarVisible, setSidebarVisible, handleMapClick, handleLongPress, handleSubmit, handleSuccess, openForm } = useAddPoint(addPoint, isAdmin);
+
+  const [poopRain, setPoopRain] = useState(false);
+  useEffect(() => {
+    let buf = '';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.length !== 1) return;
+      buf = (buf + e.key.toLowerCase()).slice(-4);
+      if (buf === 'poop') {
+        buf = '';
+        setPoopRain(true);
+        setTimeout(() => setPoopRain(false), 3000);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -261,6 +278,7 @@ export function App() {
           />
         )}
       </Suspense>
+      {poopRain && <PoopRain />}
       {tappedPoint && (
         <PointPopup
           point={tappedPoint}
