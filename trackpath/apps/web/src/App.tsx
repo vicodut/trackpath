@@ -37,20 +37,58 @@ export function App() {
   const { formOpen, setFormOpen, pickedCoords, sidebarVisible, setSidebarVisible, handleMapClick, handleLongPress, handleSubmit, handleSuccess, openForm } = useAddPoint(addPoint, isAdmin);
 
   const [poopRain, setPoopRain] = useState(false);
+  const triggerPoop = useCallback(() => {
+    setPoopRain(true);
+    setTimeout(() => setPoopRain(false), 3000);
+  }, []);
+
+  // Keyboard: type "poop"
   useEffect(() => {
     let buf = '';
     const onKey = (e: KeyboardEvent) => {
       if (e.key.length !== 1) return;
       buf = (buf + e.key.toLowerCase()).slice(-4);
-      if (buf === 'poop') {
-        buf = '';
-        setPoopRain(true);
-        setTimeout(() => setPoopRain(false), 3000);
-      }
+      if (buf === 'poop') { buf = ''; triggerPoop(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [triggerPoop]);
+
+  // Mobile shake
+  useEffect(() => {
+    if (typeof DeviceMotionEvent === 'undefined') return;
+    const THRESHOLD = 25;
+    const COOLDOWN_MS = 2000;
+    let lastShake = 0;
+
+    const onMotion = (e: DeviceMotionEvent) => {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc) return;
+      const mag = Math.sqrt((acc.x ?? 0) ** 2 + (acc.y ?? 0) ** 2 + (acc.z ?? 0) ** 2);
+      const now = Date.now();
+      if (mag > THRESHOLD && now - lastShake > COOLDOWN_MS) {
+        lastShake = now;
+        triggerPoop();
+      }
+    };
+
+    // iOS 13+ requires a user-gesture permission request
+    if (typeof (DeviceMotionEvent as { requestPermission?: () => Promise<string> }).requestPermission === 'function') {
+      const requestOnTap = () => {
+        (DeviceMotionEvent as { requestPermission: () => Promise<string> }).requestPermission()
+          .then(result => { if (result === 'granted') window.addEventListener('devicemotion', onMotion); })
+          .catch(() => {});
+      };
+      window.addEventListener('click', requestOnTap, { once: true });
+      return () => {
+        window.removeEventListener('click', requestOnTap);
+        window.removeEventListener('devicemotion', onMotion);
+      };
+    }
+
+    window.addEventListener('devicemotion', onMotion);
+    return () => window.removeEventListener('devicemotion', onMotion);
+  }, [triggerPoop]);
 
   const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(null);
   const [syncing, setSyncing] = useState(false);
