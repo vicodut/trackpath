@@ -418,6 +418,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
       zoom={6}
       id="map"
       style={{ width: "100%" }}
+      zoomControl={false}
     >
       {layers.tileStyle === 'topo' ? (
         <TileLayer
