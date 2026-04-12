@@ -91,6 +91,9 @@ export function MapElevationProfile({
   const userHasZoomed = useRef(false);
   const dragRef = useRef<{ startX: number; startViewStart: number; startViewEnd: number } | null>(null);
   const pinchRef = useRef<{ dist: number; midKm: number; start: number; end: number } | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchModeRef = useRef<'idle' | 'hover' | 'pan'>('idle');
+  const touchPanStateRef = useRef<{ startX: number; startViewStart: number; startViewEnd: number } | null>(null);
 
   // Keep refs in sync on every render
   trailDataRef.current = trailData;
@@ -203,10 +206,14 @@ export function MapElevationProfile({
       return { s, e };
     };
 
+    const TOUCH_PAN_THRESHOLD_PX = 8;
+
     const onTouchStart = (ev: TouchEvent) => {
       if (ev.touches.length === 1) {
         ev.preventDefault();
-        updateHover(ev.touches[0].clientX, ev.touches[0].clientY, true);
+        touchStartRef.current = { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
+        touchModeRef.current = 'idle';
+        touchPanStateRef.current = null;
       } else if (ev.touches.length === 2 && trailDataRef.current) {
         const td = trailDataRef.current;
         const fullRange = td[td.length - 1].distanceKm;
@@ -229,7 +236,38 @@ export function MapElevationProfile({
     const onTouchMove = (ev: TouchEvent) => {
       if (ev.touches.length === 1 && !pinchRef.current) {
         ev.preventDefault();
-        updateHover(ev.touches[0].clientX, ev.touches[0].clientY, true);
+        const touch = ev.touches[0];
+        const td = trailDataRef.current;
+
+        // Determine intent if still idle
+        if (touchModeRef.current === 'idle' && touchStartRef.current) {
+          const dx = Math.abs(touch.clientX - touchStartRef.current.x);
+          if (dx > TOUCH_PAN_THRESHOLD_PX && userHasZoomed.current && td) {
+            touchModeRef.current = 'pan';
+            const vs = viewStartRef.current;
+            const ve = viewEndRef.current ?? td[td.length - 1].distanceKm;
+            touchPanStateRef.current = { startX: touchStartRef.current.x, startViewStart: vs, startViewEnd: ve };
+            setHovered(null);
+          } else if (dx > 3 || Math.abs(touch.clientY - touchStartRef.current.y) > 3) {
+            touchModeRef.current = 'hover';
+          }
+        }
+
+        if (touchModeRef.current === 'pan' && touchPanStateRef.current && td) {
+          const { startX, startViewStart, startViewEnd } = touchPanStateRef.current;
+          const vr = startViewEnd - startViewStart;
+          const fullRange = td[td.length - 1].distanceKm;
+          const sw = svgWidthRef.current;
+          const plotW = sw - CHART_PADDING.left - CHART_PADDING.right;
+          const rect = cachedRectRef.current ?? el.getBoundingClientRect();
+          const scale = rect.width > 0 ? sw / rect.width : 1;
+          const dxKm = -((touch.clientX - startX) * scale / plotW) * vr;
+          const s = Math.max(0, startViewStart + dxKm);
+          setViewStart(s);
+          setViewEnd(Math.min(fullRange, s + vr));
+        } else if (touchModeRef.current === 'hover') {
+          updateHover(touch.clientX, touch.clientY, true);
+        }
       } else if (ev.touches.length === 2 && pinchRef.current && trailDataRef.current) {
         ev.preventDefault();
         const td = trailDataRef.current;
@@ -251,7 +289,12 @@ export function MapElevationProfile({
 
     const onTouchEnd = (ev: TouchEvent) => {
       if (ev.touches.length < 2) pinchRef.current = null;
-      if (ev.touches.length === 0) clearHover();
+      if (ev.touches.length === 0) {
+        touchModeRef.current = 'idle';
+        touchStartRef.current = null;
+        touchPanStateRef.current = null;
+        clearHover();
+      }
     };
 
     const onWheel = (ev: WheelEvent) => {
