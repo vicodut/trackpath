@@ -627,6 +627,7 @@ function DailyLog({ points, dailyKm, dailyElev }: {
   if (entries.length === 0) return <div className={styles.statsEmpty}>NO_ACTIVITY_YET</div>;
 
   const maxKm = Math.max(...entries.map(e => e.km));
+  const bestDate = entries.reduce((best, e) => e.km > best.km ? e : best, entries[0]).date;
 
   return (
     <div className={styles.dailyLog}>
@@ -640,7 +641,7 @@ function DailyLog({ points, dailyKm, dailyElev }: {
             <div className={styles.dailyLogBarFill} style={{ width: `${(e.km / maxKm) * 100}%` }} />
           </div>
           <div className={styles.dailyLogStats}>
-            <span className={styles.dailyLogKm}>{fmtDist(e.km, 1)}</span>
+            <span className={styles.dailyLogKm}>{fmtDist(e.km, 1)}{e.date === bestDate ? ' 🏆' : ''}</span>
             {e.elev > 0 && <span className={styles.dailyLogElev}>↑{Math.round(e.elev)}m</span>}
           </div>
           {e.messages.length > 0 && (

@@ -37,6 +37,13 @@ const makeLatestIcon = (fart: boolean) => L.divIcon({
   iconAnchor: [30, 60],
 });
 
+const campfireIcon = L.divIcon({
+  className: "",
+  html: '<div class="campfire-pulse" style="font-size:26px;line-height:1;filter:drop-shadow(0 0 6px rgba(255,120,0,0.8));">🔥</div>',
+  iconSize: [30, 30],
+  iconAnchor: [15, 30],
+});
+
 const flagIcon = L.divIcon({
   className: "",
   html: '<div style="font-size:28px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5));">🏁</div>',
@@ -369,6 +376,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
 }, ref) {
   const [selectedStravaId, setSelectedStravaId] = useState<number | null>(null);
   const [fart, setFart] = useState(false);
+  const isNighttime = useMemo(() => { const h = new Date().getHours(); return h >= 21 || h < 6; }, []);
   const setElevCursorRef = useRef<((lat: number, lon: number) => void) | null>(null);
   const clearElevCursorRef = useRef<(() => void) | null>(null);
 
@@ -600,6 +608,11 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
         {isAdmin && <LocateButton />}
       </div>
       <ElevationCursor onReady={handleElevCursorReady} />
+      {isNighttime && (() => {
+        const last = points.filter(p => !p.garminId?.startsWith('manual-')).at(-1);
+        const pos: [number, number] = last ? [last.latitude, last.longitude] : AMICALOLA_FALLS;
+        return <Marker position={pos} icon={campfireIcon} zIndexOffset={900} />;
+      })()}
     </MapContainer>
   );
 });

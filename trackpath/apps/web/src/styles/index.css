@@ -177,3 +177,12 @@ button.primary:hover { opacity: 0.9; }
   flex-direction: column;
   height: 100%;
 }
+
+@keyframes campfirePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.25); opacity: 0.8; }
+}
+.campfire-pulse {
+  animation: campfirePulse 1.8s ease-in-out infinite;
+  display: inline-block;
+}

@@ -21,6 +21,7 @@ interface MapElevationProfileProps {
   segmentMarkers?: SegmentMarkers | null;
   campMarkers?: number[];
   currentDistKm?: number | null;
+  pace7dayKm?: number | null;
 }
 
 const CHART_HEIGHT_DESKTOP = 160;
@@ -56,6 +57,7 @@ export function MapElevationProfile({
   segmentMarkers,
   campMarkers,
   currentDistKm,
+  pace7dayKm,
 }: MapElevationProfileProps) {
   const { fmtDist } = useUnit();
   const [trailData, setTrailData] = useState<TrailElevationPoint[] | null>(null);
@@ -573,6 +575,52 @@ export function MapElevationProfile({
                   strokeDasharray="6,4"
                   opacity="0.7"
                 />
+              )}
+
+              {/* Pace projection markers */}
+              {pace7dayKm != null && pace7dayKm > 0 && currentDistKm != null && (
+                <>
+                  {[7, 30].map(days => {
+                    const projKm = currentDistKm + pace7dayKm * days;
+                    if (projKm > fullRange || !inView(projKm)) return null;
+                    const px = toX(projKm);
+                    const label = `+${days}d`;
+                    return (
+                      <g key={days} style={{ pointerEvents: 'none' }}>
+                        <line
+                          x1={px} x2={px} y1={top} y2={top + plotH}
+                          stroke="var(--primary)"
+                          strokeWidth="1"
+                          strokeDasharray="4,3"
+                          opacity="0.5"
+                        />
+                        <text
+                          x={px + 3} y={top + 10}
+                          className={styles.mapElevLabel}
+                          fill="var(--primary)"
+                          opacity="0.8"
+                        >{label}</text>
+                      </g>
+                    );
+                  })}
+                  {/* Shaded projected region */}
+                  {(() => {
+                    const projKm = Math.min(currentDistKm + pace7dayKm * 7, fullRange);
+                    const visStart = Math.max(currentDistKm, viewStart);
+                    const visEnd = Math.min(projKm, effectiveViewEnd);
+                    if (visEnd <= visStart) return null;
+                    return (
+                      <rect
+                        x={toX(visStart)} y={top}
+                        width={toX(visEnd) - toX(visStart)}
+                        height={plotH}
+                        fill="var(--primary)"
+                        opacity="0.06"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    );
+                  })()}
+                </>
               )}
 
               {/* Camp markers */}

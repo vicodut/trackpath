@@ -27,6 +27,7 @@ import { useAddPoint } from "./hooks/useAddPoint";
 import type { TrailSegment } from "./hooks/useTrailDistance";
 import { useTrailDistance } from "./hooks/useTrailDistance";
 import type { TrackingPoint } from "./types";
+import { haversine } from "./lib/geo";
 
 export function App() {
   const { points, loading, status, sync, addPoint, removePoint, totalDistanceKm, totalElevationGain } = usePoints();
@@ -174,9 +175,28 @@ export function App() {
     return { fromDistKm: fromKm, toDistKm: toKm };
   }, [tappedPoint, highlightTarget, lastGarminPoint, getTrailKm]);
 
+  // 7-day pace for elevation chart projection
+  const pace7dayKm = useMemo(() => {
+    const garminPts = points.filter(p => !p.garminId?.startsWith('manual-'));
+    const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    const recent = garminPts.filter(p => new Date(p.timestamp).getTime() >= sevenDaysAgo);
+    if (recent.length < 2) return null;
+    let dist = 0;
+    for (let i = 1; i < recent.length; i++) {
+      const d = haversine(recent[i-1].latitude, recent[i-1].longitude, recent[i].latitude, recent[i].longitude);
+      if (d < 100) dist += d;
+    }
+    return dist / 7;
+  }, [points]);
+
   const trailProgressKm = lastGarminPoint
     ? getTrailKm(lastGarminPoint.latitude, lastGarminPoint.longitude)
     : null;
+
+  const isNighttime = useMemo(() => {
+    const h = new Date().getHours();
+    return h >= 21 || h < 6;
+  }, []);
 
   const nearbyAltitudes = useMemo(() => {
     if (!tappedPoint) return [];
@@ -222,6 +242,12 @@ export function App() {
               isAdmin={isAdmin}
             />
             <LocationBanner points={points} trailProgressKm={trailProgressKm} />
+            {isNighttime && (
+              <div style={{
+                position: 'absolute', inset: 0, background: 'rgba(10,5,30,0.18)',
+                pointerEvents: 'none', zIndex: 800,
+              }} />
+            )}
             {layers.weather && <Weather />}
             <LayerToggle layers={layers} onChange={handleLayersChange} />
             <Stats
@@ -237,6 +263,7 @@ export function App() {
             segmentMarkers={segmentMarkers}
             campMarkers={campMarkers}
             currentDistKm={lastGarminPoint ? getTrailKm(lastGarminPoint.latitude, lastGarminPoint.longitude) : null}
+            pace7dayKm={pace7dayKm}
           />
         </div>
         {sidebarVisible && (
