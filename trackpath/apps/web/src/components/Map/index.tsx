@@ -104,7 +104,7 @@ interface MapProps {
   isAdmin: boolean;
 }
 
-function ATTrailLayer() {
+function ATTrailLayer({ topo }: { topo: boolean }) {
   const [trailCoords, setTrailCoords] = useState<[number, number][]>([]);
 
   useEffect(() => {
@@ -119,7 +119,7 @@ function ATTrailLayer() {
   return (
     <Polyline
       positions={trailCoords}
-      pathOptions={{ color: colors.trail, weight: 3, opacity: 0.7 }}
+      pathOptions={{ color: topo ? '#ff3daa' : colors.trail, weight: topo ? 2.5 : 3, opacity: topo ? 0.85 : 0.7 }}
     />
   );
 }
@@ -441,7 +441,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
           attribution="&copy; OpenStreetMap contributors"
         />
       )}
-      {layers.atTrail && <ATTrailLayer />}
+      {layers.atTrail && <ATTrailLayer topo={layers.tileStyle === 'topo'} />}
       <HighlightsLayer layers={layers} onHighlightTap={onHighlightTap} onHighlightClose={onHighlightClose} trailSegment={trailSegment} />
 
       {/* Trail endpoints */}
