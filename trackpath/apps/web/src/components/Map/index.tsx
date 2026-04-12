@@ -267,7 +267,7 @@ function LocateButton() {
 
 const AMICALOLA_FALLS: [number, number] = [34.5590, -84.1946];
 const FART_WALK_MS = 15_000;    // normal sasquatch duration
-const FART_DURATION_MS = 7_500; // fart duration
+const FART_DURATION_MS = 25_000; // fart duration
 const FART_CYCLE_MS = FART_WALK_MS + FART_DURATION_MS;
 
 function getSasquatchGif(fart: boolean): string {
