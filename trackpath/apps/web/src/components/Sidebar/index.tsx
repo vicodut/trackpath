@@ -491,7 +491,7 @@ function MobileAddDrawer({ snap, setSnap, onAddPoint, onAddSuccess, onFormToggle
       open
       onOpenChange={(open) => { if (!open) handleClose(); }}
       modal={false}
-      snapPoints={[0.45, 0.85]}
+      snapPoints={[0.45, 0.85, 1]}
       activeSnapPoint={snap}
       setActiveSnapPoint={setSnap}
     >

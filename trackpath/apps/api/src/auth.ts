@@ -19,6 +19,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     "http://localhost:5173",
     process.env.BETTER_AUTH_URL ?? "",
+    ...(process.env.TRUSTED_ORIGINS ? process.env.TRUSTED_ORIGINS.split(',').map(s => s.trim()) : []),
   ].filter(Boolean),
   socialProviders: githubId && githubSecret ? {
     github: {
