@@ -229,7 +229,7 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete }: {
 }) {
   const [name, setName] = useState('vico');
   const [message, setMessage] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
+  const [isPublic, setIsPublic] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -257,7 +257,7 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete }: {
         />
         <textarea
           className={styles.cheersTextarea}
-          placeholder="Send Maurice some motivation! 💪"
+          placeholder="Send Vico some motivation! 💪"
           value={message}
           onChange={e => setMessage(e.target.value)}
           rows={2}
