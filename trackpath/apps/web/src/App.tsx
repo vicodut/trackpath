@@ -12,6 +12,7 @@ const GearPage = lazy(() => import("./components/GearPage").then(m => ({ default
 const TrailLogPage = lazy(() => import("./components/TrailLogPage").then(m => ({ default: m.TrailLogPage })));
 const Blog = lazy(() => import("./components/Blog").then(m => ({ default: m.Blog })));
 const PollsPage = lazy(() => import("./components/PollsPage").then(m => ({ default: m.PollsPage })));
+const ResourcesPage = lazy(() => import("./components/ResourcesPage").then(m => ({ default: m.ResourcesPage })));
 import { LocationBanner } from "./components/LocationBanner";
 import { PoopRain } from "./components/PoopRain";
 import type { LayerVisibility } from "./components/LayerToggle";
@@ -34,7 +35,7 @@ export function App() {
   const { isAdmin } = useAdmin();
   const { activities: stravaActivities, connect: stravaConnect, syncActivities: stravaSync } = useStrava();
   const { polls, suggestions, vote: votePoll, create: createPoll, close: closePoll, remove: deletePoll, suggest: suggestPoll, loadSuggestions, accept: acceptSuggestion, reject: rejectSuggestion } = usePolls();
-  const { showAdmin, showStats, showTrailLog, showBlog, showGear, showPolls, openAdmin, openStats, openTrailLog, openBlog, openGear, openPolls, closeModal } = useModals();
+  const { showAdmin, showStats, showTrailLog, showBlog, showGear, showPolls, showResources, openAdmin, openStats, openTrailLog, openBlog, openGear, openPolls, openResources, closeModal } = useModals();
   const { formOpen, setFormOpen, pickedCoords, sidebarVisible, setSidebarVisible, handleMapClick, handleLongPress, handleSubmit, handleSuccess, openForm } = useAddPoint(addPoint, isAdmin);
 
   const [poopRain, setPoopRain] = useState(false);
@@ -220,6 +221,7 @@ export function App() {
         onBlog={openBlog}
         onGear={openGear}
         onPolls={openPolls}
+        onResources={openResources}
       />
       <div className="main-container">
         <div className="map-wrapper">
@@ -333,6 +335,12 @@ export function App() {
         )}
         {showBlog && <Blog onClose={closeModal} />}
         {showGear && <GearPage isAdmin={isAdmin} onClose={closeModal} />}
+        {showResources && (
+          <ResourcesPage
+            trailProgressKm={trailProgressKm}
+            onClose={closeModal}
+          />
+        )}
         {showPolls && (
           <PollsPage
             polls={polls}
