@@ -608,6 +608,12 @@
   cursor: pointer;
 }
 
+.cheersPublicLabel input[type="checkbox"] {
+  accent-color: var(--secondary);
+  width: 14px;
+  height: 14px;
+}
+
 .cheersList {
   display: flex;
   flex-direction: column;

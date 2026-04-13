@@ -227,7 +227,7 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete }: {
   onSubmit?: (name: string, message: string, isPublic: boolean) => Promise<boolean>;
   onDelete?: (id: number) => void;
 }) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState('vico');
   const [message, setMessage] = useState('');
   const [isPublic, setIsPublic] = useState(true);
   const [sending, setSending] = useState(false);
