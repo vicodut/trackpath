@@ -46,6 +46,7 @@ interface SidebarProps {
   cheers?: Cheer[];
   onSubmitCheer?: (name: string, message: string, isPublic: boolean) => Promise<boolean>;
   onDeleteCheer?: (id: number) => void;
+  onOpenCheers?: () => void;
 }
 
 function SkeletonCards() {
@@ -221,17 +222,28 @@ function PollsSection({
   );
 }
 
-function CheersSection({ cheers, isAdmin, onSubmit, onDelete }: {
+const CHEER_NAME_KEY = 'trackpath:cheer-name';
+
+function CheersSection({ cheers, isAdmin, onSubmit, onDelete, onSeeAll }: {
   cheers: Cheer[];
   isAdmin: boolean;
   onSubmit?: (name: string, message: string, isPublic: boolean) => Promise<boolean>;
   onDelete?: (id: number) => void;
+  onSeeAll?: () => void;
 }) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(() => localStorage.getItem(CHEER_NAME_KEY) ?? '');
   const [message, setMessage] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const todayCheers = cheers.filter(c => c.createdAt.slice(0, 10) === today);
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    try { localStorage.setItem(CHEER_NAME_KEY, val); } catch { /* ignore */ }
+  };
 
   const handleSubmit = async () => {
     if (!name.trim() || !message.trim()) return;
@@ -252,7 +264,7 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete }: {
           className={styles.pollFormInput}
           placeholder="Your name"
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={e => handleNameChange(e.target.value)}
           maxLength={50}
         />
         <textarea
@@ -280,15 +292,15 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete }: {
         </button>
       </div>
 
-      {cheers.length > 0 && (
+      {todayCheers.length > 0 && (
         <div className={styles.cheersList}>
-          {cheers.map(c => (
+          {todayCheers.map(c => (
             <div key={c.id} className={styles.cheerItem}>
               <div className={styles.cheerHeader}>
                 <span className={styles.cheerName}>{c.name}</span>
                 {isAdmin && !c.isPublic && <span className={styles.cheerPrivate}>🔒 private</span>}
                 <span className={styles.cheerTime}>
-                  {new Date(c.createdAt).toLocaleDateString('default', { month: 'short', day: 'numeric' })}
+                  {new Date(c.createdAt).toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' })}
                 </span>
                 {isAdmin && (
                   <button className={styles.pollDeleteBtn} onClick={() => onDelete?.(c.id)}>✕</button>
@@ -299,6 +311,11 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete }: {
           ))}
         </div>
       )}
+      {cheers.length > todayCheers.length && (
+        <button className={styles.pollNewBtn} style={{ marginTop: 6, alignSelf: 'flex-end' }} onClick={onSeeAll}>
+          See all ({cheers.length}) →
+        </button>
+      )}
     </div>
   );
 }
@@ -307,7 +324,7 @@ function SidebarContent({
   points, loading, totalDistanceKm, totalElevationGain, trailProgressKm, stravaActivities,
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, onAddSuccess, pickedCoords, isAdmin, forceFormOpen,
   polls, onVote, onCreatePoll, onClosePoll, onDeletePoll,
-  cheers, onSubmitCheer, onDeleteCheer,
+  cheers, onSubmitCheer, onDeleteCheer, onOpenCheers,
 }: SidebarProps) {
   const [activeFilters, setActiveFilters] = useState(new Set());
   const { fmtDist } = useUnit();
@@ -366,6 +383,7 @@ function SidebarContent({
         isAdmin={isAdmin}
         onSubmit={onSubmitCheer}
         onDelete={onDeleteCheer}
+        onSeeAll={onOpenCheers}
       />
       {trailProgressKm != null && trailProgressKm > 0 && (
         <TrailProgress trailProgressKm={trailProgressKm} />
