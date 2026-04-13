@@ -457,15 +457,18 @@
 .drawerHandle {
   display: flex;
   justify-content: center;
-  padding: 10px 0 6px;
+  align-items: center;
+  padding: 16px 0 12px;
   flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
 }
 
 .drawerHandleBar {
-  width: 40px;
-  height: 3px;
+  width: 64px;
+  height: 5px;
   background: var(--outline-variant);
-  border-radius: 0;
+  border-radius: 3px;
 }
 
 /* Mobile add form */
@@ -479,6 +482,8 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
+  cursor: grab;
+  touch-action: none;
 }
 
 .mobileAddTitle {
