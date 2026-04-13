@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Drawer } from 'vaul';
 import type { TrackingPoint, StravaActivity } from '../../types';
 import type { Poll } from '../../api/polls';
+import type { Cheer } from '../../api/cheers';
 import { TAGS, TAG_EMOJIS } from '../../lib/constants';
 import { AddPointForm } from '../AddPointForm';
 import { PointCard } from '../PointCard';
@@ -42,6 +43,9 @@ interface SidebarProps {
   onCreatePoll?: (question: string, options: string[]) => void;
   onClosePoll?: (pollId: number) => void;
   onDeletePoll?: (pollId: number) => void;
+  cheers?: Cheer[];
+  onSubmitCheer?: (name: string, message: string, isPublic: boolean) => Promise<boolean>;
+  onDeleteCheer?: (id: number) => void;
 }
 
 function SkeletonCards() {
@@ -217,10 +221,93 @@ function PollsSection({
   );
 }
 
+function CheersSection({ cheers, isAdmin, onSubmit, onDelete }: {
+  cheers: Cheer[];
+  isAdmin: boolean;
+  onSubmit?: (name: string, message: string, isPublic: boolean) => Promise<boolean>;
+  onDelete?: (id: number) => void;
+}) {
+  const [name, setName] = useState('');
+  const [message, setMessage] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !message.trim()) return;
+    setSending(true);
+    const ok = await onSubmit?.(name.trim(), message.trim(), isPublic);
+    setSending(false);
+    if (ok) { setName(''); setMessage(''); setSent(true); setTimeout(() => setSent(false), 3000); }
+  };
+
+  return (
+    <div className={styles.cheersSection}>
+      <div className={styles.pollHeader}>
+        <span className={styles.pollHeaderLabel}>🥾 CHEERS</span>
+      </div>
+
+      <div className={styles.cheersForm}>
+        <input
+          className={styles.pollFormInput}
+          placeholder="Your name"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          maxLength={50}
+        />
+        <textarea
+          className={styles.cheersTextarea}
+          placeholder="Send Maurice some motivation! 💪"
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          rows={2}
+          maxLength={280}
+        />
+        <label className={styles.cheersPublicLabel}>
+          <input
+            type="checkbox"
+            checked={isPublic}
+            onChange={e => setIsPublic(e.target.checked)}
+          />
+          Make it public
+        </label>
+        <button
+          className={styles.pollVoteBtn}
+          onClick={handleSubmit}
+          disabled={!name.trim() || !message.trim() || sending}
+        >
+          {sent ? '🎉 Sent!' : sending ? 'Sending…' : 'Send Cheers →'}
+        </button>
+      </div>
+
+      {cheers.length > 0 && (
+        <div className={styles.cheersList}>
+          {cheers.map(c => (
+            <div key={c.id} className={styles.cheerItem}>
+              <div className={styles.cheerHeader}>
+                <span className={styles.cheerName}>{c.name}</span>
+                {isAdmin && !c.isPublic && <span className={styles.cheerPrivate}>🔒 private</span>}
+                <span className={styles.cheerTime}>
+                  {new Date(c.createdAt).toLocaleDateString('default', { month: 'short', day: 'numeric' })}
+                </span>
+                {isAdmin && (
+                  <button className={styles.pollDeleteBtn} onClick={() => onDelete?.(c.id)}>✕</button>
+                )}
+              </div>
+              <p className={styles.cheerMessage}>"{c.message}"</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SidebarContent({
   points, loading, totalDistanceKm, totalElevationGain, trailProgressKm, stravaActivities,
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, onAddSuccess, pickedCoords, isAdmin, forceFormOpen,
   polls, onVote, onCreatePoll, onClosePoll, onDeletePoll,
+  cheers, onSubmitCheer, onDeleteCheer,
 }: SidebarProps) {
   const [activeFilters, setActiveFilters] = useState(new Set());
   const { fmtDist } = useUnit();
@@ -274,6 +361,12 @@ function SidebarContent({
           onDeletePoll={onDeletePoll}
         />
       )}
+      <CheersSection
+        cheers={cheers ?? []}
+        isAdmin={isAdmin}
+        onSubmit={onSubmitCheer}
+        onDelete={onDeleteCheer}
+      />
       {trailProgressKm != null && trailProgressKm > 0 && (
         <TrailProgress trailProgressKm={trailProgressKm} />
       )}

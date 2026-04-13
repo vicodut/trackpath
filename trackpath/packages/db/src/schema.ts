@@ -141,6 +141,14 @@ export const pollSuggestions = pgTable('poll_suggestions', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const cheers = pgTable('cheers', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  message: text('message').notNull(),
+  isPublic: boolean('is_public').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),

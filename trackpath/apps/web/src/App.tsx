@@ -23,6 +23,7 @@ import { usePoints } from "./hooks/usePoints";
 import { useAdmin } from "./hooks/useAdmin";
 import { useStrava } from "./hooks/useStrava";
 import { usePolls } from "./hooks/usePolls";
+import { useCheers } from "./hooks/useCheers";
 import { useModals } from "./hooks/useModals";
 import { useAddPoint } from "./hooks/useAddPoint";
 import type { TrailSegment } from "./hooks/useTrailDistance";
@@ -35,6 +36,7 @@ export function App() {
   const { isAdmin } = useAdmin();
   const { activities: stravaActivities, connect: stravaConnect, syncActivities: stravaSync } = useStrava();
   const { polls, suggestions, vote: votePoll, create: createPoll, close: closePoll, remove: deletePoll, suggest: suggestPoll, loadSuggestions, accept: acceptSuggestion, reject: rejectSuggestion } = usePolls();
+  const { cheers, submit: submitCheer, remove: deleteCheer } = useCheers(isAdmin);
   const { showAdmin, showStats, showTrailLog, showBlog, showGear, showPolls, showResources, openAdmin, openStats, openTrailLog, openBlog, openGear, openPolls, openResources, closeModal } = useModals();
   const { formOpen, setFormOpen, pickedCoords, sidebarVisible, setSidebarVisible, handleMapClick, handleLongPress, handleSubmit, handleSuccess, openForm } = useAddPoint(addPoint, isAdmin);
 
@@ -289,6 +291,9 @@ export function App() {
             onCreatePoll={createPoll}
             onClosePoll={closePoll}
             onDeletePoll={deletePoll}
+            cheers={cheers}
+            onSubmitCheer={submitCheer}
+            onDeleteCheer={deleteCheer}
           />
         )}
       </div>

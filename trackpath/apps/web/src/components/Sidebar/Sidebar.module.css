@@ -568,3 +568,96 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* ── Cheers ─────────────────────────────────────────────────────────────────── */
+
+.cheersSection {
+  border-bottom: var(--ghost-border);
+  padding: 10px 14px 12px;
+}
+
+.cheersForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cheersTextarea {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  background: var(--surface-container-highest);
+  border: var(--ghost-border);
+  color: var(--on-surface);
+  padding: 6px 8px;
+  resize: none;
+  border-radius: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cheersTextarea:focus { outline: none; border-color: var(--primary); }
+
+.cheersPublicLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-headline);
+  font-size: 0.6rem;
+  color: var(--outline);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.cheersList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.cheerItem {
+  background: var(--surface-container);
+  border: var(--ghost-border);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cheerHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cheerName {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.cheerPrivate {
+  font-family: var(--font-headline);
+  font-size: 0.55rem;
+  color: var(--outline);
+  letter-spacing: 0.05em;
+}
+
+.cheerTime {
+  font-family: var(--font-headline);
+  font-size: 0.55rem;
+  color: var(--outline);
+  margin-left: auto;
+  letter-spacing: 0.05em;
+}
+
+.cheerMessage {
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+  font-style: italic;
+  line-height: 1.4;
+  margin: 0;
+}

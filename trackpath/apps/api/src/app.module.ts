@@ -11,6 +11,7 @@ import { WeatherModule } from './weather/weather.module.js';
 import { GearModule } from './gear/gear.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { PollsModule } from './polls/polls.module.js';
+import { CheersModule } from './cheers/cheers.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -29,6 +30,7 @@ import { HealthController } from './health/health.controller.js';
     GearModule,
     AdminModule,
     PollsModule,
+    CheersModule,
   ],
   controllers: [HealthController],
 })
