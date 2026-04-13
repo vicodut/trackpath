@@ -54,23 +54,22 @@ export function ResourcesPage({ trailProgressKm, onClose }: ResourcesPageProps) 
           <div key={r.id} className={styles.card}>
             <span className={styles.cardTitle}>{r.title}</span>
             <p className={styles.cardDesc}>{r.desc}</p>
+            {r.id === 'atforecast' && miles == null && (
+              <span className={styles.noMile}>No position yet — trip hasn't started</span>
+            )}
             <div className={styles.cardActions}>
-              {r.id === 'atforecast' && (
-                miles != null ? (
-                  <a
-                    className={styles.btnPrimary}
-                    href={`${r.url}nearest_shelter?nobo_mile=${miles}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    ⛅ Forecast at my location ({miles} mi)
-                  </a>
-                ) : (
-                  <span className={styles.noMile}>No position yet — trip hasn't started</span>
-                )
+              {r.id === 'atforecast' && miles != null && (
+                <a
+                  className={styles.btnPrimary}
+                  href={`${r.url}nearest_shelter?nobo_mile=${miles}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  ⛅ My location ({miles} mi)
+                </a>
               )}
               <a
-                className={r.id === 'atforecast' ? styles.btnGhost : styles.btnPrimary}
+                className={r.id === 'atforecast' && miles != null ? styles.btnGhost : styles.btnPrimary}
                 href={r.url}
                 target="_blank"
                 rel="noopener noreferrer"
