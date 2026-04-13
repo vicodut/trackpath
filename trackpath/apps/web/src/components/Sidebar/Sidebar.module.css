@@ -222,6 +222,20 @@
   cursor: pointer;
 }
 
+.pollVoteBtn {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 6px 12px;
+  background: var(--secondary);
+  color: var(--on-secondary);
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.pollVoteBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* Trail progress hero */
 .trailProgress {
   padding: 10px 16px 8px;
@@ -283,8 +297,15 @@
   border-left: var(--ghost-border);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   flex-shrink: 0;
+  transition: width 0.25s ease;
+}
+
+.sidebarHidden {
+  width: 0;
+  border-left: none;
 }
 
 .sidebarHeader {
@@ -414,7 +435,6 @@
 /* Points list */
 .pointsList {
   flex: 1;
-  overflow-y: auto;
   padding: 8px;
 }
 
@@ -619,6 +639,8 @@
   flex-direction: column;
   gap: 4px;
   margin-top: 10px;
+  max-height: 198px;
+  overflow-y: auto;
 }
 
 .cheerItem {

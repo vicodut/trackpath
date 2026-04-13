@@ -24,6 +24,7 @@ const TAG_FILTERS = [
 ] as const;
 
 interface SidebarProps {
+  visible?: boolean;
   points: TrackingPoint[];
   loading?: boolean;
   totalDistanceKm: number;
@@ -250,7 +251,7 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete, onSeeAll }: {
     setSending(true);
     const ok = await onSubmit?.(name.trim(), message.trim(), isPublic);
     setSending(false);
-    if (ok) { setName(''); setMessage(''); setSent(true); setTimeout(() => setSent(false), 3000); }
+    if (ok) { setMessage(''); setSent(true); setTimeout(() => setSent(false), 3000); }
   };
 
   return (
@@ -555,7 +556,7 @@ export function Sidebar(props: SidebarProps) {
 
   if (!isMobile) {
     return (
-      <div className={styles.sidebar}>
+      <div className={`${styles.sidebar} ${props.visible === false ? styles.sidebarHidden : ''}`}>
         <SidebarContent {...props} />
       </div>
     );

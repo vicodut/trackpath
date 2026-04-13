@@ -225,6 +225,7 @@ export function App() {
         onGear={openGear}
         onPolls={openPolls}
         onResources={openResources}
+        onCheers={openCheers}
       />
       <div className="main-container">
         <div className="map-wrapper">
@@ -271,33 +272,32 @@ export function App() {
             pace7dayKm={pace7dayKm}
           />
         </div>
-        {sidebarVisible && (
-          <Sidebar
-            points={points}
-            loading={loading}
-            totalDistanceKm={totalDistanceKm}
-            totalElevationGain={totalElevationGain}
-            trailProgressKm={trailProgressKm}
-            stravaActivities={stravaActivities}
-            onSelectPoint={setSelectedPoint}
-            onDeletePoint={removePoint}
-            onAddPoint={handleSubmit}
-            onFormToggle={setFormOpen}
-            onAddSuccess={handleSuccess}
-            pickedCoords={pickedCoords}
-            isAdmin={isAdmin}
-            forceFormOpen={formOpen}
-            polls={polls.slice(0, 1)}
-            onVote={votePoll}
-            onCreatePoll={createPoll}
-            onClosePoll={closePoll}
-            onDeletePoll={deletePoll}
-            cheers={cheers}
-            onSubmitCheer={submitCheer}
-            onDeleteCheer={deleteCheer}
-            onOpenCheers={openCheers}
-          />
-        )}
+        <Sidebar
+          visible={sidebarVisible}
+          points={points}
+          loading={loading}
+          totalDistanceKm={totalDistanceKm}
+          totalElevationGain={totalElevationGain}
+          trailProgressKm={trailProgressKm}
+          stravaActivities={stravaActivities}
+          onSelectPoint={setSelectedPoint}
+          onDeletePoint={removePoint}
+          onAddPoint={handleSubmit}
+          onFormToggle={setFormOpen}
+          onAddSuccess={handleSuccess}
+          pickedCoords={pickedCoords}
+          isAdmin={isAdmin}
+          forceFormOpen={formOpen}
+          polls={polls.slice(0, 1)}
+          onVote={votePoll}
+          onCreatePoll={createPoll}
+          onClosePoll={closePoll}
+          onDeletePoll={deletePoll}
+          cheers={cheers}
+          onSubmitCheer={submitCheer}
+          onDeleteCheer={deleteCheer}
+          onOpenCheers={openCheers}
+        />
       </div>
       <StatusBar message={status.message} type={status.type} />
       <Suspense fallback={null}>
@@ -347,6 +347,7 @@ export function App() {
             cheers={cheers}
             isAdmin={isAdmin}
             onDelete={deleteCheer}
+            onSubmit={submitCheer}
             onClose={closeModal}
           />
         )}
