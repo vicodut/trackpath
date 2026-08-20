@@ -1,4 +1,5 @@
 import {
+  IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
@@ -28,4 +29,15 @@ export class ManualPointDto {
   @IsOptional()
   @IsString()
   tag?: string | null;
+}
+
+/** Optional date range for backfill syncs — YYYY-MM-DD or full ISO8601. */
+export class SyncRangeDto {
+  @IsOptional()
+  @IsISO8601()
+  startDate?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  endDate?: string;
 }

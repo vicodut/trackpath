@@ -23,8 +23,8 @@ interface AdminStatus {
 interface AdminPageProps {
   onClose: () => void;
   onStravaConnect: () => void;
-  onStravaSync: () => void;
-  onGarminSync: () => void;
+  onStravaSync: (startDate?: string, endDate?: string) => void;
+  onGarminSync: (startDate?: string, endDate?: string) => void;
   syncing: boolean;
   polls: Poll[];
   onCreatePoll: (question: string, options: string[]) => void;
@@ -40,6 +40,10 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
   const [status, setStatus] = useState<AdminStatus | null>(null);
   const [syncingGarmin, setSyncingGarmin] = useState(false);
   const [syncingStrava, setSyncingStrava] = useState(false);
+  const [garminStartDate, setGarminStartDate] = useState('');
+  const [garminEndDate, setGarminEndDate] = useState('');
+  const [stravaStartDate, setStravaStartDate] = useState('');
+  const [stravaEndDate, setStravaEndDate] = useState('');
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
   const canSubmitPoll = pollQuestion.trim().length > 0 && pollOptions.filter(o => o.trim()).length >= 2;
@@ -99,6 +103,37 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
           <button className="primary" onClick={async () => { setSyncingGarmin(true); await onGarminSync(); setSyncingGarmin(false); loadStatus(); }} disabled={syncingGarmin}>
             {syncingGarmin ? 'Syncing...' : 'Sync Now'}
           </button>
+          <div className={styles.syncRangeForm}>
+            <div className={styles.syncRangeInputs}>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={garminStartDate}
+                max={garminEndDate || undefined}
+                onChange={e => setGarminStartDate(e.target.value)}
+              />
+              <span className={styles.syncRangeSep}>to</span>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={garminEndDate}
+                min={garminStartDate || undefined}
+                onChange={e => setGarminEndDate(e.target.value)}
+              />
+            </div>
+            <button
+              className={styles.pollActionBtn}
+              disabled={!garminStartDate || !garminEndDate || syncingGarmin}
+              onClick={async () => {
+                setSyncingGarmin(true);
+                await onGarminSync(garminStartDate, garminEndDate);
+                setSyncingGarmin(false);
+                loadStatus();
+              }}
+            >
+              Fetch Range
+            </button>
+          </div>
         </div>
 
         <div className={styles.adminSection}>
@@ -134,9 +169,42 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
             </div>
           </div>
           {status.strava.connected ? (
-            <button className="primary" onClick={async () => { setSyncingStrava(true); await onStravaSync(); setSyncingStrava(false); loadStatus(); }} disabled={syncingStrava}>
-              {syncingStrava ? 'Syncing...' : 'Sync Now'}
-            </button>
+            <>
+              <button className="primary" onClick={async () => { setSyncingStrava(true); await onStravaSync(); setSyncingStrava(false); loadStatus(); }} disabled={syncingStrava}>
+                {syncingStrava ? 'Syncing...' : 'Sync Now'}
+              </button>
+              <div className={styles.syncRangeForm}>
+                <div className={styles.syncRangeInputs}>
+                  <input
+                    type="date"
+                    className={styles.dateInput}
+                    value={stravaStartDate}
+                    max={stravaEndDate || undefined}
+                    onChange={e => setStravaStartDate(e.target.value)}
+                  />
+                  <span className={styles.syncRangeSep}>to</span>
+                  <input
+                    type="date"
+                    className={styles.dateInput}
+                    value={stravaEndDate}
+                    min={stravaStartDate || undefined}
+                    onChange={e => setStravaEndDate(e.target.value)}
+                  />
+                </div>
+                <button
+                  className={styles.pollActionBtn}
+                  disabled={!stravaStartDate || !stravaEndDate || syncingStrava}
+                  onClick={async () => {
+                    setSyncingStrava(true);
+                    await onStravaSync(stravaStartDate, stravaEndDate);
+                    setSyncingStrava(false);
+                    loadStatus();
+                  }}
+                >
+                  Fetch Range
+                </button>
+              </div>
+            </>
           ) : (
             <button className="primary" onClick={onStravaConnect}>
               Connect Strava

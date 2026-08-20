@@ -125,9 +125,9 @@ export function App() {
     try { localStorage.setItem('trackpath:layers', JSON.stringify(next)); } catch { /* ignore */ }
   }, []);
 
-  const handleSync = useCallback(async () => {
+  const handleSync = useCallback(async (startDate?: string, endDate?: string) => {
     setSyncing(true);
-    await sync();
+    await sync(startDate, endDate);
     setSyncing(false);
   }, [sync]);
 

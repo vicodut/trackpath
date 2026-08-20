@@ -32,6 +32,48 @@ const FETCH_TIMEOUT_MS = 30_000;
 const MAPSHARE_BASE = 'https://share.garmin.com/Feed/Share';
 const INTERVAL_NAME = 'garmin-auto-sync';
 
+/** Normalises a YYYY-MM-DD (or full ISO8601) date to the start of that UTC day. */
+function toUtcDayStart(date: string): string {
+  return date.length === 10 ? `${date}T00:00:00Z` : date;
+}
+
+/** Normalises a YYYY-MM-DD (or full ISO8601) date to the end of that UTC day. */
+function toUtcDayEnd(date: string): string {
+  return date.length === 10 ? `${date}T23:59:59Z` : date;
+}
+
+/**
+ * Garmin's "Time UTC" extended-data field is formatted as
+ * "M/D/YYYY H:MM:SS AM/PM" (no zero-padding, 12-hour clock) and represents
+ * a UTC instant despite carrying no timezone marker. Passing that string
+ * straight to `new Date()` would have Node parse it as local time — and
+ * storing it as-is (the previous behaviour) made lexicographic sort wrong,
+ * since "4" sorts after "10" as a string ("5/4/2026" > "5/10/2026").
+ * Parse the components explicitly and re-serialise as zero-padded ISO8601
+ * so both chronological and string ordering agree.
+ */
+const GARMIN_TIME_UTC_RE =
+  /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)$/i;
+
+function parseGarminTimeUtc(raw: string): string {
+  const match = GARMIN_TIME_UTC_RE.exec(raw.trim());
+  if (!match) return raw;
+
+  const [, month, day, year, hour12, minute, second, meridiem] = match;
+  let hour = parseInt(hour12, 10) % 12;
+  if (meridiem.toUpperCase() === 'PM') hour += 12;
+
+  const utcMs = Date.UTC(
+    parseInt(year, 10),
+    parseInt(month, 10) - 1,
+    parseInt(day, 10),
+    hour,
+    parseInt(minute, 10),
+    parseInt(second, 10),
+  );
+  return new Date(utcMs).toISOString();
+}
+
 @Injectable()
 export class GarminService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GarminService.name);
@@ -183,14 +225,17 @@ ${trkpts}
   // MapShare sync
   // ---------------------------------------------------------------------------
 
-  async syncFromMapShare(): Promise<{ synced: number; total: number; points: TrackingPoint[] }> {
+  async syncFromMapShare(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<{ synced: number; total: number; points: TrackingPoint[] }> {
     if (!this.mapshareId) {
       throw new BadRequestException('MAPSHARE_ID environment variable not set');
     }
 
     let fetched: NewTrackingPoint[];
     try {
-      fetched = await this.fetchGarminPoints(this.mapshareId);
+      fetched = await this.fetchGarminPoints(this.mapshareId, startDate, endDate);
     } catch (err) {
       const msg = (err as Error).message;
       this.addSyncLog(`Manual sync error: ${msg}`);
@@ -200,7 +245,8 @@ ${trkpts}
     const newCount = await this.insertPoints(fetched);
     const all = await this.getAllPoints();
 
-    this.addSyncLog(`Manual sync: ${newCount} new points (${all.length} total)`);
+    const rangeLabel = startDate || endDate ? ` (${startDate ?? '…'} to ${endDate ?? '…'})` : '';
+    this.addSyncLog(`Manual sync${rangeLabel}: ${newCount} new points (${all.length} total)`);
     if (newCount > 0) this.pointsChanged$.next();
     return { synced: newCount, total: all.length, points: all };
   }
@@ -239,14 +285,25 @@ ${trkpts}
    * The device clock reflects when the GPS fix was recorded, not when the
    * satellite uplink delivered it — critical for correct track ordering when
    * points arrive in bursts after connectivity gaps.
+   *
+   * startDate/endDate (when given) are sent as the feed's "d1"/"d2" query
+   * params, restricting the feed to a date range for manual backfill syncs.
    */
-  private async fetchGarminPoints(mapshareId: string): Promise<NewTrackingPoint[]> {
+  private async fetchGarminPoints(
+    mapshareId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<NewTrackingPoint[]> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
+    const url = new URL(`${MAPSHARE_BASE}/${mapshareId}`);
+    if (startDate) url.searchParams.set('d1', toUtcDayStart(startDate));
+    if (endDate) url.searchParams.set('d2', toUtcDayEnd(endDate));
+
     let xml: string;
     try {
-      const res = await fetch(`${MAPSHARE_BASE}/${mapshareId}`, {
+      const res = await fetch(url, {
         signal: controller.signal,
       });
       if (!res.ok) throw new Error(`Garmin feed returned HTTP ${res.status}`);
@@ -289,7 +346,7 @@ ${trkpts}
 
       const elevation = ext['Elevation'] != null ? parseFloat(ext['Elevation']) : null;
       const finalAlt = alt != null && !isNaN(alt) ? alt : elevation;
-      const timestamp = ext['Time UTC'] ?? new Date().toISOString();
+      const timestamp = ext['Time UTC'] ? parseGarminTimeUtc(ext['Time UTC']) : new Date().toISOString();
       const garminId = ext['Id'] ?? `${lat}-${lng}-${timestamp}`;
 
       const messageText = ext['Text'] ?? pm.description ?? null;

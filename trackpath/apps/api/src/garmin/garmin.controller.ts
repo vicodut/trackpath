@@ -18,7 +18,7 @@ import { Observable } from 'rxjs';
 import { Throttle } from '@nestjs/throttler';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { GarminService } from './garmin.service.js';
-import { ManualPointDto } from './garmin.dto.js';
+import { ManualPointDto, SyncRangeDto } from './garmin.dto.js';
 
 @Controller()
 export class GarminController {
@@ -30,13 +30,16 @@ export class GarminController {
     return this.garminService.getAllPoints();
   }
 
-  /** Triggers a manual pull from the Garmin MapShare KML feed. */
+  /**
+   * Triggers a manual pull from the Garmin MapShare KML feed.
+   * Accepts an optional startDate/endDate to backfill a specific date range.
+   */
   @Post('sync')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AdminGuard)
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  manualSync() {
-    return this.garminService.syncFromMapShare();
+  manualSync(@Body() body: SyncRangeDto) {
+    return this.garminService.syncFromMapShare(body.startDate, body.endDate);
   }
 
   /** Creates a manual waypoint (prefixed "manual-" to distinguish from device points). */

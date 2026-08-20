@@ -64,10 +64,13 @@ export function usePoints() {
     };
   }, [applyPoints]);
 
-  const sync = useCallback(async () => {
-    setStatus({ message: 'Syncing with inReach...', type: 'syncing' });
+  const sync = useCallback(async (startDate?: string, endDate?: string) => {
+    setStatus({
+      message: startDate || endDate ? 'Fetching date range from inReach...' : 'Syncing with inReach...',
+      type: 'syncing',
+    });
     try {
-      const data = await api.syncPoints();
+      const data = await api.syncPoints(startDate, endDate);
       const safePoints = Array.isArray(data?.points) ? data.points : [];
       const lastTime = safePoints.length > 0
         ? new Date(safePoints[safePoints.length - 1].timestamp).toLocaleString()

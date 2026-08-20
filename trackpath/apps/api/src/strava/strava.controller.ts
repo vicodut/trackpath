@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Body,
   Query,
   Redirect,
   HttpCode,
@@ -12,6 +13,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { StravaService } from './strava.service.js';
+import { SyncRangeDto } from './strava.dto.js';
 
 @Controller('strava')
 export class StravaController {
@@ -48,13 +50,16 @@ export class StravaController {
     return this.stravaService.getActivities();
   }
 
-  /** Triggers a manual Strava sync. Admin-only. */
+  /**
+   * Triggers a manual Strava sync. Admin-only.
+   * Accepts an optional startDate/endDate to backfill a specific date range.
+   */
   @Post('sync')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AdminGuard)
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  async manualSync() {
-    const result = await this.stravaService.syncActivities();
+  async manualSync(@Body() body: SyncRangeDto) {
+    const result = await this.stravaService.syncActivities(body.startDate, body.endDate);
     if ('error' in result) throw new BadRequestException(result.error);
     const activities = await this.stravaService.getActivities();
     return { ...result, activities };

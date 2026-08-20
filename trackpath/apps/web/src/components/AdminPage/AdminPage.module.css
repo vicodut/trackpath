@@ -72,6 +72,41 @@
 .statusOk { color: var(--primary); }
 .statusOff { color: var(--outline); }
 
+.syncRangeForm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.syncRangeInputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.dateInput {
+  font-family: var(--font-headline);
+  font-size: 0.7rem;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: 4px;
+  color: var(--on-surface);
+  width: 100%;
+  box-sizing: border-box;
+}
+.dateInput:focus { outline: none; border-color: var(--primary); }
+
+.syncRangeSep {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  color: var(--outline);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
 .adminLogs {
   max-height: 300px;
   overflow-y: auto;

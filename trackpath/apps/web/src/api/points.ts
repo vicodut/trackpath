@@ -26,8 +26,12 @@ export async function deletePoint(id: number): Promise<void> {
   if (res.status === 401) throw new Error('Please log in to delete points');
 }
 
-export async function syncPoints(): Promise<SyncResult> {
-  const res = await fetch('/api/sync', { method: 'POST' });
+export async function syncPoints(startDate?: string, endDate?: string): Promise<SyncResult> {
+  const res = await fetch('/api/sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ startDate, endDate }),
+  });
   if (res.status === 401) throw new Error('Please log in to sync');
   return res.json();
 }

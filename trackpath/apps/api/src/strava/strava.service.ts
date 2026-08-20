@@ -19,6 +19,15 @@ const STRAVA_API = 'https://www.strava.com/api/v3';
 /** Refresh the token 5 minutes before it expires. */
 const REFRESH_BUFFER_S = 300;
 
+/**
+ * Converts a YYYY-MM-DD (or full ISO8601) date to Unix epoch seconds, used
+ * for the Strava activities endpoint's `after`/`before` range params.
+ */
+function toEpochSeconds(date: string, bound: 'start' | 'end'): number {
+  const iso = date.length === 10 ? `${date}T${bound === 'start' ? '00:00:00' : '23:59:59'}Z` : date;
+  return Math.floor(new Date(iso).getTime() / 1000);
+}
+
 @Injectable()
 export class StravaService {
   private readonly logger = new Logger(StravaService.name);
@@ -137,15 +146,25 @@ export class StravaService {
    * Fetches up to 200 activities from Strava, then fetches GPS streams for
    * any activity that doesn't already have coordinates.
    * Returns a structured result so the controller can shape the HTTP response.
+   *
+   * startDate/endDate (when given) are sent as `after`/`before` epoch-second
+   * params, restricting the fetch to a date range for manual backfill syncs.
    */
-  async syncActivities(): Promise<StravaSyncResult | { error: string }> {
+  async syncActivities(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<StravaSyncResult | { error: string }> {
     const accessToken = await this.getToken();
     if (!accessToken) return { error: 'Strava not connected' };
 
-    const activitiesRes = await fetch(
-      `${STRAVA_API}/athlete/activities?per_page=200`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
+    const url = new URL(`${STRAVA_API}/athlete/activities`);
+    url.searchParams.set('per_page', '200');
+    if (startDate) url.searchParams.set('after', String(toEpochSeconds(startDate, 'start')));
+    if (endDate) url.searchParams.set('before', String(toEpochSeconds(endDate, 'end')));
+
+    const activitiesRes = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     if (!activitiesRes.ok) {
       return { error: `Strava API error: ${activitiesRes.status}` };
     }
