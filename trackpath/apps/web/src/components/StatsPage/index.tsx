@@ -24,51 +24,22 @@ const ELEV_CHART_PADDING = { top: 20, right: 16, bottom: 36, left: 50 };
 const HIKE_START = '2026-04-15';
 const HIKE_END = '2026-07-13';
 
-function buildDailyKm(points: TrackingPoint[], stravaActivities: StravaActivity[]): Record<string, number> {
+function buildDailyKm(stravaActivities: StravaActivity[]): Record<string, number> {
   const dailyKm: Record<string, number> = {};
-
-  // Sort points by timestamp
-  const sorted = [...points].sort((a, b) =>
-    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  );
-
-  // Compute distance between consecutive points, assign to the day of the second point
-  for (let i = 1; i < sorted.length; i++) {
-    const dist = haversine(
-      sorted[i - 1].latitude, sorted[i - 1].longitude,
-      sorted[i].latitude, sorted[i].longitude,
-    );
-    // Skip unrealistic jumps (> 100km between two consecutive points)
-    if (dist > 100) continue;
-    const day = sorted[i].timestamp.slice(0, 10);
-    dailyKm[day] = (dailyKm[day] || 0) + dist;
-  }
-
-  // Add Strava activity distances
   for (const act of stravaActivities) {
     if (!act.startDate || !act.distance) continue;
     const day = act.startDate.slice(0, 10);
     dailyKm[day] = (dailyKm[day] || 0) + act.distance / 1000;
   }
-
   return dailyKm;
 }
 
-function buildDailyElev(points: TrackingPoint[]): Record<string, number> {
+function buildDailyElev(stravaActivities: StravaActivity[]): Record<string, number> {
   const dailyElev: Record<string, number> = {};
-  const sorted = [...points]
-    .filter(p => !p.garminId?.startsWith('manual-'))
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-  for (let i = 1; i < sorted.length; i++) {
-    const alt = sorted[i].altitude;
-    const prevAlt = sorted[i - 1].altitude;
-    if (alt != null && prevAlt != null) {
-      const gain = alt - prevAlt;
-      if (gain > 0 && gain < 500) {
-        const day = sorted[i].timestamp.slice(0, 10);
-        dailyElev[day] = (dailyElev[day] || 0) + gain;
-      }
-    }
+  for (const act of stravaActivities) {
+    if (!act.startDate || !act.elevationGain) continue;
+    const day = act.startDate.slice(0, 10);
+    dailyElev[day] = (dailyElev[day] || 0) + act.elevationGain;
   }
   return dailyElev;
 }
@@ -606,7 +577,7 @@ function DailyLog({ points, dailyKm, dailyElev }: {
 
     const hikeStart = new Date(HIKE_START + 'T00:00:00');
     const allDays = new Set([
-      ...Object.keys(dailyKm).filter(d => dailyKm[d] > 0 && d >= HIKE_START),
+      ...Object.keys(dailyKm).filter(d => dailyKm[d] > 0 && d >= HIKE_START && d <= HIKE_END),
     ]);
 
     return Array.from(allDays)
@@ -1290,9 +1261,21 @@ function BeerCalculator({ distanceKm }: { distanceKm: number }) {
 export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElevationGain, isAdmin, onClose }: StatsPageProps) {
   const [hoveredCell, setHoveredCell] = useState<{ date: string; km: number; x: number; y: number } | null>(null);
 
+  // Only count actual hiking activity, within the hike window — Strava also
+  // logs rides/runs/swims etc. (year-round, before and after the hike) that
+  // shouldn't feed into trail distance/elevation stats.
+  const hikeActivities = useMemo(() =>
+    stravaActivities.filter(a =>
+      a.type === 'Hike' &&
+      a.startDate != null &&
+      a.startDate.slice(0, 10) >= HIKE_START &&
+      a.startDate.slice(0, 10) <= HIKE_END,
+    ),
+  [stravaActivities]);
+
   const stats = useMemo(() => {
-    const stravaDistanceKm = stravaActivities.reduce((sum, a) => sum + ((a.distance || 0) / 1000), 0);
-    const stravaElevation = stravaActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0);
+    const stravaDistanceKm = hikeActivities.reduce((sum, a) => sum + ((a.distance || 0) / 1000), 0);
+    const stravaElevation = hikeActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0);
 
     const garminPoints = points.filter(p => !p.garminId?.startsWith('manual-'));
 
@@ -1306,31 +1289,27 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
 
     const allDates = new Set<string>();
     garminPoints.forEach(p => allDates.add(new Date(p.timestamp).toDateString()));
-    stravaActivities.forEach(a => {
+    hikeActivities.forEach(a => {
       if (a.startDate) allDates.add(new Date(a.startDate).toDateString());
     });
 
-    const combinedDist = totalDistanceKm + stravaDistanceKm;
-    const combinedElev = totalElevationGain + stravaElevation;
-    const progress = Math.min((combinedDist / AT_TOTAL_KM) * 100, 100);
+    const progress = Math.min((stravaDistanceKm / AT_TOTAL_KM) * 100, 100);
 
     return {
       garminDist: totalDistanceKm,
       garminElev: totalElevationGain,
       stravaDist: stravaDistanceKm,
       stravaElev: stravaElevation,
-      combinedDist,
-      combinedElev,
       trackingPoints: points.length,
-      stravaCount: stravaActivities.length,
+      stravaCount: hikeActivities.length,
       avgSpeed,
       daysOnTrail: allDates.size,
       progress,
     };
-  }, [points, stravaActivities, totalDistanceKm, totalElevationGain]);
+  }, [points, hikeActivities, totalDistanceKm, totalElevationGain]);
 
-  const dailyKm = useMemo(() => buildDailyKm(points, stravaActivities), [points, stravaActivities]);
-  const dailyElev = useMemo(() => buildDailyElev(points), [points]);
+  const dailyKm = useMemo(() => buildDailyKm(hikeActivities), [hikeActivities]);
+  const dailyElev = useMemo(() => buildDailyElev(hikeActivities), [hikeActivities]);
   const { weeks, months } = useMemo(() => getFixedWeeksGrid(dailyKm), [dailyKm]);
   const activeDays = Object.entries(dailyKm).filter(([date, km]) => {
     return km > 0 && date >= HIKE_START && date <= HIKE_END;
@@ -1358,7 +1337,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
             <div>
               <span className={styles.statsLabel}>TOTAL_DISTANCE</span>
               <div className={styles.statsHeroValue}>
-                <span className={styles.statsHeroNumber}>{stats.combinedDist.toFixed(0)}</span>
+                <span className={styles.statsHeroNumber}>{stats.stravaDist.toFixed(0)}</span>
                 <span className={styles.statsHeroUnit}>/ {AT_TOTAL_KM} KM</span>
               </div>
             </div>
@@ -1369,8 +1348,8 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
           </div>
           <div className={styles.statsProgressBars}>
             <div className={`${styles.statsProgressBar} ${styles.statsProgressBarFull}`}>
-              <div className={`${styles.statsProgressFill} ${styles.statsProgressFillFull}`} style={{ width: `${Math.min((stats.combinedDist / 3500) * 100, 100)}%` }} />
-              <span className={styles.statsProgressLabel}>FULL AT — 3,500 KM ({((stats.combinedDist / 3500) * 100).toFixed(1)}%)</span>
+              <div className={`${styles.statsProgressFill} ${styles.statsProgressFillFull}`} style={{ width: `${Math.min((stats.stravaDist / 3500) * 100, 100)}%` }} />
+              <span className={styles.statsProgressLabel}>FULL AT — 3,500 KM ({((stats.stravaDist / 3500) * 100).toFixed(1)}%)</span>
             </div>
             <div className={styles.statsProgressBar}>
               <div className={styles.statsProgressFill} style={{ width: `${Math.min(stats.progress, 100)}%` }} />
@@ -1387,7 +1366,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
           </div>
           <div className={styles.statsBentoCard}>
             <span className={styles.statsLabel}>TOTAL_ASCENT</span>
-            <div className={styles.statsBentoNumber}>{Math.round(stats.combinedElev)}<span className={styles.statsBentoUnit}>M</span></div>
+            <div className={styles.statsBentoNumber}>{Math.round(stats.stravaElev)}<span className={styles.statsBentoUnit}>M</span></div>
           </div>
           <div className={styles.statsBentoCard}>
             <span className={styles.statsLabel}>TRACKING_PTS</span>
@@ -1430,7 +1409,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
           <div style={{ padding: '24px 24px 0' }}>
             <h3 className={styles.statsSectionTitle}>ROAD_TO_MORDOR</h3>
           </div>
-          <RoadToMordor distanceKm={stats.combinedDist} />
+          <RoadToMordor distanceKm={stats.stravaDist} />
         </section>
 
         {/* Activity heatmap */}
@@ -1527,7 +1506,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         {/* AT Trail altitude profile */}
         <section className={styles.statsSection}>
           <h3 className={styles.statsSectionTitle}>AT_TRAIL_PROFILE</h3>
-          <TrailAltitudeProfile hikerDistanceKm={stats.combinedDist} isAdmin={isAdmin} />
+          <TrailAltitudeProfile hikerDistanceKm={stats.stravaDist} isAdmin={isAdmin} />
         </section>
 
         {/* Elevation profile from tracking */}
@@ -1539,7 +1518,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         {/* Beer calculator */}
         <section className={styles.statsSection}>
           <h3 className={styles.statsSectionTitle}>BEER_CALCULATOR</h3>
-          <BeerCalculator distanceKm={stats.combinedDist} />
+          <BeerCalculator distanceKm={stats.stravaDist} />
         </section>
 
         {/* Recent events */}
