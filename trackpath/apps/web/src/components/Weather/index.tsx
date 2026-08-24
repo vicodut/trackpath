@@ -51,7 +51,7 @@ export const Weather = memo(function Weather() {
         }));
         setForecast(days.slice(0, 2));
       })
-      .catch(() => setError('Failed to load weather'));
+      .catch(() => { setError('Failed to load weather'); });
   }, []);
 
   if (error) return null;

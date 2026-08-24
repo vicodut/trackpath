@@ -6,9 +6,9 @@ export function useModals() {
   const [path, setPath] = useState<string>(() => window.location.pathname);
 
   useEffect(() => {
-    const onPop = () => setPath(window.location.pathname);
+    const onPop = () => { setPath(window.location.pathname); };
     window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    return () => { window.removeEventListener('popstate', onPop); };
   }, []);
 
   const navigate = useCallback((to: Route) => {
@@ -16,7 +16,7 @@ export function useModals() {
     setPath(to);
   }, []);
 
-  const closeModal = useCallback(() => navigate('/'), [navigate]);
+  const closeModal = useCallback(() => { navigate('/'); }, [navigate]);
 
   return {
     showAdmin:    path === '/admin',
@@ -27,14 +27,14 @@ export function useModals() {
     showPolls:     path === '/polls',
     showResources: path === '/resources',
     showCheers:    path === '/cheers',
-    openAdmin:     () => navigate('/admin'),
-    openStats:     () => navigate('/stats'),
-    openTrailLog:  () => navigate('/trail-log'),
-    openBlog:      () => navigate('/blog'),
-    openGear:      () => navigate('/gear'),
-    openPolls:     () => navigate('/polls'),
-    openResources: () => navigate('/resources'),
-    openCheers:    () => navigate('/cheers'),
+    openAdmin:     () => { navigate('/admin'); },
+    openStats:     () => { navigate('/stats'); },
+    openTrailLog:  () => { navigate('/trail-log'); },
+    openBlog:      () => { navigate('/blog'); },
+    openGear:      () => { navigate('/gear'); },
+    openPolls:     () => { navigate('/polls'); },
+    openResources: () => { navigate('/resources'); },
+    openCheers:    () => { navigate('/cheers'); },
     closeModal,
   };
 }

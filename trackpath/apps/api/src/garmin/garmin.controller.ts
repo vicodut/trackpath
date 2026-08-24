@@ -68,7 +68,7 @@ export class GarminController {
   @Get('stream')
   @Sse()
   stream(): Observable<MessageEvent> {
-    return this.garminService.getPointsStream() as Observable<MessageEvent>;
+    return this.garminService.getPointsStream();
   }
 
   /** Downloads all tracking points as a GPX 1.1 file. */

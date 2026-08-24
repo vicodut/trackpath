@@ -51,7 +51,7 @@ function EditCell({ value, type = 'text', onSave, align = 'right' }: {
   const [draft, setDraft] = useState(String(value));
 
   const confirm = () => { setEditing(false); onSave(draft); };
-  const cancel = () => setEditing(false);
+  const cancel = () => { setEditing(false); };
 
   if (!editing) {
     return (
@@ -68,7 +68,7 @@ function EditCell({ value, type = 'text', onSave, align = 'right' }: {
         type={type}
         value={draft}
         autoFocus
-        onChange={e => setDraft(e.target.value)}
+        onChange={e => { setDraft(e.target.value); }}
         onKeyDown={e => { if (e.key === 'Enter') confirm(); if (e.key === 'Escape') cancel(); }}
       />
       <button className={`${styles.iconBtn} ${styles.confirmBtn}`} onMouseDown={e => { e.preventDefault(); confirm(); }} title="Save">✓</button>
@@ -98,7 +98,7 @@ function WeightEditCell({ weightG, displayUnit, onSave }: {
     onSave(isNaN(grams) ? 0 : grams);
   };
 
-  const cancel = () => setEditing(false);
+  const cancel = () => { setEditing(false); };
 
   if (!editing) {
     return (
@@ -115,14 +115,14 @@ function WeightEditCell({ weightG, displayUnit, onSave }: {
         className={styles.inlineInput}
         style={{ textAlign: 'right', width: 0, flex: 1 }}
         type="number" value={draft} autoFocus min="0" step="any"
-        onChange={e => setDraft(e.target.value)}
+        onChange={e => { setDraft(e.target.value); }}
         onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); }}
       />
       <select
         className={styles.inlineInput}
         style={{ width: 42, padding: '2px 1px', flexShrink: 0 }}
         value={editUnit}
-        onChange={e => setEditUnit(e.target.value as WeightUnit)}
+        onChange={e => { setEditUnit(e.target.value as WeightUnit); }}
       >
         {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
       </select>
@@ -157,23 +157,23 @@ function AddItemRow({ categoryId, unit, onAdd, onCancel }: {
         <div className={styles.addItemForm}>
           <input
             type="text" placeholder="Item name" value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={e => { setName(e.target.value); }}
             onKeyDown={e => e.key === 'Enter' && submit()}
             autoFocus
           />
           <input
             type="number" placeholder={`Weight (${unit})`} value={weight}
-            onChange={e => setWeight(e.target.value)} min="0" step="any"
+            onChange={e => { setWeight(e.target.value); }} min="0" step="any"
           />
           <input
             type="number" placeholder="Qty" value={qty}
-            onChange={e => setQty(e.target.value)} min="1"
+            onChange={e => { setQty(e.target.value); }} min="1"
           />
           <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', fontFamily: 'var(--font-headline)', color: 'var(--outline)', cursor: 'pointer' }}>
-            <input type="checkbox" checked={worn} onChange={e => setWorn(e.target.checked)} /> WORN
+            <input type="checkbox" checked={worn} onChange={e => { setWorn(e.target.checked); }} /> WORN
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', fontFamily: 'var(--font-headline)', color: 'var(--outline)', cursor: 'pointer' }}>
-            <input type="checkbox" checked={consumable} onChange={e => setConsumable(e.target.checked)} /> CONSUMABLE
+            <input type="checkbox" checked={consumable} onChange={e => { setConsumable(e.target.checked); }} /> CONSUMABLE
           </label>
           <button className={styles.addBtn} onClick={submit}>ADD</button>
           <button className={styles.cancelBtn} onClick={onCancel}>CANCEL</button>
@@ -233,7 +233,7 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
                 {isAdmin && (
                   <td style={{ textAlign: 'center', padding: '0 6px' }}>
                     <input type="checkbox" checked={item.included}
-                      onChange={e => onUpdateItem(item.id, { included: e.target.checked })}
+                      onChange={e => { onUpdateItem(item.id, { included: e.target.checked }); }}
                       style={{ cursor: 'pointer', accentColor: 'var(--secondary)' }}
                     />
                   </td>
@@ -242,7 +242,7 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
                   <div className={styles.itemName}>
                     {isAdmin
                       ? <EditCell value={item.name} type="text" align="left"
-                          onSave={v => onUpdateItem(item.id, { name: v })} />
+                          onSave={v => { onUpdateItem(item.id, { name: v }); }} />
                       : item.name
                     }
                   </div>
@@ -254,14 +254,14 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
                 <td className={styles.itemNum}>
                   {isAdmin
                     ? <WeightEditCell weightG={item.weightG} displayUnit={unit}
-                        onSave={grams => onUpdateItem(item.id, { weightG: grams })} />
+                        onSave={grams => { onUpdateItem(item.id, { weightG: grams }); }} />
                     : <>{fmtW(item.weightG, unit)}<span className={styles.itemNumMuted}> {unit}</span></>
                   }
                 </td>
                 <td className={styles.itemNum}>
                   {isAdmin
                     ? <EditCell value={item.qty} type="number"
-                        onSave={v => onUpdateItem(item.id, { qty: parseInt(v) || 1 })} />
+                        onSave={v => { onUpdateItem(item.id, { qty: parseInt(v) || 1 }); }} />
                     : item.qty
                   }
                 </td>
@@ -271,7 +271,7 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
                 {isAdmin && (
                   <td style={{ textAlign: 'right' }}>
                     <button className={`${styles.iconBtn} ${styles.deleteBtn}`}
-                      onClick={() => onDeleteItem(item.id)}>✕</button>
+                      onClick={() => { onDeleteItem(item.id); }}>✕</button>
                   </td>
                 )}
               </tr>
@@ -292,7 +292,7 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
           {isAdmin && !adding && (
             <tr className={styles.addItemRow}>
               <td colSpan={6}>
-                <button className={styles.addBtn} onClick={() => setAdding(true)}>+ ADD ITEM</button>
+                <button className={styles.addBtn} onClick={() => { setAdding(true); }}>+ ADD ITEM</button>
               </td>
             </tr>
           )}
@@ -300,7 +300,7 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
             <AddItemRow
               categoryId={cat.id} unit={unit}
               onAdd={data => { onAddItem(data); setAdding(false); }}
-              onCancel={() => setAdding(false)}
+              onCancel={() => { setAdding(false); }}
             />
           )}
         </tbody>
@@ -312,7 +312,7 @@ function CategorySection({ cat, items, unit, isAdmin, isFirst, isLast, onMoveUp,
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export function GearPage({ isAdmin, onClose }: GearPageProps) {
-  const { categories, items, loading, addCategory, updateCategory, deleteCategory,
+  const { categories, items, loading, addCategory, deleteCategory,
     moveCategoryUp, moveCategoryDown, addItem, updateItem, deleteItem, load } = useGear();
 
   const [unit, setUnit] = useState<WeightUnit>(() => {
@@ -386,7 +386,7 @@ export function GearPage({ isAdmin, onClose }: GearPageProps) {
               <div className={styles.unitToggle}>
                 {UNITS.map(u => (
                   <button key={u} className={`${styles.unitBtn} ${unit === u ? styles.unitBtnActive : ''}`}
-                    onClick={() => setUnitAndSave(u)}>
+                    onClick={() => { setUnitAndSave(u); }}>
                     {u}
                   </button>
                 ))}
@@ -486,24 +486,24 @@ export function GearPage({ isAdmin, onClose }: GearPageProps) {
               {isAdmin && (
                 <div>
                   {!showAddCat ? (
-                    <button className={styles.addBtn} onClick={() => setShowAddCat(true)}>+ ADD CATEGORY</button>
+                    <button className={styles.addBtn} onClick={() => { setShowAddCat(true); }}>+ ADD CATEGORY</button>
                   ) : (
                     <div className={styles.addCategoryArea}>
                       <input
                         type="text" placeholder="Category name" value={newCatName}
-                        onChange={e => setNewCatName(e.target.value)}
+                        onChange={e => { setNewCatName(e.target.value); }}
                         onKeyDown={e => e.key === 'Escape' && setShowAddCat(false)}
                         autoFocus
                       />
                       <div style={{ display: 'flex', gap: 4 }}>
                         {PRESET_COLORS.map(c => (
-                          <button key={c} onClick={() => setNewCatColor(c)} style={{
+                          <button key={c} onClick={() => { setNewCatColor(c); }} style={{
                             width: 22, height: 22, background: c,
                             border: newCatColor === c ? '2px solid var(--on-surface)' : '1px solid transparent',
                             cursor: 'pointer', padding: 0,
                           }} />
                         ))}
-                        <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)}
+                        <input type="color" value={newCatColor} onChange={e => { setNewCatColor(e.target.value); }}
                           className={styles.colorPicker} title="Custom color" />
                       </div>
                       <button className={styles.addBtn} onClick={async () => {
@@ -512,7 +512,7 @@ export function GearPage({ isAdmin, onClose }: GearPageProps) {
                         setNewCatName('');
                         setShowAddCat(false);
                       }}>CREATE</button>
-                      <button className={styles.cancelBtn} onClick={() => setShowAddCat(false)}>CANCEL</button>
+                      <button className={styles.cancelBtn} onClick={() => { setShowAddCat(false); }}>CANCEL</button>
                     </div>
                   )}
                 </div>

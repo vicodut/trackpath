@@ -14,7 +14,6 @@ import type { LayerVisibility } from "../LayerToggle";
 import { HighlightsLayer } from "../HighlightsLayer";
 import { colors } from "../../theme";
 import { formatDuration } from "../../lib/format";
-import { useIsMobile } from "../../hooks/useIsMobile";
 import { TAG_EMOJIS } from "../../lib/constants";
 import type { TrailSegment } from "../../hooks/useTrailDistance";
 import styles from "./Map.module.css";
@@ -110,8 +109,8 @@ function ATTrailLayer({ topo }: { topo: boolean }) {
   useEffect(() => {
     fetch("/at-trail.json")
       .then((res) => res.json())
-      .then((coords: [number, number][]) => setTrailCoords(coords))
-      .catch((err) => console.error("Failed to load AT trail:", err));
+      .then((coords: [number, number][]) => { setTrailCoords(coords); })
+      .catch((err) => { console.error("Failed to load AT trail:", err); });
   }, []);
 
   if (trailCoords.length === 0) return null;
@@ -383,9 +382,9 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
   useEffect(() => {
     const id = setInterval(() => {
       setFart(true);
-      setTimeout(() => setFart(false), FART_DURATION_MS);
+      setTimeout(() => { setFart(false); }, FART_DURATION_MS);
     }, FART_CYCLE_MS);
-    return () => clearInterval(id);
+    return () => { clearInterval(id); };
   }, []);
 
   const shuttleCoords: [number, number][] = useMemo(() => [
@@ -524,6 +523,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
               (isLatest ? makeLatestIcon(fart) : pointIcon)
             }
             zIndexOffset={isLatest ? 1000 : 0}
+            eventHandlers={{ click: () => onPointTap?.(pt) }}
           >
             <Popup>
               <strong>{time}</strong>
@@ -561,9 +561,9 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
               key={act.id}
               positions={coords}
               pathOptions={{ color: isSelected ? '#ff69b4' : getStravaColor(act.type), weight: isSelected ? 5 : 4, opacity: 0.9 }}
-              eventHandlers={{ click: () => setSelectedStravaId(act.id) }}
+              eventHandlers={{ click: () => { setSelectedStravaId(act.id); } }}
             >
-              <Popup eventHandlers={{ remove: () => setSelectedStravaId(null) }}>
+              <Popup eventHandlers={{ remove: () => { setSelectedStravaId(null); } }}>
                 <strong>{act.name}</strong>
                 <br />
                 {date} — {act.type}
@@ -594,7 +594,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
       />
       <FlyToPoint point={selectedPoint} />
       <InvalidateOnResize sidebarVisible={sidebarVisible} />
-      <div className={styles.mapControls} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.mapControls} onClick={(e) => { e.stopPropagation(); }}>
         {isAdmin && onAddPoint && (
           <button
             className={`${styles.mapCtrlBtn} ${styles.mapCtrlAdd}`}

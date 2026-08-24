@@ -94,7 +94,7 @@ export function BlogList({ onSelectPost, onClose }: BlogListProps) {
       setPosts(fetchedPosts);
       setActivities(fetchedActivities);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { setLoading(false); });
   }, []);
 
   // Merge into timeline, newest first
@@ -172,7 +172,7 @@ export function BlogList({ onSelectPost, onClose }: BlogListProps) {
                 <div
                   key={post.id}
                   className={`${styles.entry} ${isLatest ? styles.entryLatest : ''}`}
-                  onClick={() => onSelectPost(post.slug)}
+                  onClick={() => { onSelectPost(post.slug); }}
                 >
                   <div className={styles.entryMargin}>
                     <span className={styles.entryDay}>DAY {day}</span>

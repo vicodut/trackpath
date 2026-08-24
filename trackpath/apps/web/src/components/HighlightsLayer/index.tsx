@@ -75,7 +75,7 @@ export function HighlightsLayer({ layers, onHighlightTap, onHighlightClose, trai
     fetch('/at-highlights.json')
       .then(res => res.json())
       .then(setHighlights)
-      .catch(() => setHighlights([]));
+      .catch(() => { setHighlights([]); });
   }, []);
 
   const updateView = useCallback(() => {
@@ -116,8 +116,8 @@ export function HighlightsLayer({ layers, onHighlightTap, onHighlightClose, trai
           position={[h.lat, h.lon]}
           icon={getHighlightIcon(h.category)}
           eventHandlers={{
-            ...(onHighlightTap ? { click: () => onHighlightTap(h.lat, h.lon) } : {}),
-            ...(onHighlightClose ? { popupclose: () => onHighlightClose() } : {}),
+            ...(onHighlightTap ? { click: () => { onHighlightTap(h.lat, h.lon); } } : {}),
+            ...(onHighlightClose ? { popupclose: () => { onHighlightClose(); } } : {}),
           }}
         >
           <Popup>

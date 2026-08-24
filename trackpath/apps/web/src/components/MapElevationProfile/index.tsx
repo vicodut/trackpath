@@ -107,7 +107,7 @@ export function MapElevationProfile({
     fetch("/at-trail-elevation.json")
       .then((res) => res.json())
       .then(setTrailData)
-      .catch(() => setTrailData(null));
+      .catch(() => { setTrailData(null); });
   }, []);
 
   useEffect(() => {
@@ -122,7 +122,7 @@ export function MapElevationProfile({
       }
     });
     observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); };
   }, [collapsed, trailData]);
 
   const processHover = useCallback(
@@ -448,7 +448,7 @@ export function MapElevationProfile({
     >
       <button
         className={styles.mapElevToggle}
-        onClick={() => setCollapsed((c) => !c)}
+        onClick={() => { setCollapsed((c) => !c); }}
         title={collapsed ? "Show elevation profile" : "Hide elevation profile"}
       >
         <svg

@@ -70,7 +70,7 @@ export function Stats({ points, stravaActivities, totalDistanceKm, totalElevatio
   }, [points, stravaActivities, totalDistanceKm, totalElevationGain]);
 
   return (
-    <div className={styles.statsWidget} onClick={() => setOpen(!open)}>
+    <div className={styles.statsWidget} onClick={() => { setOpen(!open); }}>
       <div className={styles.statsWidgetHeader}>
         <span className={styles.statsWidgetTitle}>Stats</span>
         <span className={styles.statsWidgetToggle}>{open ? '▾' : '▸'}</span>

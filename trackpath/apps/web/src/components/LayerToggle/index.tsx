@@ -49,8 +49,8 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
   const [highlightsOpen, setHighlightsOpen] = useState(false);
 
   return (
-    <div className={styles.layerToggle} onClick={(e) => e.stopPropagation()}>
-      <div className={styles.layerToggleHeader} onClick={() => setOpen(!open)}>
+    <div className={styles.layerToggle} onClick={(e) => { e.stopPropagation(); }}>
+      <div className={styles.layerToggleHeader} onClick={() => { setOpen(!open); }}>
         <span className={styles.layerToggleTitle}>Layers</span>
         <span className={styles.layerToggleIcon}>{open ? '▾' : '▸'}</span>
       </div>
@@ -63,7 +63,7 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
                 <button
                   key={key}
                   className={`${styles.tileStyleBtn} ${layers.tileStyle === key ? styles.tileStyleActive : ''}`}
-                  onClick={() => onChange({ ...layers, tileStyle: key })}
+                  onClick={() => { onChange({ ...layers, tileStyle: key }); }}
                 >
                   {key === 'osm' ? 'Street' : 'Topo'}
                 </button>
@@ -75,13 +75,13 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
               <input
                 type="checkbox"
                 checked={layers[key]}
-                onChange={() => onChange({ ...layers, [key]: !layers[key] })}
+                onChange={() => { onChange({ ...layers, [key]: !layers[key] }); }}
               />
               <span>{label}</span>
             </label>
           ))}
           <div className={styles.layerToggleGroup}>
-            <div className={styles.layerToggleGroupHeader} onClick={() => setTagsOpen(!tagsOpen)}>
+            <div className={styles.layerToggleGroupHeader} onClick={() => { setTagsOpen(!tagsOpen); }}>
               <span>Tags</span>
               <span className={styles.layerToggleIcon}>{tagsOpen ? '▾' : '▸'}</span>
             </div>
@@ -92,10 +92,10 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
                     <input
                       type="checkbox"
                       checked={layers.tags[tag]}
-                      onChange={() => onChange({
+                      onChange={() => { onChange({
                         ...layers,
                         tags: { ...layers.tags, [tag]: !layers.tags[tag] },
-                      })}
+                      }); }}
                     />
                     <span>{TAG_EMOJIS[tag]} {tag}</span>
                   </label>
@@ -104,7 +104,7 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
             )}
           </div>
           <div className={styles.layerToggleGroup}>
-            <div className={styles.layerToggleGroupHeader} onClick={() => setHighlightsOpen(!highlightsOpen)}>
+            <div className={styles.layerToggleGroupHeader} onClick={() => { setHighlightsOpen(!highlightsOpen); }}>
               <span>Highlights</span>
               <span className={styles.layerToggleIcon}>{highlightsOpen ? '▾' : '▸'}</span>
             </div>
@@ -115,10 +115,10 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
                     <input
                       type="checkbox"
                       checked={layers.highlights[cat]}
-                      onChange={() => onChange({
+                      onChange={() => { onChange({
                         ...layers,
                         highlights: { ...layers.highlights, [cat]: !layers.highlights[cat] },
-                      })}
+                      }); }}
                     />
                     <span>{HIGHLIGHT_EMOJIS[cat]} {cat}</span>
                   </label>

@@ -64,7 +64,7 @@ function SuggestForm({ onSuggest }: { onSuggest: (q: string, opts: string[]) => 
   return (
     <div className={styles.suggestBox}>
       {!open ? (
-        <button className={styles.suggestToggle} onClick={() => setOpen(true)}>
+        <button className={styles.suggestToggle} onClick={() => { setOpen(true); }}>
           💡 Suggest a poll
         </button>
       ) : (
@@ -74,7 +74,7 @@ function SuggestForm({ onSuggest }: { onSuggest: (q: string, opts: string[]) => 
             className={styles.suggestInput}
             placeholder="Your question…"
             value={question}
-            onChange={(e) => setQuestion(e.target.value)}
+            onChange={(e) => { setQuestion(e.target.value); }}
           />
           <div className={styles.suggestOptions}>
             {options.map((o, i) => (
@@ -83,12 +83,12 @@ function SuggestForm({ onSuggest }: { onSuggest: (q: string, opts: string[]) => 
                 className={styles.suggestInput}
                 placeholder={`Option ${i + 1}`}
                 value={o}
-                onChange={(e) => setOptions((prev) => prev.map((p, idx) => (idx === i ? e.target.value : p)))}
+                onChange={(e) => { setOptions((prev) => prev.map((p, idx) => (idx === i ? e.target.value : p))); }}
               />
             ))}
           </div>
           {options.length < 6 && (
-            <button className={styles.suggestAddOption} onClick={() => setOptions((p) => [...p, ''])}>
+            <button className={styles.suggestAddOption} onClick={() => { setOptions((p) => [...p, '']); }}>
               + add option
             </button>
           )}
@@ -96,7 +96,7 @@ function SuggestForm({ onSuggest }: { onSuggest: (q: string, opts: string[]) => 
             <button className="primary" disabled={!canSubmit} onClick={handleSubmit}>
               Send suggestion
             </button>
-            <button className={styles.suggestCancel} onClick={() => setOpen(false)}>Cancel</button>
+            <button className={styles.suggestCancel} onClick={() => { setOpen(false); }}>Cancel</button>
           </div>
         </div>
       )}
@@ -135,7 +135,7 @@ export function PollsPage({ polls, isAdmin, onVote, onSuggest, onClose }: PollsP
                     <button
                       key={opt.id}
                       className={styles.optionBtn}
-                      onClick={() => onVote(poll.id, opt.id)}
+                      onClick={() => { onVote(poll.id, opt.id); }}
                     >
                       {opt.text}
                     </button>

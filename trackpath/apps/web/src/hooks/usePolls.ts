@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { Poll, PollOption, PollSuggestion } from '../api/polls';
+import type { Poll, PollSuggestion } from '../api/polls';
 import {
   fetchPolls, createPoll, votePoll, closePoll, deletePoll,
   suggestPoll, fetchSuggestions, acceptSuggestion, rejectSuggestion,
@@ -23,7 +23,7 @@ export function usePolls() {
     setPolls((prev) =>
       prev.map((p) =>
         p.id === pollId
-          ? { ...p, options: result.options as PollOption[], totalVotes: result.totalVotes, votedOptionId: result.votedOptionId }
+          ? { ...p, options: result.options, totalVotes: result.totalVotes, votedOptionId: result.votedOptionId }
           : p,
       ),
     );

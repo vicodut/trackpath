@@ -149,6 +149,8 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
 
   async countPoints(): Promise<number> {
     const [row] = await this.db.select({ total: count() }).from(trackingPoints);
+    // node-postgres returns COUNT(*)/bigint as a string at runtime despite Drizzle's `number` type.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
     return Number(row?.total ?? 0);
   }
 
@@ -295,7 +297,7 @@ ${trkpts}
     endDate?: string,
   ): Promise<NewTrackingPoint[]> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const timer = setTimeout(() => { controller.abort(); }, FETCH_TIMEOUT_MS);
 
     const url = new URL(`${MAPSHARE_BASE}/${mapshareId}`);
     if (startDate) url.searchParams.set('d1', toUtcDayStart(startDate));
@@ -318,7 +320,7 @@ ${trkpts}
   private parseKml(xml: string): Promise<KmlRoot> {
     return new Promise((resolve, reject) => {
       parseString(xml, { explicitArray: false }, (err, result) => {
-        if (err) return reject(err);
+        if (err) { reject(err); return; }
         resolve(result as KmlRoot);
       });
     });

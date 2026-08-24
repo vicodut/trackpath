@@ -12,9 +12,9 @@ export function useUnit() {
   const [unit, setUnit] = useState<Unit>(stored);
 
   useEffect(() => {
-    const handler = () => setUnit(stored());
+    const handler = () => { setUnit(stored()); };
     window.addEventListener(UNIT_EVENT, handler);
-    return () => window.removeEventListener(UNIT_EVENT, handler);
+    return () => { window.removeEventListener(UNIT_EVENT, handler); };
   }, []);
 
   const toggleUnit = useCallback(() => {

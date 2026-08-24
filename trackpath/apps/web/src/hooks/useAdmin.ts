@@ -9,8 +9,8 @@ export function useAdmin() {
     if (session?.user) {
       fetch('/api/me')
         .then((r) => r.json())
-        .then((d: { isAdmin: boolean }) => setIsAdmin(d.isAdmin))
-        .catch(() => setIsAdmin(false));
+        .then((d: { isAdmin: boolean }) => { setIsAdmin(d.isAdmin); })
+        .catch(() => { setIsAdmin(false); });
     } else {
       setIsAdmin(false);
     }

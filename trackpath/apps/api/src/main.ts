@@ -29,7 +29,7 @@ async function bootstrap() {
     // routing works. Registered before NestJS routes so it wins over NestJS's
     // own 404 handler for unmatched routes.
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      if (req.path.startsWith('/api/')) return next();
+      if (req.path.startsWith('/api/')) { next(); return; }
       res.sendFile(join(clientDir, 'index.html'));
     });
   }

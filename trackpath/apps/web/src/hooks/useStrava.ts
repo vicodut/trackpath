@@ -15,12 +15,12 @@ export function useStrava() {
   useEffect(() => {
     fetch('/api/strava/status')
       .then((r) => r.json())
-      .then((d: { connected: boolean }) => setConnected(d.connected))
-      .catch(() => setConnected(false));
+      .then((d: { connected: boolean }) => { setConnected(d.connected); })
+      .catch(() => { setConnected(false); });
     fetch('/api/strava/activities')
       .then((r) => r.json())
-      .then((data) => setActivities(filterActivities(data)))
-      .catch((err: unknown) => console.error('Failed to load Strava activities:', err));
+      .then((data) => { setActivities(filterActivities(data)); })
+      .catch((err: unknown) => { console.error('Failed to load Strava activities:', err); });
   }, []);
 
   const connect = useCallback(async () => {

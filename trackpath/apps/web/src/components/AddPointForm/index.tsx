@@ -80,7 +80,7 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
           <button
             key={t}
             className={`${styles.addFormTagBtn} ${tag === t ? styles.addFormTagBtnActive : ''}`}
-            onClick={() => setTag(tag === t ? '' : t)}
+            onClick={() => { setTag(tag === t ? '' : t); }}
           >
             <span className={styles.addFormTagEmoji}>{TAG_EMOJIS[t]}</span>
             <span className={styles.addFormTagLabel}>{t}</span>
@@ -90,7 +90,7 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
       <textarea
         placeholder="Message (optional)"
         value={msg}
-        onChange={(e) => setMsg(e.target.value)}
+        onChange={(e) => { setMsg(e.target.value); }}
         rows={3}
       />
       <div className={styles.addFormActions}>
@@ -135,7 +135,7 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
                     step="any"
                     placeholder="e.g. 34.627"
                     value={lat}
-                    onChange={(e) => setLat(e.target.value)}
+                    onChange={(e) => { setLat(e.target.value); }}
                   />
                 </div>
                 <div>
@@ -145,7 +145,7 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
                     step="any"
                     placeholder="e.g. -84.194"
                     value={lng}
-                    onChange={(e) => setLng(e.target.value)}
+                    onChange={(e) => { setLng(e.target.value); }}
                   />
                 </div>
               </div>
@@ -155,10 +155,10 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
                 step="any"
                 placeholder="e.g. 1152"
                 value={alt}
-                onChange={(e) => setAlt(e.target.value)}
+                onChange={(e) => { setAlt(e.target.value); }}
               />
               <label>Tag</label>
-              <select className="tag-select" value={tag} onChange={(e) => setTag(e.target.value)}>
+              <select className="tag-select" value={tag} onChange={(e) => { setTag(e.target.value); }}>
                 <option value="">-- none --</option>
                 {TAGS.map((t) => (
                   <option key={t} value={t}>{t}</option>
@@ -168,7 +168,7 @@ export function AddPointForm({ onSubmit, onFormToggle, onSuccess, pickedCoords, 
               <textarea
                 placeholder="e.g. Camp for the night near shelter"
                 value={msg}
-                onChange={(e) => setMsg(e.target.value)}
+                onChange={(e) => { setMsg(e.target.value); }}
               />
               <p className={`${styles.pickHint} ${styles.pickHintActive}`}>TAP_MAP_TO_SET_COORDINATES</p>
               <div className={styles.addFormActions}>

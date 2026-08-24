@@ -229,7 +229,7 @@ function ElevationChart({ points }: { points: TrackingPoint[] }) {
             y: e.clientY,
           });
         }}
-        onMouseLeave={() => setHovered(null)}
+        onMouseLeave={() => { setHovered(null); }}
       >
         {/* Grid lines */}
         {yTickValues.map(v => (
@@ -291,7 +291,7 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
     fetch('/at-trail-elevation.json')
       .then(res => res.json())
       .then(setTrailData)
-      .catch(() => setTrailData(null));
+      .catch(() => { setTrailData(null); });
   }, []);
 
   if (!trailData || trailData.length < 2) return null;
@@ -366,7 +366,7 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
             summitName: nearSummit?.name,
           });
         }}
-        onMouseLeave={() => setHovered(null)}
+        onMouseLeave={() => { setHovered(null); }}
       >
         {/* Grid lines */}
         {yTickValues.map(v => (
@@ -501,7 +501,7 @@ function DailyBarChart({ dailyKm, dailyElev }: { dailyKm: Record<string, number>
 
   return (
     <div className={styles.elevChartWrapper}>
-      <svg viewBox={`0 0 ${W} ${H}`} className={styles.elevChartSvg} onMouseLeave={() => setHovered(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} className={styles.elevChartSvg} onMouseLeave={() => { setHovered(null); }}>
         {yTicks.map(v => (
           <line key={`yg${v}`} x1={PAD.left} x2={W - PAD.right} y1={toY(v)} y2={toY(v)}
             stroke="var(--outline-variant)" strokeWidth="0.5" opacity="0.3" />
@@ -518,7 +518,7 @@ function DailyBarChart({ dailyKm, dailyElev }: { dailyKm: Record<string, number>
           const isBest = e.km === maxKm;
           return (
             <g key={e.date}
-              onMouseEnter={(evt) => setHovered({ date: e.date, km: e.km, elev: e.elev, x: evt.clientX, y: evt.clientY })}
+              onMouseEnter={(evt) => { setHovered({ date: e.date, km: e.km, elev: e.elev, x: evt.clientX, y: evt.clientY }); }}
             >
               <rect x={x} y={y} width={barW} height={barH}
                 fill={isToday ? 'var(--primary)' : 'var(--secondary)'} opacity={isToday ? 1 : 0.75} />
@@ -1086,7 +1086,7 @@ function RoadToMordor({ distanceKm }: { distanceKm: number }) {
       { threshold: 0.3 },
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); };
   }, [frodoX]);
 
   return (
@@ -1458,7 +1458,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
                             y: rect.top,
                           });
                         }}
-                        onMouseLeave={() => setHoveredCell(null)}
+                        onMouseLeave={() => { setHoveredCell(null); }}
                         onTouchStart={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
                           setHoveredCell({
@@ -1468,7 +1468,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
                             y: rect.top,
                           });
                         }}
-                        onTouchEnd={() => setHoveredCell(null)}
+                        onTouchEnd={() => { setHoveredCell(null); }}
                       />
                     );
                   })

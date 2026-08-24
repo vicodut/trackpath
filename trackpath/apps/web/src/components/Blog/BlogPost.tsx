@@ -27,7 +27,7 @@ export function BlogPost({ slug, onBack, onClose }: BlogPostProps) {
         setPost(data.posts[0] ?? null);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoading(false); });
   }, [slug]);
 
   return (

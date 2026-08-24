@@ -59,7 +59,7 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
     loadStatus();
     void onLoadSuggestions();
     const interval = setInterval(loadStatus, 10000);
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); };
   }, [loadStatus, onLoadSuggestions]);
 
   if (!status) return <div className={styles.adminPage}><div className={styles.adminLoading}>Loading...</div></div>;
@@ -110,7 +110,7 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
                 className={styles.dateInput}
                 value={garminStartDate}
                 max={garminEndDate || undefined}
-                onChange={e => setGarminStartDate(e.target.value)}
+                onChange={e => { setGarminStartDate(e.target.value); }}
               />
               <span className={styles.syncRangeSep}>to</span>
               <input
@@ -118,7 +118,7 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
                 className={styles.dateInput}
                 value={garminEndDate}
                 min={garminStartDate || undefined}
-                onChange={e => setGarminEndDate(e.target.value)}
+                onChange={e => { setGarminEndDate(e.target.value); }}
               />
             </div>
             <button
@@ -180,7 +180,7 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
                     className={styles.dateInput}
                     value={stravaStartDate}
                     max={stravaEndDate || undefined}
-                    onChange={e => setStravaStartDate(e.target.value)}
+                    onChange={e => { setStravaStartDate(e.target.value); }}
                   />
                   <span className={styles.syncRangeSep}>to</span>
                   <input
@@ -188,7 +188,7 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
                     className={styles.dateInput}
                     value={stravaEndDate}
                     min={stravaStartDate || undefined}
-                    onChange={e => setStravaEndDate(e.target.value)}
+                    onChange={e => { setStravaEndDate(e.target.value); }}
                   />
                 </div>
                 <button
@@ -243,9 +243,9 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
                 </div>
                 <div className={styles.pollRowActions}>
                   {!poll.closed && (
-                    <button className={styles.pollActionBtn} onClick={() => onClosePoll(poll.id)}>Close</button>
+                    <button className={styles.pollActionBtn} onClick={() => { onClosePoll(poll.id); }}>Close</button>
                   )}
-                  <button className={`${styles.pollActionBtn} ${styles.pollDeleteBtn}`} onClick={() => onDeletePoll(poll.id)}>Delete</button>
+                  <button className={`${styles.pollActionBtn} ${styles.pollDeleteBtn}`} onClick={() => { onDeletePoll(poll.id); }}>Delete</button>
                 </div>
               </div>
             ))}
@@ -255,7 +255,7 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
               className={styles.pollCreateInput}
               placeholder="New poll question…"
               value={pollQuestion}
-              onChange={e => setPollQuestion(e.target.value)}
+              onChange={e => { setPollQuestion(e.target.value); }}
             />
             <div className={styles.pollCreateOptions}>
               {pollOptions.map((o, i) => (
@@ -264,12 +264,12 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
                   className={styles.pollCreateInput}
                   placeholder={`Option ${i + 1}`}
                   value={o}
-                  onChange={e => setPollOptions(prev => prev.map((p, idx) => idx === i ? e.target.value : p))}
+                  onChange={e => { setPollOptions(prev => prev.map((p, idx) => idx === i ? e.target.value : p)); }}
                 />
               ))}
             </div>
             {pollOptions.length < 6 && (
-              <button className={styles.pollAddOption} onClick={() => setPollOptions(p => [...p, ''])}>
+              <button className={styles.pollAddOption} onClick={() => { setPollOptions(p => [...p, '']); }}>
                 + add option
               </button>
             )}

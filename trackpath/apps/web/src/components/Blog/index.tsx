@@ -13,7 +13,7 @@ export function Blog({ onClose }: BlogProps) {
     return (
       <BlogPost
         slug={selectedSlug}
-        onBack={() => setSelectedSlug(null)}
+        onBack={() => { setSelectedSlug(null); }}
         onClose={onClose}
       />
     );

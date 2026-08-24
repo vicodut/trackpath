@@ -18,6 +18,8 @@ export class HealthController {
     const [{ total }] = await this.db
       .select({ total: count() })
       .from(trackingPoints);
+    // node-postgres returns COUNT(*)/bigint as a string at runtime despite Drizzle's `number` type.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
     return { status: 'ok', trackingPointsCount: Number(total) };
   }
 }

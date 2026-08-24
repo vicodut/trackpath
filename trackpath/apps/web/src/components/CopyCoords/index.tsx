@@ -7,7 +7,7 @@ export function CopyCoords({ lat, lon }: { lat: number; lon: number }) {
   const copy = () => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setTimeout(() => { setCopied(false); }, 1500);
     });
   };
 

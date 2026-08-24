@@ -11,7 +11,7 @@ export const envSchema = z.object({
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   BETTER_AUTH_SECRET: z.string().min(16, 'BETTER_AUTH_SECRET must be at least 16 characters'),
-  BETTER_AUTH_URL: z.string().url().optional(),
+  BETTER_AUTH_URL: z.url().optional(),
   ADMIN_EMAILS: z.string().optional(),
 
   // ── GitHub OAuth (optional — disables GitHub login when absent) ───────────
@@ -27,7 +27,7 @@ export const envSchema = z.object({
   STRAVA_CLIENT_SECRET: z.string().optional(),
 
   // ── Ghost CMS (blog proxy) ────────────────────────────────────────────────
-  GHOST_URL: z.string().url().optional(),
+  GHOST_URL: z.url().optional(),
   GHOST_CONTENT_API_KEY: z.string().optional(),
 
   // ── Server ────────────────────────────────────────────────────────────────

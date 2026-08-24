@@ -35,7 +35,7 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
         }
       };
       document.addEventListener('pointerdown', handleClose);
-      cleanup = () => document.removeEventListener('pointerdown', handleClose);
+      cleanup = () => { document.removeEventListener('pointerdown', handleClose); };
     }, 50);
     return () => { clearTimeout(timer); cleanup?.(); };
   }, [menuOpen]);
@@ -47,28 +47,28 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
 
   const actions = (
     <>
-      <button className={styles.unitToggle} onClick={() => toggleUnit()}>{unit.toUpperCase()}</button>
-      <button onClick={() => closeAndDo(onStats)}>STATS</button>
-      <button onClick={() => closeAndDo(onGear)}>GEAR</button>
-      <button onClick={() => closeAndDo(onPolls)}>POLLS</button>
-      <button onClick={() => closeAndDo(onCheers)}>CHEERS</button>
-      <button onClick={() => closeAndDo(onBlog)}>JOURNAL</button>
-      <button onClick={() => closeAndDo(onResources)}>RESOURCES</button>
-      {isAdmin && <button onClick={() => closeAndDo(onAdmin)}>ADMIN</button>}
+      <button className={styles.unitToggle} onClick={() => { toggleUnit(); }}>{unit.toUpperCase()}</button>
+      <button onClick={() => { closeAndDo(onStats); }}>STATS</button>
+      <button onClick={() => { closeAndDo(onGear); }}>GEAR</button>
+      <button onClick={() => { closeAndDo(onPolls); }}>POLLS</button>
+      <button onClick={() => { closeAndDo(onCheers); }}>CHEERS</button>
+      <button onClick={() => { closeAndDo(onBlog); }}>JOURNAL</button>
+      <button onClick={() => { closeAndDo(onResources); }}>RESOURCES</button>
+      {isAdmin && <button onClick={() => { closeAndDo(onAdmin); }}>ADMIN</button>}
       {isMobile ? (
-        <button onClick={() => closeAndDo(onTrailLog)}>TRAIL_LOG</button>
+        <button onClick={() => { closeAndDo(onTrailLog); }}>TRAIL_LOG</button>
       ) : (
-        <button onClick={() => closeAndDo(onToggleSidebar)}>
+        <button onClick={() => { closeAndDo(onToggleSidebar); }}>
           {sidebarVisible ? 'HIDE_LIST' : 'SHOW_LIST'}
         </button>
       )}
       {isPending ? null : session?.user ? (
         <>
           <span className={styles.authUser}>{session.user.name || session.user.email}</span>
-          <button onClick={() => closeAndDo(() => void authClient.signOut())}>LOGOUT</button>
+          <button onClick={() => { closeAndDo(() => void authClient.signOut()); }}>LOGOUT</button>
         </>
       ) : (
-        <button onClick={() => closeAndDo(() => void authClient.signIn.social({ provider: "github", callbackURL: "/" }))}>
+        <button onClick={() => { closeAndDo(() => void authClient.signIn.social({ provider: "github", callbackURL: "/" })); }}>
           LOGIN_GITHUB
         </button>
       )}
@@ -83,7 +83,7 @@ export function Header({ sidebarVisible, onToggleSidebar, isAdmin, onAdmin, onSt
       </h1>
       {isMobile ? (
         <div className={styles.menu} ref={menuRef}>
-          <button className={styles.hamburgerBtn} onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">
+          <button className={styles.hamburgerBtn} onClick={() => { setMenuOpen(!menuOpen); }} aria-label="Menu">
             <span className={`${styles.hamburgerIcon} ${menuOpen ? styles.hamburgerIconOpen : ''}`}>
               <span /><span /><span />
             </span>

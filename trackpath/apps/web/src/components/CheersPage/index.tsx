@@ -29,7 +29,7 @@ export function CheersPage({ cheers, isAdmin, onDelete, onSubmit, onClose }: Che
     setSending(true);
     const ok = await onSubmit?.(name.trim(), message.trim(), isPublic);
     setSending(false);
-    if (ok) { setMessage(''); setSent(true); setTimeout(() => setSent(false), 3000); }
+    if (ok) { setMessage(''); setSent(true); setTimeout(() => { setSent(false); }, 3000); }
   };
 
   const grouped = useMemo(() => {
@@ -59,14 +59,14 @@ export function CheersPage({ cheers, isAdmin, onDelete, onSubmit, onClose }: Che
             className={styles.formInput}
             placeholder="Your name"
             value={name}
-            onChange={e => handleNameChange(e.target.value)}
+            onChange={e => { handleNameChange(e.target.value); }}
             maxLength={50}
           />
           <textarea
             className={styles.formTextarea}
             placeholder="Send Vico some motivation! 💪"
             value={message}
-            onChange={e => setMessage(e.target.value)}
+            onChange={e => { setMessage(e.target.value); }}
             rows={3}
             maxLength={280}
           />
@@ -75,7 +75,7 @@ export function CheersPage({ cheers, isAdmin, onDelete, onSubmit, onClose }: Che
               <input
                 type="checkbox"
                 checked={isPublic}
-                onChange={e => setIsPublic(e.target.checked)}
+                onChange={e => { setIsPublic(e.target.checked); }}
               />
               Make it public
             </label>
@@ -104,7 +104,7 @@ export function CheersPage({ cheers, isAdmin, onDelete, onSubmit, onClose }: Che
                     {new Date(c.createdAt).toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   {isAdmin && (
-                    <button className={styles.cheerDelete} onClick={() => onDelete(c.id)}>✕</button>
+                    <button className={styles.cheerDelete} onClick={() => { onDelete(c.id); }}>✕</button>
                   )}
                 </div>
                 <p className={styles.cheerMessage}>"{c.message}"</p>

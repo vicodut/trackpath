@@ -207,6 +207,8 @@ export class StravaService {
     }
 
     const [{ total }] = await this.db.select({ total: count() }).from(stravaActivities);
+    // node-postgres returns COUNT(*)/bigint as a string at runtime despite Drizzle's `number` type.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
     return { synced, total: Number(total) };
   }
 

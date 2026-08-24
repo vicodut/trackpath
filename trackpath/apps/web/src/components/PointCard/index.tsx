@@ -14,7 +14,7 @@ export const PointCard = memo(function PointCard({ point, onSelect, onDelete }: 
   const emoji = point.eventType ? TAG_EMOJIS[point.eventType] : null;
 
   return (
-    <div className={styles.pointCard} onClick={() => onSelect(point)}>
+    <div className={styles.pointCard} onClick={() => { onSelect(point); }}>
       <div className={styles.pointTime}>{emoji && <>{emoji} · </>}{time}</div>
       <div className={styles.pointCoords}>
         {point.latitude.toFixed(5)}, {point.longitude.toFixed(5)}

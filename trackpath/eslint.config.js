@@ -10,13 +10,13 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        project: ["./tsconfig.json", "./tsconfig.client.json"],
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
   },
   {
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["apps/*/src/**/*.{ts,tsx}"],
     plugins: {
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
@@ -65,13 +65,20 @@ export default tseslint.config(
       "no-var": "error",
     },
   },
-  // Server-specific relaxations (Express handlers return void but use async)
+  // Backend-specific relaxations (NestJS handlers return void but use async)
   {
-    files: ["src/server/**/*.ts"],
+    files: ["apps/api/src/**/*.ts"],
     rules: {
       "@typescript-eslint/no-misused-promises": "warn",
       "@typescript-eslint/no-floating-promises": "warn",
       "no-console": "off",
+    },
+  },
+  // NestJS module classes are decorator-only DI targets — always empty by design.
+  {
+    files: ["apps/api/src/**/*.module.ts"],
+    rules: {
+      "@typescript-eslint/no-extraneous-class": "off",
     },
   },
 );

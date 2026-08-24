@@ -75,7 +75,7 @@ export function TrailLogPage({
           <button
             key={key}
             className={`tag-filter-btn ${activeFilters.has(key) ? 'active' : ''}`}
-            onClick={() => toggleFilter(key)}
+            onClick={() => { toggleFilter(key); }}
           >
             {emoji}
           </button>

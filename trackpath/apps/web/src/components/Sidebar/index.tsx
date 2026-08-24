@@ -105,7 +105,7 @@ function PollsSection({
   };
 
   const setOption = (i: number, val: string) =>
-    setOptions((prev) => prev.map((o, idx) => (idx === i ? val : o)));
+    { setOptions((prev) => prev.map((o, idx) => (idx === i ? val : o))); };
 
   if (polls.length === 0 && !isAdmin) return null;
 
@@ -114,7 +114,7 @@ function PollsSection({
       <div className={styles.pollHeader}>
         <span className={styles.pollHeaderLabel}>POLL</span>
         {isAdmin && (
-          <button className={styles.pollNewBtn} onClick={() => setShowForm((s) => !s)}>
+          <button className={styles.pollNewBtn} onClick={() => { setShowForm((s) => !s); }}>
             {showForm ? '✕' : '+ New'}
           </button>
         )}
@@ -126,7 +126,7 @@ function PollsSection({
             className={styles.pollFormInput}
             placeholder="Question…"
             value={question}
-            onChange={(e) => setQuestion(e.target.value)}
+            onChange={(e) => { setQuestion(e.target.value); }}
           />
           <div className={styles.pollFormOptions}>
             {options.map((o, i) => (
@@ -135,14 +135,14 @@ function PollsSection({
                 className={styles.pollFormInput}
                 placeholder={`Option ${i + 1}`}
                 value={o}
-                onChange={(e) => setOption(i, e.target.value)}
+                onChange={(e) => { setOption(i, e.target.value); }}
               />
             ))}
           </div>
           {options.length < 6 && (
             <button
               className={styles.pollAddOptionBtn}
-              onClick={() => setOptions((prev) => [...prev, ''])}
+              onClick={() => { setOptions((prev) => [...prev, '']); }}
             >
               + add option
             </button>
@@ -155,7 +155,7 @@ function PollsSection({
             >
               Create
             </button>
-            <button className={styles.pollCancelBtn} onClick={() => setShowForm(false)}>Cancel</button>
+            <button className={styles.pollCancelBtn} onClick={() => { setShowForm(false); }}>Cancel</button>
           </div>
         </div>
       )}
@@ -251,7 +251,7 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete, onSeeAll }: {
     setSending(true);
     const ok = await onSubmit?.(name.trim(), message.trim(), isPublic);
     setSending(false);
-    if (ok) { setMessage(''); setSent(true); setTimeout(() => setSent(false), 3000); }
+    if (ok) { setMessage(''); setSent(true); setTimeout(() => { setSent(false); }, 3000); }
   };
 
   return (
@@ -265,14 +265,14 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete, onSeeAll }: {
           className={styles.pollFormInput}
           placeholder="Your name"
           value={name}
-          onChange={e => handleNameChange(e.target.value)}
+          onChange={e => { handleNameChange(e.target.value); }}
           maxLength={50}
         />
         <textarea
           className={styles.cheersTextarea}
           placeholder="Send Vico some motivation! 💪"
           value={message}
-          onChange={e => setMessage(e.target.value)}
+          onChange={e => { setMessage(e.target.value); }}
           rows={2}
           maxLength={280}
         />
@@ -280,7 +280,7 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete, onSeeAll }: {
           <input
             type="checkbox"
             checked={isPublic}
-            onChange={e => setIsPublic(e.target.checked)}
+            onChange={e => { setIsPublic(e.target.checked); }}
           />
           Make it public
         </label>
@@ -411,7 +411,7 @@ function SidebarContent({
           <button
             key={key}
             className={`${styles.tagFilterBtn} ${activeFilters.has(key) ? styles.active : ''}`}
-            onClick={() => toggleFilter(key)}
+            onClick={() => { toggleFilter(key); }}
           >
             {emoji}
           </button>
@@ -518,7 +518,7 @@ function MobileAddDrawer({ snap, setSnap, onAddPoint, onAddSuccess, onFormToggle
                 <button
                   key={t}
                   className={`${styles.addFormTagBtn} ${tag === t ? styles.active : ''}`}
-                  onClick={() => setTag(tag === t ? '' : t)}
+                  onClick={() => { setTag(tag === t ? '' : t); }}
                 >
                   <span className={styles.addFormTagEmoji}>{TAG_EMOJIS[t]}</span>
                   <span className={styles.addFormTagLabel}>{t}</span>
@@ -529,7 +529,7 @@ function MobileAddDrawer({ snap, setSnap, onAddPoint, onAddSuccess, onFormToggle
               className={styles.mobileAddMessage}
               placeholder="Message (optional)"
               value={msg}
-              onChange={(e) => setMsg(e.target.value)}
+              onChange={(e) => { setMsg(e.target.value); }}
               rows={2}
             />
             <button

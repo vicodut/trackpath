@@ -47,7 +47,7 @@ export class WeatherService {
     }
 
     const url =
-      `${OPEN_METEO_BASE}` +
+      OPEN_METEO_BASE +
       `?latitude=${latitude}&longitude=${longitude}` +
       `&daily=${DAILY_FIELDS}` +
       `&temperature_unit=celsius&windspeed_unit=kmh` +

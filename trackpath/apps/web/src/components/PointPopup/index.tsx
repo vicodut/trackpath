@@ -56,7 +56,7 @@ export const PointPopup = memo(function PointPopup({
 
   return (
     <div className={styles.pointPopupOverlay} onClick={onClose}>
-      <div className={styles.pointPopup} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.pointPopup} onClick={(e) => { e.stopPropagation(); }}>
         <div className={styles.pointPopupHeader}>
           <span className={styles.pointPopupType}>
             {emoji && <>{emoji} </>}

@@ -44,7 +44,7 @@ export function App() {
   const [poopRain, setPoopRain] = useState(false);
   const triggerPoop = useCallback(() => {
     setPoopRain(true);
-    setTimeout(() => setPoopRain(false), 3000);
+    setTimeout(() => { setPoopRain(false); }, 3000);
   }, []);
 
   // Keyboard: type "poop"
@@ -56,7 +56,7 @@ export function App() {
       if (buf === 'poop') { buf = ''; triggerPoop(); }
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); };
   }, [triggerPoop]);
 
   // Mobile shake
@@ -78,9 +78,11 @@ export function App() {
     };
 
     // iOS 13+ requires a user-gesture permission request
-    if (typeof (DeviceMotionEvent as { requestPermission?: () => Promise<string> }).requestPermission === 'function') {
+    const motionEventWithPermission = DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> };
+    if (typeof motionEventWithPermission.requestPermission === 'function') {
+      const requestPermission = motionEventWithPermission.requestPermission;
       const requestOnTap = () => {
-        (DeviceMotionEvent as { requestPermission: () => Promise<string> }).requestPermission()
+        requestPermission()
           .then(result => { if (result === 'granted') window.addEventListener('devicemotion', onMotion); })
           .catch(() => {});
       };
@@ -92,7 +94,7 @@ export function App() {
     }
 
     window.addEventListener('devicemotion', onMotion);
-    return () => window.removeEventListener('devicemotion', onMotion);
+    return () => { window.removeEventListener('devicemotion', onMotion); };
   }, [triggerPoop]);
 
   const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(null);
@@ -216,7 +218,7 @@ export function App() {
     <div className="app">
       <Header
         sidebarVisible={sidebarVisible}
-        onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
+        onToggleSidebar={() => { setSidebarVisible(!sidebarVisible); }}
         isAdmin={isAdmin}
         onAdmin={openAdmin}
         onStats={openStats}
