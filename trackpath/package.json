@@ -1,6 +1,7 @@
 {
   "name": "trackpath-root",
   "private": true,
+  "type": "module",
   "packageManager": "npm@10.8.1",
   "workspaces": [
     "apps/*",
@@ -19,7 +20,11 @@
     "db:studio": "npm run db:studio --workspace=@trackpath/db"
   },
   "devDependencies": {
+    "chokidar": "^3.6.0",
     "eslint": "^9.39.4",
-    "turbo": "^2.5.4"
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.4",
+    "turbo": "^2.5.4",
+    "typescript-eslint": "^8.67.0"
   }
 }

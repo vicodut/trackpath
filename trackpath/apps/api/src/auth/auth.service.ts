@@ -1,16 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { betterAuth } from 'better-auth';
+import type { Session, User } from 'better-auth';
 import { fromNodeHeaders } from 'better-auth/node';
 import type { IncomingHttpHeaders } from 'node:http';
 import { auth } from '../auth.js';
 
 /**
- * Inferred session type from better-auth. Typed structurally so we're not
- * coupled to a specific version of the library's exported types.
+ * Session shape returned by better-auth's getSession(), typed against the
+ * library's own exported Session/User models.
  */
-export type BetterAuthSession = NonNullable<
-  Awaited<ReturnType<typeof betterAuth.prototype.api.getSession>>
->;
+export interface BetterAuthSession {
+  session: Session;
+  user: User;
+}
 
 @Injectable()
 export class AuthService {
@@ -44,7 +45,7 @@ export class AuthService {
   getSession(headers: IncomingHttpHeaders): Promise<BetterAuthSession | null> {
     return this.instance.api.getSession({
       headers: fromNodeHeaders(headers),
-    }) as Promise<BetterAuthSession | null>;
+    });
   }
 
   /**
