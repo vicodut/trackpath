@@ -8,7 +8,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { asc, desc, not, like, count, eq, gte } from 'drizzle-orm';
+import { asc, desc, not, like, count, eq, gte, inArray } from 'drizzle-orm';
 import { parseString } from 'xml2js';
 import { Subject, Observable, from, startWith, switchMap, map } from 'rxjs';
 import { trackingPoints } from '@trackpath/db/schema';
@@ -16,6 +16,8 @@ import type { NewTrackingPoint, TrackingPoint } from '@trackpath/db/schema';
 import { DRIZZLE } from '../database/drizzle.constants.js';
 import type { DrizzleClient } from '../database/drizzle.types.js';
 import { TRIP_START } from '../constants.js';
+import { toUtcDayStart, toUtcDayEnd } from '../common/date-range.util.js';
+import { SyncPeriodsService } from '../sync-periods/sync-periods.service.js';
 import type {
   GarminExtData,
   KmlDataEntry,
@@ -31,16 +33,6 @@ const FETCH_TIMEOUT_MS = 30_000;
 
 const MAPSHARE_BASE = 'https://share.garmin.com/Feed/Share';
 const INTERVAL_NAME = 'garmin-auto-sync';
-
-/** Normalises a YYYY-MM-DD (or full ISO8601) date to the start of that UTC day. */
-function toUtcDayStart(date: string): string {
-  return date.length === 10 ? `${date}T00:00:00Z` : date;
-}
-
-/** Normalises a YYYY-MM-DD (or full ISO8601) date to the end of that UTC day. */
-function toUtcDayEnd(date: string): string {
-  return date.length === 10 ? `${date}T23:59:59Z` : date;
-}
 
 /**
  * Garmin's "Time UTC" extended-data field is formatted as
@@ -88,6 +80,7 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleClient,
     private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly syncPeriodsService: SyncPeriodsService,
   ) {
     this.mapshareId = process.env.MAPSHARE_ID ?? null;
     this.pollIntervalMs =
@@ -230,7 +223,7 @@ ${trkpts}
   async syncFromMapShare(
     startDate?: string,
     endDate?: string,
-  ): Promise<{ synced: number; total: number; points: TrackingPoint[] }> {
+  ): Promise<{ synced: number; pruned: number; total: number; points: TrackingPoint[] }> {
     if (!this.mapshareId) {
       throw new BadRequestException('MAPSHARE_ID environment variable not set');
     }
@@ -245,12 +238,14 @@ ${trkpts}
     }
 
     const newCount = await this.insertPoints(fetched);
+    const prunedCount = await this.pruneOutsidePeriods();
     const all = await this.getAllPoints();
 
     const rangeLabel = startDate || endDate ? ` (${startDate ?? '…'} to ${endDate ?? '…'})` : '';
-    this.addSyncLog(`Manual sync${rangeLabel}: ${newCount} new points (${all.length} total)`);
-    if (newCount > 0) this.pointsChanged$.next();
-    return { synced: newCount, total: all.length, points: all };
+    const prunedLabel = prunedCount > 0 ? `, ${prunedCount} pruned (outside sync periods)` : '';
+    this.addSyncLog(`Manual sync${rangeLabel}: ${newCount} new points${prunedLabel} (${all.length} total)`);
+    if (newCount > 0 || prunedCount > 0) this.pointsChanged$.next();
+    return { synced: newCount, pruned: prunedCount, total: all.length, points: all };
   }
 
   // ---------------------------------------------------------------------------
@@ -263,12 +258,14 @@ ${trkpts}
     try {
       const fetched = await this.fetchGarminPoints(this.mapshareId);
       const newCount = await this.insertPoints(fetched);
+      const prunedCount = await this.pruneOutsidePeriods();
 
       this.lastSyncStatus = { time: new Date().toISOString(), newCount, error: null };
 
-      if (newCount > 0) {
-        this.logger.log(`Auto-sync: ${newCount} new points`);
-        this.addSyncLog(`${newCount} new points synced`);
+      if (newCount > 0 || prunedCount > 0) {
+        const prunedLabel = prunedCount > 0 ? `, ${prunedCount} pruned (outside sync periods)` : '';
+        this.logger.log(`Auto-sync: ${newCount} new points${prunedLabel}`);
+        this.addSyncLog(`${newCount} new points synced${prunedLabel}`);
         this.pointsChanged$.next();
       }
     } catch (err) {
@@ -392,6 +389,29 @@ ${trkpts}
       .onConflictDoNothing()
       .returning({ id: trackingPoints.id });
     return inserted.length;
+  }
+
+  /**
+   * Deletes previously-synced (non-manual) points whose device timestamp
+   * falls outside every configured sync period. No-op when no periods are
+   * configured, so syncing stays unrestricted until the admin opts in.
+   */
+  private async pruneOutsidePeriods(): Promise<number> {
+    const periods = await this.syncPeriodsService.getAll();
+    if (periods.length === 0) return 0;
+
+    const rows = await this.db
+      .select({ id: trackingPoints.id, timestamp: trackingPoints.timestamp })
+      .from(trackingPoints)
+      .where(not(like(trackingPoints.garminId, 'manual-%')));
+
+    const staleIds = rows
+      .filter((r) => !SyncPeriodsService.isWithinPeriods(r.timestamp, periods))
+      .map((r) => r.id);
+    if (staleIds.length === 0) return 0;
+
+    await this.db.delete(trackingPoints).where(inArray(trackingPoints.id, staleIds));
+    return staleIds.length;
   }
 
   private addSyncLog(message: string): void {

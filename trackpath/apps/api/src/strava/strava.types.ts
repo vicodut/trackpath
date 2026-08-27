@@ -37,6 +37,7 @@ export interface StravaStreamResponse {
 
 export interface StravaSyncResult {
   synced: number;
+  pruned: number;
   total: number;
 }
 

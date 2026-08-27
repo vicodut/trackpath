@@ -1,9 +1,11 @@
 import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { asc, eq, count, gte } from 'drizzle-orm';
+import { asc, eq, count, gte, inArray } from 'drizzle-orm';
 import { stravaActivities, stravaTokens } from '@trackpath/db/schema';
 import { DRIZZLE } from '../database/drizzle.constants.js';
 import { TRIP_START } from '../constants.js';
+import { toUtcDayStart, toUtcDayEnd } from '../common/date-range.util.js';
+import { SyncPeriodsService } from '../sync-periods/sync-periods.service.js';
 import type { DrizzleClient } from '../database/drizzle.types.js';
 import type {
   StravaActivityRaw,
@@ -24,7 +26,7 @@ const REFRESH_BUFFER_S = 300;
  * for the Strava activities endpoint's `after`/`before` range params.
  */
 function toEpochSeconds(date: string, bound: 'start' | 'end'): number {
-  const iso = date.length === 10 ? `${date}T${bound === 'start' ? '00:00:00' : '23:59:59'}Z` : date;
+  const iso = bound === 'start' ? toUtcDayStart(date) : toUtcDayEnd(date);
   return Math.floor(new Date(iso).getTime() / 1000);
 }
 
@@ -43,7 +45,10 @@ export class StravaService {
   private refreshPromise: Promise<string | null> | null = null;
   private readonly syncLogs: Array<{ source: string; time: string; message: string }> = [];
 
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleClient) {
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleClient,
+    private readonly syncPeriodsService: SyncPeriodsService,
+  ) {
     this.clientId = process.env.STRAVA_CLIENT_ID ?? null;
     this.clientSecret = process.env.STRAVA_CLIENT_SECRET ?? null;
     this.redirectBase = process.env.BETTER_AUTH_URL ?? 'http://localhost:3001';
@@ -206,10 +211,12 @@ export class StravaService {
       synced++;
     }
 
+    const pruned = await this.pruneOutsidePeriods();
+
     const [{ total }] = await this.db.select({ total: count() }).from(stravaActivities);
     // node-postgres returns COUNT(*)/bigint as a string at runtime despite Drizzle's `number` type.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
-    return { synced, total: Number(total) };
+    return { synced, pruned, total: Number(total) };
   }
 
   /**
@@ -225,9 +232,10 @@ export class StravaService {
       if ('error' in result) {
         this.logger.warn(`Daily Strava sync skipped: ${result.error}`);
         this.addSyncLog(`Skipped: ${result.error}`);
-      } else if (result.synced > 0) {
-        this.logger.log(`Daily Strava sync: ${result.synced} new activities`);
-        this.addSyncLog(`${result.synced} new activities synced`);
+      } else if (result.synced > 0 || result.pruned > 0) {
+        const prunedLabel = result.pruned > 0 ? `, ${result.pruned} pruned (outside sync periods)` : '';
+        this.logger.log(`Daily Strava sync: ${result.synced} new activities${prunedLabel}`);
+        this.addSyncLog(`${result.synced} new activities synced${prunedLabel}`);
       }
     } catch (err) {
       const msg = (err as Error).message;
@@ -239,6 +247,28 @@ export class StravaService {
   private addSyncLog(message: string): void {
     this.syncLogs.unshift({ source: 'strava', time: new Date().toISOString(), message });
     if (this.syncLogs.length > 50) this.syncLogs.length = 50;
+  }
+
+  /**
+   * Deletes previously-synced activities whose start date falls outside
+   * every configured sync period. No-op when no periods are configured, so
+   * syncing stays unrestricted until the admin opts in.
+   */
+  private async pruneOutsidePeriods(): Promise<number> {
+    const periods = await this.syncPeriodsService.getAll();
+    if (periods.length === 0) return 0;
+
+    const rows = await this.db
+      .select({ id: stravaActivities.id, startDate: stravaActivities.startDate })
+      .from(stravaActivities);
+
+    const staleIds = rows
+      .filter((r) => !r.startDate || !SyncPeriodsService.isWithinPeriods(r.startDate, periods))
+      .map((r) => r.id);
+    if (staleIds.length === 0) return 0;
+
+    await this.db.delete(stravaActivities).where(inArray(stravaActivities.id, staleIds));
+    return staleIds.length;
   }
 
   // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Poll, PollSuggestion } from '../../api/polls';
+import { fetchSyncPeriods, addSyncPeriod, deleteSyncPeriod, type SyncPeriod } from '../../api/syncPeriods';
 import styles from './AdminPage.module.css';
 
 interface AdminStatus {
@@ -44,6 +45,10 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
   const [garminEndDate, setGarminEndDate] = useState('');
   const [stravaStartDate, setStravaStartDate] = useState('');
   const [stravaEndDate, setStravaEndDate] = useState('');
+  const [periods, setPeriods] = useState<SyncPeriod[]>([]);
+  const [newPeriodStart, setNewPeriodStart] = useState('');
+  const [newPeriodEnd, setNewPeriodEnd] = useState('');
+  const [savingPeriod, setSavingPeriod] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
   const canSubmitPoll = pollQuestion.trim().length > 0 && pollOptions.filter(o => o.trim()).length >= 2;
@@ -55,12 +60,41 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
       .catch(console.error);
   }, []);
 
+  const loadPeriods = useCallback(() => {
+    fetchSyncPeriods().then(setPeriods).catch(console.error);
+  }, []);
+
   useEffect(() => {
     loadStatus();
+    loadPeriods();
     void onLoadSuggestions();
     const interval = setInterval(loadStatus, 10000);
     return () => { clearInterval(interval); };
-  }, [loadStatus, onLoadSuggestions]);
+  }, [loadStatus, loadPeriods, onLoadSuggestions]);
+
+  const handleAddPeriod = useCallback(async () => {
+    if (!newPeriodStart || !newPeriodEnd) return;
+    setSavingPeriod(true);
+    try {
+      await addSyncPeriod(newPeriodStart, newPeriodEnd);
+      setNewPeriodStart('');
+      setNewPeriodEnd('');
+      loadPeriods();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingPeriod(false);
+    }
+  }, [newPeriodStart, newPeriodEnd, loadPeriods]);
+
+  const handleDeletePeriod = useCallback(async (id: number) => {
+    try {
+      await deleteSyncPeriod(id);
+      loadPeriods();
+    } catch (err) {
+      console.error(err);
+    }
+  }, [loadPeriods]);
 
   if (!status) return <div className={styles.adminPage}><div className={styles.adminLoading}>Loading...</div></div>;
 
@@ -72,6 +106,56 @@ export function AdminPage({ onClose, onStravaConnect, onStravaSync, onGarminSync
       </div>
 
       <div className={styles.adminSections}>
+        <div className={styles.adminSection}>
+          <h3>Sync Periods</h3>
+          <p className={styles.adminHint}>
+            Restrict Garmin and Strava syncing to these date ranges. Data outside every period is pruned after each sync. Leave empty to sync everything.
+          </p>
+          <div className={styles.adminInfo}>
+            {periods.length === 0 ? (
+              <div className={styles.adminLogEmpty}>No periods configured — syncing everything</div>
+            ) : (
+              periods.map(p => (
+                <div key={p.id} className={styles.adminRow}>
+                  <span>{p.startDate} → {p.endDate}</span>
+                  <button
+                    className={`${styles.pollActionBtn} ${styles.pollDeleteBtn}`}
+                    onClick={() => { void handleDeletePeriod(p.id); }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+          <div className={styles.syncRangeForm}>
+            <div className={styles.syncRangeInputs}>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={newPeriodStart}
+                max={newPeriodEnd || undefined}
+                onChange={e => { setNewPeriodStart(e.target.value); }}
+              />
+              <span className={styles.syncRangeSep}>to</span>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={newPeriodEnd}
+                min={newPeriodStart || undefined}
+                onChange={e => { setNewPeriodEnd(e.target.value); }}
+              />
+            </div>
+            <button
+              className={styles.pollActionBtn}
+              disabled={!newPeriodStart || !newPeriodEnd || savingPeriod}
+              onClick={() => { void handleAddPeriod(); }}
+            >
+              Add Period
+            </button>
+          </div>
+        </div>
+
         <div className={styles.adminSection}>
           <h3>Garmin inReach</h3>
           <div className={styles.adminInfo}>

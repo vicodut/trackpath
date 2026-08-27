@@ -19,6 +19,21 @@ export const trackingPoints = pgTable('tracking_points', {
 export type TrackingPoint = typeof trackingPoints.$inferSelect;
 export type NewTrackingPoint = typeof trackingPoints.$inferInsert;
 
+// --- Sync periods ---
+// Date ranges (shared by Garmin + Strava) that restrict which synced data is
+// kept. Points/activities outside every configured period are pruned after
+// each sync; an empty table means "no restriction" (sync everything).
+
+export const syncPeriods = pgTable('sync_periods', {
+  id: serial('id').primaryKey(),
+  startDate: text('start_date').notNull(),
+  endDate: text('end_date').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export type SyncPeriod = typeof syncPeriods.$inferSelect;
+export type NewSyncPeriod = typeof syncPeriods.$inferInsert;
+
 // --- Better Auth tables ---
 
 export const user = pgTable("user", {

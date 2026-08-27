@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
+import { SyncPeriodsModule } from '../sync-periods/sync-periods.module.js';
 import { GarminController } from './garmin.controller.js';
 import { GarminService } from './garmin.service.js';
 
 @Module({
+  imports: [SyncPeriodsModule],
   controllers: [GarminController],
   providers: [GarminService],
   // Export GarminService so other modules (e.g. a future AdminModule) can

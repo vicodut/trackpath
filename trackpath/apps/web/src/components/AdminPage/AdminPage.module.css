@@ -48,6 +48,13 @@
   letter-spacing: 0.2em;
 }
 
+.adminHint {
+  font-size: 0.75rem;
+  color: var(--outline);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
 .adminInfo {
   display: flex;
   flex-direction: column;
