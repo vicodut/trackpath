@@ -19,6 +19,36 @@ interface StatsPageProps {
   onClose: () => void;
 }
 
+type Metric = 'distance' | 'elevation';
+
+/** Small DISTANCE/ELEVATION tab switcher shared by the daily chart, daily log, and heatmap. */
+function MetricTabs({ metric, onChange }: { metric: Metric; onChange: (m: Metric) => void }) {
+  return (
+    <div className={styles.metricTabs}>
+      {(['distance', 'elevation'] as const).map(m => (
+        <button
+          key={m}
+          className={`${styles.metricTab} ${metric === m ? styles.metricTabActive : ''}`}
+          onClick={() => { onChange(m); }}
+        >
+          {m === 'distance' ? 'Distance' : 'Elevation'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Rounds `max / 5` to a "nice" 1/2/5 × 10^n step, for either km or metre scales. */
+function niceStep(max: number): number {
+  if (max <= 0) return 1;
+  const rough = max / 5;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+  const residual = rough / magnitude;
+  if (residual >= 5) return 5 * magnitude;
+  if (residual >= 2) return 2 * magnitude;
+  return magnitude;
+}
+
 const AT_TOTAL_KM = 1500;
 const BEER_CAL = 153; // regular beer 12 fl oz, ~5% alc
 const BEER_CARBS = 12.6;
@@ -66,7 +96,7 @@ function mondayIndex(date: Date): number {
   return (date.getDay() + 6) % 7;
 }
 
-function getFixedWeeksGrid(dailyKm: Record<string, number>, startDate: string, endDate: string) {
+function getFixedWeeksGrid(dailyKm: Record<string, number>, dailyElev: Record<string, number>, startDate: string, endDate: string) {
   const start = new Date(startDate + 'T00:00:00');
   const end = new Date(endDate + 'T00:00:00');
 
@@ -78,7 +108,7 @@ function getFixedWeeksGrid(dailyKm: Record<string, number>, startDate: string, e
   const gridEnd = new Date(end);
   gridEnd.setDate(gridEnd.getDate() + (6 - mondayIndex(gridEnd)));
 
-  const weeks: ({ date: string; km: number; row: number } | null)[][] = [];
+  const weeks: ({ date: string; km: number; elev: number; row: number } | null)[][] = [];
   const months: { label: string; weekIndex: number }[] = [];
   let currentWeek: typeof weeks[0] = [];
   let lastMonth = -1;
@@ -89,7 +119,7 @@ function getFixedWeeksGrid(dailyKm: Record<string, number>, startDate: string, e
     const row = mondayIndex(cursor); // 0=Mon, 6=Sun
     const inRange = cursor >= start && cursor <= end;
 
-    currentWeek.push(inRange ? { date: dateStr, km: dailyKm[dateStr] || 0, row } : null);
+    currentWeek.push(inRange ? { date: dateStr, km: dailyKm[dateStr] || 0, elev: dailyElev[dateStr] || 0, row } : null);
 
     if (inRange && cursor.getMonth() !== lastMonth) {
       lastMonth = cursor.getMonth();
@@ -112,12 +142,34 @@ function getFixedWeeksGrid(dailyKm: Record<string, number>, startDate: string, e
   return { weeks, months };
 }
 
-function intensityClass(km: number): string {
-  if (km === 0) return styles.heatmapCell0;
-  if (km < 10) return styles.heatmapCell1;
-  if (km < 20) return styles.heatmapCell2;
-  if (km < 30) return styles.heatmapCell3;
-  return styles.heatmapCell4;
+const HEATMAP_THRESHOLDS: Record<Metric, number[]> = {
+  distance: [10, 20, 30], // km
+  elevation: [250, 500, 1000, 1500, 2000], // m
+};
+
+/** 0 = no activity; 1..maxIntensityLevel(metric) = increasing intensity buckets. */
+function intensityLevel(value: number, metric: Metric): number {
+  if (value === 0) return 0;
+  const thresholds = HEATMAP_THRESHOLDS[metric];
+  const bucket = thresholds.findIndex(t => value < t);
+  return bucket === -1 ? thresholds.length + 1 : bucket + 1;
+}
+
+function maxIntensityLevel(metric: Metric): number {
+  return HEATMAP_THRESHOLDS[metric].length + 1;
+}
+
+/** Maps a 1..maxLevel bucket to an opacity so the top bucket is always fully
+ *  solid regardless of how many buckets a metric's scale has. */
+function levelOpacity(level: number, metric: Metric): number {
+  const maxLevel = maxIntensityLevel(metric);
+  return maxLevel > 1 ? 0.25 + ((level - 1) / (maxLevel - 1)) * 0.75 : 1;
+}
+
+function heatmapCellProps(value: number, metric: Metric): { className: string; style?: { opacity: number } } {
+  const level = intensityLevel(value, metric);
+  if (level === 0) return { className: styles.heatmapCell0 };
+  return { className: styles.heatmapCellFilled, style: { opacity: levelOpacity(level, metric) } };
 }
 
 interface TrailElevationPoint {
@@ -485,6 +537,7 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
 
 function DailyBarChart({ dailyKm, dailyElev, allTripDays }: { dailyKm: Record<string, number>; dailyElev: Record<string, number>; allTripDays: string[] }) {
   const { fmtDist } = useUnit();
+  const [metric, setMetric] = useState<Metric>('distance');
   const [hovered, setHovered] = useState<{ date: string; km: number; elev: number; x: number; y: number } | null>(null);
 
   const entries = useMemo(() =>
@@ -493,9 +546,12 @@ function DailyBarChart({ dailyKm, dailyElev, allTripDays }: { dailyKm: Record<st
 
   if (entries.length === 0) return <div className={styles.statsEmpty}>NO_DAILY_DATA_YET</div>;
 
+  const valueOf = (e: { km: number; elev: number }) => metric === 'distance' ? e.km : e.elev;
+  const fmtValue = (v: number) => metric === 'distance' ? fmtDist(v, 1) : `${Math.round(v)}m`;
+
   // Guard against an all-zero range (e.g. right at trip start) dividing by zero.
-  const maxKm = Math.max(...entries.map(e => e.km), 1);
-  const avgKm = entries.reduce((s, e) => s + e.km, 0) / entries.length;
+  const maxVal = Math.max(...entries.map(valueOf), 1);
+  const avgVal = entries.reduce((s, e) => s + valueOf(e), 0) / entries.length;
   const today = new Date().toISOString().slice(0, 10);
 
   const W = 800; const H = 160;
@@ -507,67 +563,71 @@ function DailyBarChart({ dailyKm, dailyElev, allTripDays }: { dailyKm: Record<st
   const slot = plotW / n;
   const barW = Math.max(Math.min(slot * 0.72, 28), 4);
   const toX = (i: number) => PAD.left + i * slot + (slot - barW) / 2;
-  const toY = (km: number) => PAD.top + plotH - (km / maxKm) * plotH;
-  const avgY = toY(avgKm);
+  const toY = (v: number) => PAD.top + plotH - (v / maxVal) * plotH;
+  const avgY = toY(avgVal);
 
-  const yStep = maxKm > 40 ? 20 : maxKm > 20 ? 10 : 5;
-  const yTicks = Array.from({ length: Math.ceil(maxKm / yStep) + 1 }, (_, i) => i * yStep).filter(v => v <= maxKm + yStep * 0.5);
+  const yStep = niceStep(maxVal);
+  const yTicks = Array.from({ length: Math.ceil(maxVal / yStep) + 1 }, (_, i) => i * yStep).filter(v => v <= maxVal + yStep * 0.5);
   const labelEvery = Math.ceil(n / 10);
 
   return (
-    <div className={styles.elevChartWrapper}>
-      <svg viewBox={`0 0 ${W} ${H}`} className={styles.elevChartSvg} onMouseLeave={() => { setHovered(null); }}>
-        {yTicks.map(v => (
-          <line key={`yg${v}`} x1={PAD.left} x2={W - PAD.right} y1={toY(v)} y2={toY(v)}
-            stroke="var(--outline-variant)" strokeWidth="0.5" opacity="0.3" />
-        ))}
-        <line x1={PAD.left} x2={W - PAD.right} y1={avgY} y2={avgY}
-          stroke="var(--outline)" strokeWidth="1" strokeDasharray="4,3" opacity="0.45" />
-        <text x={W - PAD.right + 4} y={avgY + 3} className={styles.elevChartLabel} style={{ fontSize: 10 }}>AVG</text>
+    <div>
+      <MetricTabs metric={metric} onChange={setMetric} />
+      <div className={styles.elevChartWrapper}>
+        <svg viewBox={`0 0 ${W} ${H}`} className={styles.elevChartSvg} onMouseLeave={() => { setHovered(null); }}>
+          {yTicks.map(v => (
+            <line key={`yg${v}`} x1={PAD.left} x2={W - PAD.right} y1={toY(v)} y2={toY(v)}
+              stroke="var(--outline-variant)" strokeWidth="0.5" opacity="0.3" />
+          ))}
+          <line x1={PAD.left} x2={W - PAD.right} y1={avgY} y2={avgY}
+            stroke="var(--outline)" strokeWidth="1" strokeDasharray="4,3" opacity="0.45" />
+          <text x={W - PAD.right + 4} y={avgY + 3} className={styles.elevChartLabel} style={{ fontSize: 10 }}>AVG</text>
 
-        {entries.map((e, i) => {
-          const x = toX(i);
-          const y = toY(e.km);
-          const barH = plotH - (y - PAD.top);
-          const isToday = e.date === today;
-          const isBest = e.km === maxKm;
-          return (
-            <g key={e.date}
-              onMouseEnter={(evt) => { setHovered({ date: e.date, km: e.km, elev: e.elev, x: evt.clientX, y: evt.clientY }); }}
-            >
-              <rect x={x} y={y} width={barW} height={barH}
-                fill={isToday ? 'var(--primary)' : 'var(--secondary)'} opacity={isToday ? 1 : 0.75} />
-              {(isBest || isToday) && (
-                <text x={x + barW / 2} y={y - 3} textAnchor="middle" className={styles.elevChartLabel} style={{ fontSize: 9 }}>
-                  {fmtDist(e.km, 1)}
-                </text>
-              )}
-            </g>
-          );
-        })}
+          {entries.map((e, i) => {
+            const val = valueOf(e);
+            const x = toX(i);
+            const y = toY(val);
+            const barH = plotH - (y - PAD.top);
+            const isToday = e.date === today;
+            const isBest = val === maxVal;
+            return (
+              <g key={e.date}
+                onMouseEnter={(evt) => { setHovered({ date: e.date, km: e.km, elev: e.elev, x: evt.clientX, y: evt.clientY }); }}
+              >
+                <rect x={x} y={y} width={barW} height={barH}
+                  fill={isToday ? 'var(--primary)' : 'var(--secondary)'} opacity={isToday ? 1 : 0.75} />
+                {(isBest || isToday) && (
+                  <text x={x + barW / 2} y={y - 3} textAnchor="middle" className={styles.elevChartLabel} style={{ fontSize: 9 }}>
+                    {fmtValue(val)}
+                  </text>
+                )}
+              </g>
+            );
+          })}
 
-        {yTicks.map(v => (
-          <text key={`yl${v}`} x={PAD.left - 4} y={toY(v) + 3} textAnchor="end" className={styles.elevChartLabel}>{v}</text>
-        ))}
-        <text x={PAD.left - 4} y={PAD.top - 4} textAnchor="end" className={styles.elevChartLabel} style={{ fontSize: 9 }}>KM</text>
+          {yTicks.map(v => (
+            <text key={`yl${v}`} x={PAD.left - 4} y={toY(v) + 3} textAnchor="end" className={styles.elevChartLabel}>{v}</text>
+          ))}
+          <text x={PAD.left - 4} y={PAD.top - 4} textAnchor="end" className={styles.elevChartLabel} style={{ fontSize: 9 }}>{metric === 'distance' ? 'KM' : 'M'}</text>
 
-        {entries.map((e, i) => {
-          if (i % labelEvery !== 0 && e.date !== today) return null;
-          const d = new Date(e.date + 'T00:00:00');
-          return (
-            <text key={`xl${i}`} x={toX(i) + barW / 2} y={H - 4} textAnchor="middle" className={styles.elevChartLabel}>
-              {`${d.getMonth() + 1}/${d.getDate()}`}
-            </text>
-          );
-        })}
-      </svg>
-      {hovered && (
-        <div className={styles.heatmapTooltip} style={{ position: 'fixed', left: hovered.x, top: hovered.y - 12, transform: 'translate(-50%, -100%)' }}>
-          <strong>{fmtDist(hovered.km, 1)}</strong>
-          {hovered.elev > 0 && <span>↑{Math.round(hovered.elev)}m</span>}
-          <span>{hovered.date}</span>
-        </div>
-      )}
+          {entries.map((e, i) => {
+            if (i % labelEvery !== 0 && e.date !== today) return null;
+            const d = new Date(e.date + 'T00:00:00');
+            return (
+              <text key={`xl${i}`} x={toX(i) + barW / 2} y={H - 4} textAnchor="middle" className={styles.elevChartLabel}>
+                {`${d.getMonth() + 1}/${d.getDate()}`}
+              </text>
+            );
+          })}
+        </svg>
+        {hovered && (
+          <div className={styles.heatmapTooltip} style={{ position: 'fixed', left: hovered.x, top: hovered.y - 12, transform: 'translate(-50%, -100%)' }}>
+            <strong>{fmtDist(hovered.km, 1)}</strong>
+            {hovered.elev > 0 && <span>↑{Math.round(hovered.elev)}m</span>}
+            <span>{hovered.date}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -581,6 +641,7 @@ function DailyLog({ points, dailyKm, dailyElev, allTripDays }: {
   allTripDays: string[];
 }) {
   const { fmtDist } = useUnit();
+  const [metric, setMetric] = useState<Metric>('distance');
 
   const entries = useMemo(() => {
     const messages: Record<string, string[]> = {};
@@ -613,35 +674,42 @@ function DailyLog({ points, dailyKm, dailyElev, allTripDays }: {
 
   if (entries.length === 0) return <div className={styles.statsEmpty}>NO_ACTIVITY_YET</div>;
 
-  const maxKm = Math.max(...entries.map(e => e.km));
-  const bestDate = maxKm > 0 ? entries.reduce((best, e) => e.km > best.km ? e : best, entries[0]).date : null;
+  const valueOf = (e: { km: number; elev: number }) => metric === 'distance' ? e.km : e.elev;
+  const maxVal = Math.max(...entries.map(valueOf));
+  const bestDate = maxVal > 0 ? entries.reduce((best, e) => valueOf(e) > valueOf(best) ? e : best, entries[0]).date : null;
 
   return (
-    <div className={styles.dailyLog}>
-      {entries.map(e => (
-        <div key={e.date} className={`${styles.dailyLogRow} ${e.km === 0 ? styles.dailyLogRowZero : ''}`}>
-          <div className={styles.dailyLogMeta}>
-            <span className={styles.dailyLogDay}>D{e.dayNum}</span>
-            <span className={styles.dailyLogDate}>{e.label}</span>
-          </div>
-          <div className={styles.dailyLogBar}>
-            <div className={styles.dailyLogBarFill} style={{ width: `${maxKm > 0 ? (e.km / maxKm) * 100 : 0}%` }} />
-          </div>
-          <div className={styles.dailyLogStats}>
-            {e.km === 0 ? (
-              <span className={styles.dailyLogZero}>REST DAY 💤</span>
-            ) : (
-              <span className={styles.dailyLogKm}>{fmtDist(e.km, 1)}{e.date === bestDate ? ' 🏆' : ''}</span>
-            )}
-            {e.elev > 0 && <span className={styles.dailyLogElev}>↑{Math.round(e.elev)}m</span>}
-          </div>
-          {e.messages.length > 0 && (
-            <div className={styles.dailyLogMessages}>
-              {e.messages.map((msg, i) => <span key={i} className={styles.dailyLogMessage}>"{msg}"</span>)}
+    <div>
+      <MetricTabs metric={metric} onChange={setMetric} />
+      <div className={styles.dailyLog}>
+        {entries.map(e => (
+          <div key={e.date} className={`${styles.dailyLogRow} ${e.km === 0 ? styles.dailyLogRowZero : ''}`}>
+            <div className={styles.dailyLogMeta}>
+              <span className={styles.dailyLogDay}>D{e.dayNum}</span>
+              <span className={styles.dailyLogDate}>{e.label}</span>
             </div>
-          )}
-        </div>
-      ))}
+            <div className={styles.dailyLogBar}>
+              <div className={styles.dailyLogBarFill} style={{ width: `${maxVal > 0 ? (valueOf(e) / maxVal) * 100 : 0}%` }} />
+            </div>
+            <div className={styles.dailyLogStats}>
+              {e.km === 0 ? (
+                <span className={styles.dailyLogZero}>REST DAY 💤</span>
+              ) : metric === 'distance' ? (
+                <span className={styles.dailyLogKm}>{fmtDist(e.km, 1)}{e.date === bestDate ? ' 🏆' : ''}</span>
+              ) : (
+                <span className={styles.dailyLogKm}>{Math.round(e.elev)}m{e.date === bestDate ? ' 🏆' : ''}</span>
+              )}
+              {e.km !== 0 && metric === 'distance' && e.elev > 0 && <span className={styles.dailyLogElev}>↑{Math.round(e.elev)}m</span>}
+              {e.km !== 0 && metric === 'elevation' && <span className={styles.dailyLogElev}>{fmtDist(e.km, 1)}</span>}
+            </div>
+            {e.messages.length > 0 && (
+              <div className={styles.dailyLogMessages}>
+                {e.messages.map((msg, i) => <span key={i} className={styles.dailyLogMessage}>"{msg}"</span>)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1279,7 +1347,8 @@ function BeerCalculator({ distanceKm }: { distanceKm: number }) {
 }
 
 export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElevationGain, isAdmin, onClose }: StatsPageProps) {
-  const [hoveredCell, setHoveredCell] = useState<{ date: string; km: number; x: number; y: number } | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<{ date: string; km: number; elev: number; x: number; y: number } | null>(null);
+  const [heatmapMetric, setHeatmapMetric] = useState<Metric>('distance');
   const [periods, setPeriods] = useState<SyncPeriod[]>([]);
 
   useEffect(() => {
@@ -1351,7 +1420,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
   const gridEndDate = periods.length > 0
     ? new Date(latestPeriodEndMs(periods)).toISOString().slice(0, 10)
     : HIKE_END;
-  const { weeks, months } = useMemo(() => getFixedWeeksGrid(dailyKm, gridStartDate, gridEndDate), [dailyKm, gridStartDate, gridEndDate]);
+  const { weeks, months } = useMemo(() => getFixedWeeksGrid(dailyKm, dailyElev, gridStartDate, gridEndDate), [dailyKm, dailyElev, gridStartDate, gridEndDate]);
 
   const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -1444,12 +1513,6 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
           <DailyBarChart dailyKm={dailyKm} dailyElev={dailyElev} allTripDays={allTripDays} />
         </section>
 
-        {/* Daily log */}
-        <section className={styles.statsSection}>
-          <h3 className={styles.statsSectionTitle}>DAILY_LOG</h3>
-          <DailyLog points={points} dailyKm={dailyKm} dailyElev={dailyElev} allTripDays={allTripDays} />
-        </section>
-
         {/* Road to Mordor */}
         <section className={styles.statsSection} style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '24px 24px 0' }}>
@@ -1464,6 +1527,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
             <h3>ACTIVITY_LOG</h3>
             <span className={styles.statsLabel}>{activeDays} / {totalDays} ACTIVE_DAYS</span>
           </div>
+          <MetricTabs metric={heatmapMetric} onChange={setHeatmapMetric} />
           <div className={styles.heatmapWrapper} style={{ position: 'relative' }}>
             {/* Month labels */}
             <div className={styles.heatmapMonthsRow} style={{ position: 'relative', height: 16, marginLeft: 20, marginBottom: 2 }}>
@@ -1491,15 +1555,18 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
                   Array.from({ length: 7 }).map((_, row) => {
                     const cell = week[row];
                     if (!cell) return <div key={`${col}-${row}`} className={`${styles.heatmapCell} ${styles.heatmapCellEmpty}`} />;
+                    const cellProps = heatmapCellProps(heatmapMetric === 'distance' ? cell.km : cell.elev, heatmapMetric);
                     return (
                       <div
                         key={`${col}-${row}`}
-                        className={`${styles.heatmapCell} ${intensityClass(cell.km)}`}
+                        className={`${styles.heatmapCell} ${cellProps.className}`}
+                        style={cellProps.style}
                         onMouseEnter={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
                           setHoveredCell({
                             date: cell.date,
                             km: cell.km,
+                            elev: cell.elev,
                             x: rect.left + rect.width / 2,
                             y: rect.top,
                           });
@@ -1510,6 +1577,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
                           setHoveredCell({
                             date: cell.date,
                             km: cell.km,
+                            elev: cell.elev,
                             x: rect.left + rect.width / 2,
                             y: rect.top,
                           });
@@ -1523,13 +1591,16 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
             </div>
             {/* Legend */}
             <div className={styles.heatmapLegend}>
-              <span className={styles.statsLabel}>0 KM</span>
-              <div className={`${styles.heatmapCell} ${styles.heatmapCell0}`} />
-              <div className={`${styles.heatmapCell} ${styles.heatmapCell1}`} />
-              <div className={`${styles.heatmapCell} ${styles.heatmapCell2}`} />
-              <div className={`${styles.heatmapCell} ${styles.heatmapCell3}`} />
-              <div className={`${styles.heatmapCell} ${styles.heatmapCell4}`} />
-              <span className={styles.statsLabel}>30+ KM</span>
+              <span className={styles.statsLabel}>{heatmapMetric === 'distance' ? '0 KM' : '0 M'}</span>
+              {Array.from({ length: maxIntensityLevel(heatmapMetric) + 1 }, (_, level) => {
+                const legendProps = level === 0
+                  ? { className: styles.heatmapCell0 }
+                  : { className: styles.heatmapCellFilled, style: { opacity: levelOpacity(level, heatmapMetric) } };
+                return <div key={level} className={`${styles.heatmapCell} ${legendProps.className}`} style={legendProps.style} />;
+              })}
+              <span className={styles.statsLabel}>
+                {HEATMAP_THRESHOLDS[heatmapMetric][HEATMAP_THRESHOLDS[heatmapMetric].length - 1]}+ {heatmapMetric === 'distance' ? 'KM' : 'M'}
+              </span>
             </div>
             {/* Tooltip */}
             {hoveredCell && (
@@ -1542,7 +1613,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
                   transform: 'translate(-50%, -100%)',
                 }}
               >
-                <strong>{hoveredCell.km.toFixed(1)} km</strong>
+                <strong>{heatmapMetric === 'distance' ? `${hoveredCell.km.toFixed(1)} km` : `${Math.round(hoveredCell.elev)} m`}</strong>
                 <span>{hoveredCell.date}</span>
               </div>
             )}
@@ -1565,6 +1636,12 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         <section className={styles.statsSection}>
           <h3 className={styles.statsSectionTitle}>BEER_CALCULATOR</h3>
           <BeerCalculator distanceKm={stats.stravaDist} />
+        </section>
+
+        {/* Daily log */}
+        <section className={styles.statsSection}>
+          <h3 className={styles.statsSectionTitle}>DAILY_LOG</h3>
+          <DailyLog points={points} dailyKm={dailyKm} dailyElev={dailyElev} allTripDays={allTripDays} />
         </section>
 
         {/* Recent events */}

@@ -47,6 +47,32 @@
   margin-bottom: 16px;
 }
 
+.metricTabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.metricTab {
+  padding: 4px 12px;
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-high);
+  color: var(--outline);
+  transition: background 0.15s, color 0.15s;
+}
+
+.metricTabActive {
+  background: var(--secondary);
+  color: var(--on-secondary);
+  border-color: var(--secondary);
+}
+
 .statsLabel {
   font-family: var(--font-headline);
   font-size: 0.6rem;
@@ -235,10 +261,7 @@
 
 .heatmapCellEmpty { background: transparent; pointer-events: none; }
 .heatmapCell0 { background: var(--surface-container-highest); }
-.heatmapCell1 { background: rgba(var(--secondary-rgb), 0.3); }
-.heatmapCell2 { background: rgba(var(--secondary-rgb), 0.5); }
-.heatmapCell3 { background: rgba(var(--secondary-rgb), 0.75); }
-.heatmapCell4 { background: var(--secondary); }
+.heatmapCellFilled { background: var(--secondary); }
 
 .heatmapDayLabel {
   font-family: var(--font-headline);
