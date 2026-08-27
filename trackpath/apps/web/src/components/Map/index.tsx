@@ -26,11 +26,11 @@ const pointIcon = L.divIcon({
   iconAnchor: [6, 6],
 });
 
-const makeLatestIcon = (fart: boolean) => L.divIcon({
+const makeLatestIcon = (fart: boolean, specialAnimations: boolean) => L.divIcon({
   className: "",
   html: `<div style="position:relative;width:60px;height:60px;">
     <div class="current-pos-pulse"></div>
-    <img src="${getSasquatchGif(fart)}" style="width:60px;height:60px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />
+    <img src="${getSasquatchGif(fart, specialAnimations)}" style="width:60px;height:60px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(254,107,0,0.6));" />
   </div>`,
   iconSize: [60, 60],
   iconAnchor: [30, 60],
@@ -269,14 +269,17 @@ const FART_WALK_MS = 25_000;   // normal sasquatch duration
 const FART_DURATION_MS = 7_500; // fart duration
 const FART_CYCLE_MS = FART_WALK_MS + FART_DURATION_MS;
 
-function getSasquatchGif(fart: boolean): string {
+/** `fart` and the May-1st special are Easter-egg animations — the base
+ *  walking sasquatch.gif always shows regardless of the toggle. */
+function getSasquatchGif(fart: boolean, specialAnimations: boolean): string {
+  if (!specialAnimations) return '/sasquatch.gif';
   if (fart) return '/sasquatch_fart.gif';
   const now = new Date();
   if (now.getMonth() === 4 && now.getDate() === 1) return '/sasquatch_1st_may.gif';
   return '/sasquatch.gif';
 }
 
-function LastPositionButton({ points, fart }: { points: TrackingPoint[]; fart: boolean }) {
+function LastPositionButton({ points, fart, specialAnimations }: { points: TrackingPoint[]; fart: boolean; specialAnimations: boolean }) {
   const map = useMap();
 
   const handleClick = useCallback(() => {
@@ -291,7 +294,7 @@ function LastPositionButton({ points, fart }: { points: TrackingPoint[]; fart: b
   return (
     <button className={styles.lastposBtn} onClick={handleClick} title="LAST_POSITION">
       <img
-        src={getSasquatchGif(fart)}
+        src={getSasquatchGif(fart, specialAnimations)}
         alt=""
         style={{ width: 22, height: 22, imageRendering: "pixelated" }}
       />
@@ -380,12 +383,13 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
   const clearElevCursorRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    if (!layers.easterEggs.sasquatchAnimations) return;
     const id = setInterval(() => {
       setFart(true);
       setTimeout(() => { setFart(false); }, FART_DURATION_MS);
     }, FART_CYCLE_MS);
     return () => { clearInterval(id); };
-  }, []);
+  }, [layers.easterEggs.sasquatchAnimations]);
 
   const shuttleCoords: [number, number][] = useMemo(() => [
     [33.6407, -84.4277], // ATL airport
@@ -500,7 +504,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
 
       {/* Sasquatch at Amicalola Falls when no tracking points yet */}
       {points.length === 0 && layers.garminPoints && (
-        <Marker position={AMICALOLA_FALLS} icon={makeLatestIcon(fart)} zIndexOffset={1000}>
+        <Marker position={AMICALOLA_FALLS} icon={makeLatestIcon(fart, layers.easterEggs.sasquatchAnimations)} zIndexOffset={1000}>
           <Popup><strong>Amicalola Falls</strong><br />Trip starts here 🥾</Popup>
         </Marker>
       )}
@@ -520,7 +524,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
             position={[pt.latitude, pt.longitude]}
             icon={
               (pt.eventType && getTagIcon(pt.eventType)) ||
-              (isLatest ? makeLatestIcon(fart) : pointIcon)
+              (isLatest ? makeLatestIcon(fart, layers.easterEggs.sasquatchAnimations) : pointIcon)
             }
             zIndexOffset={isLatest ? 1000 : 0}
             eventHandlers={{ click: () => onPointTap?.(pt) }}
@@ -604,7 +608,7 @@ export const Map = forwardRef<MapHandle, MapProps>(function Map({
             +
           </button>
         )}
-        <LastPositionButton points={points} fart={fart} />
+        <LastPositionButton points={points} fart={fart} specialAnimations={layers.easterEggs.sasquatchAnimations} />
         {isAdmin && <LocateButton />}
       </div>
       <ElevationCursor onReady={handleElevCursorReady} />

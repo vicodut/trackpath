@@ -59,44 +59,6 @@ export function App() {
     return () => { window.removeEventListener('keydown', onKey); };
   }, [triggerPoop]);
 
-  // Mobile shake
-  useEffect(() => {
-    if (typeof DeviceMotionEvent === 'undefined') return;
-    const THRESHOLD = 25;
-    const COOLDOWN_MS = 2000;
-    let lastShake = 0;
-
-    const onMotion = (e: DeviceMotionEvent) => {
-      const acc = e.accelerationIncludingGravity;
-      if (!acc) return;
-      const mag = Math.sqrt((acc.x ?? 0) ** 2 + (acc.y ?? 0) ** 2 + (acc.z ?? 0) ** 2);
-      const now = Date.now();
-      if (mag > THRESHOLD && now - lastShake > COOLDOWN_MS) {
-        lastShake = now;
-        triggerPoop();
-      }
-    };
-
-    // iOS 13+ requires a user-gesture permission request
-    const motionEventWithPermission = DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> };
-    if (typeof motionEventWithPermission.requestPermission === 'function') {
-      const requestPermission = motionEventWithPermission.requestPermission;
-      const requestOnTap = () => {
-        requestPermission()
-          .then(result => { if (result === 'granted') window.addEventListener('devicemotion', onMotion); })
-          .catch(() => {});
-      };
-      window.addEventListener('click', requestOnTap, { once: true });
-      return () => {
-        window.removeEventListener('click', requestOnTap);
-        window.removeEventListener('devicemotion', onMotion);
-      };
-    }
-
-    window.addEventListener('devicemotion', onMotion);
-    return () => { window.removeEventListener('devicemotion', onMotion); };
-  }, [triggerPoop]);
-
   const [selectedPoint, setSelectedPoint] = useState<TrackingPoint | null>(null);
   const [syncing, setSyncing] = useState(false);
   const mapRef = useRef<MapHandle>(null);
@@ -114,6 +76,7 @@ export function App() {
         shelter: !isMobile, summit: !isMobile, campsite: !isMobile, town: !isMobile,
         'road-crossing': !isMobile, landmark: true, 'state-border': true, 'water-source': false,
       },
+      easterEggs: { shakeForPoop: false, sasquatchAnimations: false },
     };
     try {
       const saved = localStorage.getItem('trackpath:layers');
@@ -125,7 +88,49 @@ export function App() {
   const handleLayersChange = useCallback((next: LayerVisibility) => {
     setLayers(next);
     try { localStorage.setItem('trackpath:layers', JSON.stringify(next)); } catch { /* ignore */ }
-  }, []);
+
+    // iOS 13+ requires a user-gesture-triggered permission request — the
+    // checkbox click that got us here counts, so ask right away and revert
+    // the toggle if the user declines.
+    const enablingShake = next.easterEggs.shakeForPoop && !layers.easterEggs.shakeForPoop;
+    if (enablingShake && typeof DeviceMotionEvent !== 'undefined') {
+      const motionEventWithPermission = DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> };
+      if (typeof motionEventWithPermission.requestPermission === 'function') {
+        motionEventWithPermission.requestPermission()
+          .then(result => {
+            if (result !== 'granted') {
+              setLayers(prev => ({ ...prev, easterEggs: { ...prev.easterEggs, shakeForPoop: false } }));
+            }
+          })
+          .catch(() => {
+            setLayers(prev => ({ ...prev, easterEggs: { ...prev.easterEggs, shakeForPoop: false } }));
+          });
+      }
+    }
+  }, [layers.easterEggs.shakeForPoop]);
+
+  // Mobile shake (Easter Eggs > Shake for poop). Permission (iOS 13+) is
+  // requested from the toggle's own click handler in handleLayersChange.
+  useEffect(() => {
+    if (!layers.easterEggs.shakeForPoop || typeof DeviceMotionEvent === 'undefined') return;
+    const THRESHOLD = 25;
+    const COOLDOWN_MS = 2000;
+    let lastShake = 0;
+
+    const onMotion = (e: DeviceMotionEvent) => {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc) return;
+      const mag = Math.sqrt((acc.x ?? 0) ** 2 + (acc.y ?? 0) ** 2 + (acc.z ?? 0) ** 2);
+      const now = Date.now();
+      if (mag > THRESHOLD && now - lastShake > COOLDOWN_MS) {
+        lastShake = now;
+        triggerPoop();
+      }
+    };
+
+    window.addEventListener('devicemotion', onMotion);
+    return () => { window.removeEventListener('devicemotion', onMotion); };
+  }, [layers.easterEggs.shakeForPoop, triggerPoop]);
 
   const handleSync = useCallback(async (startDate?: string, endDate?: string) => {
     setSyncing(true);
@@ -249,7 +254,7 @@ export function App() {
               layers={layers}
               isAdmin={isAdmin}
             />
-            <LocationBanner points={points} trailProgressKm={trailProgressKm} />
+            <LocationBanner points={points} stravaActivities={stravaActivities} />
             {isNighttime && (
               <div style={{
                 position: 'absolute', inset: 0, background: 'rgba(10,5,30,0.18)',
@@ -280,7 +285,6 @@ export function App() {
           loading={loading}
           totalDistanceKm={totalDistanceKm}
           totalElevationGain={totalElevationGain}
-          trailProgressKm={trailProgressKm}
           stravaActivities={stravaActivities}
           onSelectPoint={setSelectedPoint}
           onDeletePoint={removePoint}

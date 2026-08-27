@@ -3,7 +3,10 @@ import { Drawer } from 'vaul';
 import type { TrackingPoint, StravaActivity } from '../../types';
 import type { Poll } from '../../api/polls';
 import type { Cheer } from '../../api/cheers';
+import type { SyncPeriod } from '../../api/syncPeriods';
 import { TAGS, TAG_EMOJIS } from '../../lib/constants';
+import { fetchSyncPeriods } from '../../api/syncPeriods';
+import { filterHikeActivities, sumHikeDistanceKm } from '../../lib/stravaHike';
 import { AddPointForm } from '../AddPointForm';
 import { PointCard } from '../PointCard';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -29,7 +32,6 @@ interface SidebarProps {
   loading?: boolean;
   totalDistanceKm: number;
   totalElevationGain: number;
-  trailProgressKm?: number | null;
   stravaActivities: StravaActivity[];
   onSelectPoint: (point: TrackingPoint) => void;
   onDeletePoint: (id: number) => void;
@@ -322,13 +324,18 @@ function CheersSection({ cheers, isAdmin, onSubmit, onDelete, onSeeAll }: {
 }
 
 function SidebarContent({
-  points, loading, totalDistanceKm, totalElevationGain, trailProgressKm, stravaActivities,
+  points, loading, totalDistanceKm, totalElevationGain, stravaActivities,
   onSelectPoint, onDeletePoint, onAddPoint, onFormToggle, onAddSuccess, pickedCoords, isAdmin, forceFormOpen,
   polls, onVote, onCreatePoll, onClosePoll, onDeletePoll,
   cheers, onSubmitCheer, onDeleteCheer, onOpenCheers,
 }: SidebarProps) {
   const [activeFilters, setActiveFilters] = useState(new Set());
+  const [periods, setPeriods] = useState<SyncPeriod[]>([]);
   const { fmtDist } = useUnit();
+
+  useEffect(() => {
+    fetchSyncPeriods().then(setPeriods).catch(() => { /* keep the empty fallback */ });
+  }, []);
 
   const toggleFilter = (key: string) => {
     setActiveFilters(prev => {
@@ -338,6 +345,11 @@ function SidebarContent({
       return next;
     });
   };
+
+  // GOAL progress is Strava's cumulative hiking distance — matches
+  // LocationBanner's + StatsPage's calculation so all three never disagree.
+  const hikeActivities = useMemo(() => filterHikeActivities(stravaActivities, periods), [stravaActivities, periods]);
+  const stravaTrailKm = useMemo(() => sumHikeDistanceKm(hikeActivities), [hikeActivities]);
 
   const stravaElevation = useMemo(() =>
     stravaActivities.reduce((sum, a) => sum + (a.elevationGain || 0), 0),
@@ -386,8 +398,8 @@ function SidebarContent({
         onDelete={onDeleteCheer}
         onSeeAll={onOpenCheers}
       />
-      {trailProgressKm != null && trailProgressKm > 0 && (
-        <TrailProgress trailProgressKm={trailProgressKm} />
+      {stravaTrailKm > 0 && (
+        <TrailProgress trailProgressKm={stravaTrailKm} />
       )}
       <div className={styles.sidebarHeader}>
         <h2>TRAIL_LOG</h2>

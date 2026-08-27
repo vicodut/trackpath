@@ -517,6 +517,18 @@
 }
 .dailyLogRow:last-child { border-bottom: none; }
 
+.dailyLogRowZero { opacity: 0.55; }
+
+.dailyLogZero {
+  font-family: var(--font-headline);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--outline);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .dailyLogMeta {
   display: flex;
   flex-direction: column;

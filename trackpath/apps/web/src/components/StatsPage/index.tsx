@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TrackingPoint, StravaActivity } from '../../types';
+import type { SyncPeriod } from '../../api/syncPeriods';
 import { ICONIC_SUMMITS } from '../../data/iconic-summits';
 import { haversine } from '../../lib/geo';
 import { useUnit } from '../../hooks/useUnit';
+import { HIKE_START, HIKE_END } from '../../lib/constants';
+import { fetchSyncPeriods } from '../../api/syncPeriods';
+import { daysInPeriods, isWithinPeriods, earliestPeriodStartMs, latestPeriodEndMs } from '../../lib/tripDays';
+import { filterHikeActivities } from '../../lib/stravaHike';
 import styles from './StatsPage.module.css';
 
 interface StatsPageProps {
@@ -21,8 +26,6 @@ const BEER_ALCOHOL_G = 13.8;
 const CAL_PER_KM = 90; // approx cal burned hiking with pack on AT
 const ELEV_CHART_HEIGHT = 280;
 const ELEV_CHART_PADDING = { top: 20, right: 16, bottom: 36, left: 50 };
-const HIKE_START = '2026-04-15';
-const HIKE_END = '2026-07-13';
 
 function buildDailyKm(stravaActivities: StravaActivity[]): Record<string, number> {
   const dailyKm: Record<string, number> = {};
@@ -44,14 +47,28 @@ function buildDailyElev(stravaActivities: StravaActivity[]): Record<string, numb
   return dailyElev;
 }
 
+/** Every calendar day (YYYY-MM-DD, inclusive) from `start` to `end` — used so
+ *  zero-distance rest days still show up in the daily chart/log instead of
+ *  being silently skipped. */
+function buildDayRange(start: string, end: string): string[] {
+  const days: string[] = [];
+  const cursor = new Date(`${start}T00:00:00Z`);
+  const endDate = new Date(`${end}T00:00:00Z`);
+  while (cursor.getTime() <= endDate.getTime()) {
+    days.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return days;
+}
+
 // Monday=0 .. Sunday=6
 function mondayIndex(date: Date): number {
   return (date.getDay() + 6) % 7;
 }
 
-function getFixedWeeksGrid(dailyKm: Record<string, number>) {
-  const start = new Date(HIKE_START + 'T00:00:00');
-  const end = new Date(HIKE_END + 'T00:00:00');
+function getFixedWeeksGrid(dailyKm: Record<string, number>, startDate: string, endDate: string) {
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
 
   // Align start to Monday
   const gridStart = new Date(start);
@@ -466,20 +483,18 @@ function TrailAltitudeProfile({ hikerDistanceKm, isAdmin }: { hikerDistanceKm: n
 
 // ─── Daily Distance Bar Chart ─────────────────────────────────────────────────
 
-function DailyBarChart({ dailyKm, dailyElev }: { dailyKm: Record<string, number>; dailyElev: Record<string, number> }) {
+function DailyBarChart({ dailyKm, dailyElev, allTripDays }: { dailyKm: Record<string, number>; dailyElev: Record<string, number>; allTripDays: string[] }) {
   const { fmtDist } = useUnit();
   const [hovered, setHovered] = useState<{ date: string; km: number; elev: number; x: number; y: number } | null>(null);
 
   const entries = useMemo(() =>
-    Object.entries(dailyKm)
-      .filter(([date, km]) => km > 0 && date >= HIKE_START && date <= HIKE_END)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, km]) => ({ date, km, elev: dailyElev[date] ?? 0 }))
-  , [dailyKm, dailyElev]);
+    allTripDays.map(date => ({ date, km: dailyKm[date] ?? 0, elev: dailyElev[date] ?? 0 }))
+  , [dailyKm, dailyElev, allTripDays]);
 
   if (entries.length === 0) return <div className={styles.statsEmpty}>NO_DAILY_DATA_YET</div>;
 
-  const maxKm = Math.max(...entries.map(e => e.km));
+  // Guard against an all-zero range (e.g. right at trip start) dividing by zero.
+  const maxKm = Math.max(...entries.map(e => e.km), 1);
   const avgKm = entries.reduce((s, e) => s + e.km, 0) / entries.length;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -559,10 +574,11 @@ function DailyBarChart({ dailyKm, dailyElev }: { dailyKm: Record<string, number>
 
 // ─── Daily Log ─────────────────────────────────────────────────────────────────
 
-function DailyLog({ points, dailyKm, dailyElev }: {
+function DailyLog({ points, dailyKm, dailyElev, allTripDays }: {
   points: TrackingPoint[];
   dailyKm: Record<string, number>;
   dailyElev: Record<string, number>;
+  allTripDays: string[];
 }) {
   const { fmtDist } = useUnit();
 
@@ -575,16 +591,16 @@ function DailyLog({ points, dailyKm, dailyElev }: {
       }
     }
 
-    const hikeStart = new Date(HIKE_START + 'T00:00:00');
-    const allDays = new Set([
-      ...Object.keys(dailyKm).filter(d => dailyKm[d] > 0 && d >= HIKE_START && d <= HIKE_END),
-    ]);
+    // allTripDays is already ascending and excludes gap days between
+    // configured periods, so a day's position in it — not a raw date diff
+    // from a fixed start — is what should number it.
+    const dayNumByDate = new Map(allTripDays.map((date, i) => [date, i + 1]));
 
-    return Array.from(allDays)
+    return [...allTripDays]
       .sort((a, b) => b.localeCompare(a))
       .map(date => {
         const d = new Date(date + 'T00:00:00');
-        const dayNum = Math.floor((d.getTime() - hikeStart.getTime()) / 86400000) + 1;
+        const dayNum = dayNumByDate.get(date) ?? 0;
         return {
           date, dayNum,
           km: dailyKm[date] ?? 0,
@@ -593,26 +609,30 @@ function DailyLog({ points, dailyKm, dailyElev }: {
           label: d.toLocaleDateString('default', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase(),
         };
       });
-  }, [dailyKm, dailyElev, points]);
+  }, [dailyKm, dailyElev, points, allTripDays]);
 
   if (entries.length === 0) return <div className={styles.statsEmpty}>NO_ACTIVITY_YET</div>;
 
   const maxKm = Math.max(...entries.map(e => e.km));
-  const bestDate = entries.reduce((best, e) => e.km > best.km ? e : best, entries[0]).date;
+  const bestDate = maxKm > 0 ? entries.reduce((best, e) => e.km > best.km ? e : best, entries[0]).date : null;
 
   return (
     <div className={styles.dailyLog}>
       {entries.map(e => (
-        <div key={e.date} className={styles.dailyLogRow}>
+        <div key={e.date} className={`${styles.dailyLogRow} ${e.km === 0 ? styles.dailyLogRowZero : ''}`}>
           <div className={styles.dailyLogMeta}>
             <span className={styles.dailyLogDay}>D{e.dayNum}</span>
             <span className={styles.dailyLogDate}>{e.label}</span>
           </div>
           <div className={styles.dailyLogBar}>
-            <div className={styles.dailyLogBarFill} style={{ width: `${(e.km / maxKm) * 100}%` }} />
+            <div className={styles.dailyLogBarFill} style={{ width: `${maxKm > 0 ? (e.km / maxKm) * 100 : 0}%` }} />
           </div>
           <div className={styles.dailyLogStats}>
-            <span className={styles.dailyLogKm}>{fmtDist(e.km, 1)}{e.date === bestDate ? ' 🏆' : ''}</span>
+            {e.km === 0 ? (
+              <span className={styles.dailyLogZero}>REST DAY 💤</span>
+            ) : (
+              <span className={styles.dailyLogKm}>{fmtDist(e.km, 1)}{e.date === bestDate ? ' 🏆' : ''}</span>
+            )}
             {e.elev > 0 && <span className={styles.dailyLogElev}>↑{Math.round(e.elev)}m</span>}
           </div>
           {e.messages.length > 0 && (
@@ -1260,18 +1280,14 @@ function BeerCalculator({ distanceKm }: { distanceKm: number }) {
 
 export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElevationGain, isAdmin, onClose }: StatsPageProps) {
   const [hoveredCell, setHoveredCell] = useState<{ date: string; km: number; x: number; y: number } | null>(null);
+  const [periods, setPeriods] = useState<SyncPeriod[]>([]);
 
-  // Only count actual hiking activity, within the hike window — Strava also
-  // logs rides/runs/swims etc. (year-round, before and after the hike) that
-  // shouldn't feed into trail distance/elevation stats.
-  const hikeActivities = useMemo(() =>
-    stravaActivities.filter(a =>
-      a.type === 'Hike' &&
-      a.startDate != null &&
-      a.startDate.slice(0, 10) >= HIKE_START &&
-      a.startDate.slice(0, 10) <= HIKE_END,
-    ),
-  [stravaActivities]);
+  useEffect(() => {
+    fetchSyncPeriods().then(setPeriods).catch(() => { /* keep the hardcoded fallback */ });
+  }, []);
+
+  // Matches LocationBanner's + Sidebar's calculation so all three never disagree.
+  const hikeActivities = useMemo(() => filterHikeActivities(stravaActivities, periods), [stravaActivities, periods]);
 
   const stats = useMemo(() => {
     const stravaDistanceKm = hikeActivities.reduce((sum, a) => sum + ((a.distance || 0) / 1000), 0);
@@ -1279,13 +1295,11 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
 
     const garminPoints = points.filter(p => !p.garminId?.startsWith('manual-'));
 
-    let avgSpeed = 0;
-    if (garminPoints.length >= 2) {
-      const first = new Date(garminPoints[0].timestamp).getTime();
-      const last = new Date(garminPoints[garminPoints.length - 1].timestamp).getTime();
-      const hours = (last - first) / 3600000;
-      if (hours > 0) avgSpeed = totalDistanceKm / hours;
-    }
+    // Based on Strava's own moving time rather than Garmin's first-to-last
+    // ping span, so rest days and time off trail (no Strava activity logged)
+    // don't drag the average down.
+    const stravaMovingTimeS = hikeActivities.reduce((sum, a) => sum + (a.movingTime ?? 0), 0);
+    const avgSpeed = stravaMovingTimeS > 0 ? stravaDistanceKm / (stravaMovingTimeS / 3600) : 0;
 
     const allDates = new Set<string>();
     garminPoints.forEach(p => allDates.add(new Date(p.timestamp).toDateString()));
@@ -1310,10 +1324,34 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
 
   const dailyKm = useMemo(() => buildDailyKm(hikeActivities), [hikeActivities]);
   const dailyElev = useMemo(() => buildDailyElev(hikeActivities), [hikeActivities]);
-  const { weeks, months } = useMemo(() => getFixedWeeksGrid(dailyKm), [dailyKm]);
+
+  // Every calendar day actually on trail — from the configured admin sync
+  // periods when set (gaps between periods, e.g. time at home, excluded;
+  // a period `now` falls inside capped at today), otherwise every day from
+  // the hardcoded hike start through today (capped at the planned hike end).
+  // Feeds the daily chart/log so rest days show as zero-height entries
+  // instead of being skipped.
+  const allTripDays = useMemo(() => {
+    if (periods.length > 0) return daysInPeriods(periods, Date.now());
+    const today = new Date().toISOString().slice(0, 10);
+    const rangeEnd = today < HIKE_END ? today : HIKE_END;
+    return buildDayRange(HIKE_START, rangeEnd);
+  }, [periods]);
+  const totalDays = allTripDays.length;
+
   const activeDays = Object.entries(dailyKm).filter(([date, km]) => {
-    return km > 0 && date >= HIKE_START && date <= HIKE_END;
+    if (km <= 0) return false;
+    return periods.length > 0 ? isWithinPeriods(date, periods) : date >= HIKE_START && date <= HIKE_END;
   }).length;
+  const zeroDays = Math.max(0, totalDays - activeDays);
+
+  const gridStartDate = periods.length > 0
+    ? new Date(earliestPeriodStartMs(periods)).toISOString().slice(0, 10)
+    : HIKE_START;
+  const gridEndDate = periods.length > 0
+    ? new Date(latestPeriodEndMs(periods)).toISOString().slice(0, 10)
+    : HIKE_END;
+  const { weeks, months } = useMemo(() => getFixedWeeksGrid(dailyKm, gridStartDate, gridEndDate), [dailyKm, gridStartDate, gridEndDate]);
 
   const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -1365,6 +1403,14 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
             <span className={styles.statsBentoNumber}>{stats.daysOnTrail}</span>
           </div>
           <div className={styles.statsBentoCard}>
+            <span className={styles.statsLabel}>TOTAL_DAYS</span>
+            <span className={styles.statsBentoNumber}>{totalDays}</span>
+          </div>
+          <div className={styles.statsBentoCard}>
+            <span className={styles.statsLabel}>ZERO_DAYS</span>
+            <span className={styles.statsBentoNumber}>{zeroDays}</span>
+          </div>
+          <div className={styles.statsBentoCard}>
             <span className={styles.statsLabel}>TOTAL_ASCENT</span>
             <div className={styles.statsBentoNumber}>{Math.round(stats.stravaElev)}<span className={styles.statsBentoUnit}>M</span></div>
           </div>
@@ -1395,13 +1441,13 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         {/* Daily distance bar chart */}
         <section className={styles.statsSection}>
           <h3 className={styles.statsSectionTitle}>DAILY_DISTANCE</h3>
-          <DailyBarChart dailyKm={dailyKm} dailyElev={dailyElev} />
+          <DailyBarChart dailyKm={dailyKm} dailyElev={dailyElev} allTripDays={allTripDays} />
         </section>
 
         {/* Daily log */}
         <section className={styles.statsSection}>
           <h3 className={styles.statsSectionTitle}>DAILY_LOG</h3>
-          <DailyLog points={points} dailyKm={dailyKm} dailyElev={dailyElev} />
+          <DailyLog points={points} dailyKm={dailyKm} dailyElev={dailyElev} allTripDays={allTripDays} />
         </section>
 
         {/* Road to Mordor */}
@@ -1416,7 +1462,7 @@ export function StatsPage({ points, stravaActivities, totalDistanceKm, totalElev
         <section className={styles.statsSection}>
           <div className={styles.statsHeatmapHeader}>
             <h3>ACTIVITY_LOG</h3>
-            <span className={styles.statsLabel}>{activeDays} / 90 ACTIVE_DAYS</span>
+            <span className={styles.statsLabel}>{activeDays} / {totalDays} ACTIVE_DAYS</span>
           </div>
           <div className={styles.heatmapWrapper} style={{ position: 'relative' }}>
             {/* Month labels */}

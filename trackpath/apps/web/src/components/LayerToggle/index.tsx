@@ -19,6 +19,14 @@ const HIGHLIGHT_EMOJIS: Record<string, string> = {
   'water-source': '💧',
 };
 
+export const EASTER_EGGS = ['shakeForPoop', 'sasquatchAnimations'] as const;
+export type EasterEgg = typeof EASTER_EGGS[number];
+
+const EASTER_EGG_LABELS: Record<EasterEgg, string> = {
+  shakeForPoop: '💩 Shake for poop',
+  sasquatchAnimations: '🦶 Sasquatch shenanigans',
+};
+
 export interface LayerVisibility {
   garminPath: boolean;
   garminPoints: boolean;
@@ -28,6 +36,7 @@ export interface LayerVisibility {
   tileStyle: 'osm' | 'topo';
   tags: Record<string, boolean>;
   highlights: Record<string, boolean>;
+  easterEggs: Record<EasterEgg, boolean>;
 }
 
 interface LayerToggleProps {
@@ -35,7 +44,7 @@ interface LayerToggleProps {
   onChange: (layers: LayerVisibility) => void;
 }
 
-const LAYER_LABELS: { key: keyof Omit<LayerVisibility, 'tags' | 'highlights' | 'tileStyle'>; label: string }[] = [
+const LAYER_LABELS: { key: keyof Omit<LayerVisibility, 'tags' | 'highlights' | 'tileStyle' | 'easterEggs'>; label: string }[] = [
   { key: 'atTrail', label: 'AT Trail' },
   { key: 'garminPath', label: 'Garmin path' },
   { key: 'garminPoints', label: 'Garmin points' },
@@ -47,6 +56,7 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
   const [open, setOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [highlightsOpen, setHighlightsOpen] = useState(false);
+  const [easterEggsOpen, setEasterEggsOpen] = useState(false);
 
   return (
     <div className={styles.layerToggle} onClick={(e) => { e.stopPropagation(); }}>
@@ -121,6 +131,29 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
                       }); }}
                     />
                     <span>{HIGHLIGHT_EMOJIS[cat]} {cat}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className={styles.layerToggleGroup}>
+            <div className={styles.layerToggleGroupHeader} onClick={() => { setEasterEggsOpen(!easterEggsOpen); }}>
+              <span>Easter eggs</span>
+              <span className={styles.layerToggleIcon}>{easterEggsOpen ? '▾' : '▸'}</span>
+            </div>
+            {easterEggsOpen && (
+              <div className={styles.layerToggleGroupBody}>
+                {EASTER_EGGS.map((egg) => (
+                  <label key={egg} className={styles.layerToggleRow}>
+                    <input
+                      type="checkbox"
+                      checked={layers.easterEggs[egg]}
+                      onChange={() => { onChange({
+                        ...layers,
+                        easterEggs: { ...layers.easterEggs, [egg]: !layers.easterEggs[egg] },
+                      }); }}
+                    />
+                    <span>{EASTER_EGG_LABELS[egg]}</span>
                   </label>
                 ))}
               </div>
