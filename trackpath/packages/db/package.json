@@ -10,6 +10,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "migrate": "tsx src/migrate.ts",
+    "backfill-at-hike": "tsx src/backfill-at-hike.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
