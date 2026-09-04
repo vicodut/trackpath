@@ -99,6 +99,16 @@ packages/
 | `POLL_INTERVAL_MIN` | Garmin auto-sync interval (default 5) |
 | `NEST_PORT` | NestJS port for local dev (default 3001) |
 
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as local markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context layout: `CONTEXT.md` + `docs/adr/` at the project root. See `docs/agents/domain.md`.
+
 ## Do not
 
 - Hand-edit files in `packages/db/drizzle/` — always use `db:generate`
