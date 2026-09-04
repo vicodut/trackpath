@@ -1,5 +1,6 @@
 import {
   IsISO8601,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -29,6 +30,10 @@ export class ManualPointDto {
   @IsOptional()
   @IsString()
   tag?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  hikeId?: number;
 }
 
 /** Optional date range for backfill syncs — YYYY-MM-DD or full ISO8601. */

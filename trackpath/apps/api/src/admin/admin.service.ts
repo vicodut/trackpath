@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { GarminService } from '../garmin/garmin.service.js';
 import { StravaService } from '../strava/strava.service.js';
+import { AppSettingsService } from '../hikes/app-settings.service.js';
 import type { AdminStatus } from './admin.types.js';
 
 @Injectable()
@@ -10,17 +11,19 @@ export class AdminService {
   constructor(
     private readonly garminService: GarminService,
     private readonly stravaService: StravaService,
+    private readonly appSettingsService: AppSettingsService,
   ) {
     this.pollIntervalMin =
       parseInt(process.env.POLL_INTERVAL_MIN ?? '5', 10) || 5;
   }
 
   async getStatus(): Promise<AdminStatus> {
-    const [lastGarmin, totalPoints, activities, connected] = await Promise.all([
+    const [lastGarmin, totalPoints, activities, connected, mapshareId] = await Promise.all([
       this.garminService.getLastGarminPoint(),
       this.garminService.countPoints(),
       this.stravaService.getActivities(),
       this.stravaService.isConnected(),
+      this.appSettingsService.getMapshareId(),
     ]);
 
     const tokens = await this.stravaService.getTokenMeta();
@@ -28,8 +31,8 @@ export class AdminService {
 
     return {
       garmin: {
-        configured: !!process.env.MAPSHARE_ID,
-        mapshareId: process.env.MAPSHARE_ID ?? null,
+        configured: !!mapshareId,
+        mapshareId,
         totalPoints,
         lastPointTime: lastGarmin?.timestamp ?? null,
         pollIntervalMin: this.pollIntervalMin,

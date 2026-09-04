@@ -19,8 +19,8 @@ import type { ClassifiableHike, ClassificationResult } from './hike-classifier.t
 export class HikeClassifierService {
   classify(
     timestampIso: string,
-    lat: number,
-    lon: number,
+    lat: number | null,
+    lon: number | null,
     hikes: ClassifiableHike[],
   ): ClassificationResult | null {
     const t = new Date(timestampIso).getTime();
@@ -28,6 +28,10 @@ export class HikeClassifierService {
 
     if (candidates.length === 0) return null;
     if (candidates.length === 1) return { hikeId: candidates[0].id, nearMisses: [] };
+
+    // Multiple date-range matches with no coordinates to break the tie —
+    // leave unresolved rather than guess which hike this belongs to.
+    if (lat == null || lon == null) return null;
 
     const ranked = candidates
       .map((h) => ({ id: h.id, distanceKm: this.distanceToTrail(lat, lon, h.trailCoords) }))

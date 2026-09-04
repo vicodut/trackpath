@@ -8,7 +8,7 @@
     "start": "NODE_ENV=production node dist/main.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest"
   },
   "dependencies": {
     "@trackpath/db": "*",

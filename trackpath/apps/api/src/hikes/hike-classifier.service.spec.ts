@@ -71,4 +71,19 @@ describe('HikeClassifierService', () => {
     const result = service.classify('2026-01-01T00:00:00Z', 10, 10, hikes);
     expect(result).toBeNull();
   });
+
+  it('matches the single hike whose range covers the timestamp when no coordinates are available', () => {
+    const hikes = [hike({ id: 1, startDate: '2026-01-01', endDate: '2026-01-31' })];
+    const result = service.classify('2026-01-15T12:00:00Z', null, null, hikes);
+    expect(result).toEqual({ hikeId: 1, nearMisses: [] });
+  });
+
+  it('leaves an event unresolved when ranges overlap and no coordinates are available to break the tie', () => {
+    const hikes = [
+      hike({ id: 1, startDate: '2026-01-01', endDate: '2026-01-31' }),
+      hike({ id: 2, startDate: '2026-01-10', endDate: '2026-02-10' }),
+    ];
+    const result = service.classify('2026-01-15T12:00:00Z', null, null, hikes);
+    expect(result).toBeNull();
+  });
 });

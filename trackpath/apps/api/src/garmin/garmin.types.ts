@@ -75,4 +75,6 @@ export interface ManualPointBody {
   altitude?: number | null;
   message?: string | null;
   tag?: string | null;
+  /** Defaults to the current default hike when omitted. */
+  hikeId?: number;
 }

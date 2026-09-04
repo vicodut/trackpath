@@ -8,16 +8,18 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { asc, desc, not, like, count, eq, gte, inArray } from 'drizzle-orm';
+import { asc, desc, not, like, count, eq, inArray } from 'drizzle-orm';
 import { parseString } from 'xml2js';
 import { Subject, Observable, from, startWith, switchMap, map } from 'rxjs';
 import { trackingPoints } from '@trackpath/db/schema';
 import type { NewTrackingPoint, TrackingPoint } from '@trackpath/db/schema';
 import { DRIZZLE } from '../database/drizzle.constants.js';
 import type { DrizzleClient } from '../database/drizzle.types.js';
-import { TRIP_START } from '../constants.js';
 import { toUtcDayStart, toUtcDayEnd } from '../common/date-range.util.js';
 import { SyncPeriodsService } from '../sync-periods/sync-periods.service.js';
+import { HikesService } from '../hikes/hikes.service.js';
+import { AppSettingsService } from '../hikes/app-settings.service.js';
+import { HikeClassifierService } from '../hikes/hike-classifier.service.js';
 import type {
   GarminExtData,
   KmlDataEntry,
@@ -70,7 +72,6 @@ function parseGarminTimeUtc(raw: string): string {
 export class GarminService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GarminService.name);
 
-  private readonly mapshareId: string | null;
   private readonly pollIntervalMs: number;
 
   private lastSyncStatus: SyncStatus = { time: null, newCount: 0, error: null };
@@ -81,8 +82,10 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
     @Inject(DRIZZLE) private readonly db: DrizzleClient,
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly syncPeriodsService: SyncPeriodsService,
+    private readonly hikesService: HikesService,
+    private readonly appSettingsService: AppSettingsService,
+    private readonly classifier: HikeClassifierService,
   ) {
-    this.mapshareId = process.env.MAPSHARE_ID ?? null;
     this.pollIntervalMs =
       (parseInt(process.env.POLL_INTERVAL_MIN ?? '5', 10) || 5) * 60_000;
   }
@@ -91,30 +94,25 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
   // Lifecycle
   // ---------------------------------------------------------------------------
 
+  /**
+   * The Garmin device (mapshareId) is now admin-editable via AppSettingsService
+   * rather than fixed at boot, so the poll interval is always registered —
+   * each tick checks for a configured device itself and no-ops if absent.
+   */
   onModuleInit(): void {
-    if (!this.mapshareId) {
-      this.logger.warn('MAPSHARE_ID not set — auto-sync disabled');
-      return;
-    }
-
-    // Register with SchedulerRegistry so the interval is visible to NestJS
-    // diagnostics and is cleaned up correctly on shutdown.
     const interval = setInterval(() => void this.autoSync(), this.pollIntervalMs);
     this.schedulerRegistry.addInterval(INTERVAL_NAME, interval);
 
-    // Fire an initial sync immediately rather than waiting for the first tick.
     void this.autoSync();
 
-    this.logger.log(
-      `Auto-sync started: every ${this.pollIntervalMs / 60_000} min (mapshareId=${this.mapshareId})`,
-    );
+    this.logger.log(`Auto-sync started: every ${this.pollIntervalMs / 60_000} min`);
   }
 
   onModuleDestroy(): void {
     try {
       this.schedulerRegistry.deleteInterval(INTERVAL_NAME);
     } catch {
-      // Interval was never registered (MAPSHARE_ID absent) — nothing to clean up.
+      // Interval was never registered — nothing to clean up.
     }
   }
 
@@ -122,11 +120,15 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
   // Public query methods
   // ---------------------------------------------------------------------------
 
-  getAllPoints(): Promise<TrackingPoint[]> {
+  /** Defaults to the current default hike when no hikeId is given. */
+  async getAllPoints(hikeId?: number): Promise<TrackingPoint[]> {
+    const resolvedHikeId = hikeId ?? (await this.appSettingsService.getDefaultHikeId());
+    if (resolvedHikeId == null) return [];
+
     return this.db
       .select()
       .from(trackingPoints)
-      .where(gte(trackingPoints.timestamp, TRIP_START))
+      .where(eq(trackingPoints.hikeId, resolvedHikeId))
       .orderBy(asc(trackingPoints.timestamp));
   }
 
@@ -147,11 +149,12 @@ export class GarminService implements OnModuleInit, OnModuleDestroy {
     return Number(row?.total ?? 0);
   }
 
-  getSyncStatus(): SyncStatus & { pollIntervalMin: number; mapshareConfigured: boolean } {
+  async getSyncStatus(): Promise<SyncStatus & { pollIntervalMin: number; mapshareConfigured: boolean }> {
+    const mapshareId = await this.appSettingsService.getMapshareId();
     return {
       ...this.lastSyncStatus,
       pollIntervalMin: this.pollIntervalMs / 60_000,
-      mapshareConfigured: !!this.mapshareId,
+      mapshareConfigured: !!mapshareId,
     };
   }
 
@@ -194,8 +197,12 @@ ${trkpts}
   async addManualPoint(body: ManualPointBody): Promise<TrackingPoint> {
     this.validateManualPointBody(body);
 
+    const hikeId = body.hikeId ?? (await this.appSettingsService.getDefaultHikeId());
+    if (hikeId == null) throw new BadRequestException('No hike to assign this point to — set a default hike first');
+
     const point: NewTrackingPoint = {
       garminId: `manual-${Date.now()}`,
+      hikeId,
       latitude: body.latitude,
       longitude: body.longitude,
       altitude: body.altitude ?? null,
@@ -224,20 +231,22 @@ ${trkpts}
     startDate?: string,
     endDate?: string,
   ): Promise<{ synced: number; pruned: number; total: number; points: TrackingPoint[] }> {
-    if (!this.mapshareId) {
-      throw new BadRequestException('MAPSHARE_ID environment variable not set');
+    const mapshareId = await this.appSettingsService.getMapshareId();
+    if (!mapshareId) {
+      throw new BadRequestException('Garmin MapShare ID not configured — set it in the admin settings panel');
     }
 
     let fetched: NewTrackingPoint[];
     try {
-      fetched = await this.fetchGarminPoints(this.mapshareId, startDate, endDate);
+      fetched = await this.fetchGarminPoints(mapshareId, startDate, endDate);
     } catch (err) {
       const msg = (err as Error).message;
       this.addSyncLog(`Manual sync error: ${msg}`);
       throw new InternalServerErrorException(msg);
     }
 
-    const newCount = await this.insertPoints(fetched);
+    const classified = await this.classifyPoints(fetched);
+    const newCount = await this.insertPoints(classified);
     const prunedCount = await this.pruneOutsidePeriods();
     const all = await this.getAllPoints();
 
@@ -253,11 +262,13 @@ ${trkpts}
   // ---------------------------------------------------------------------------
 
   private async autoSync(): Promise<void> {
-    if (!this.mapshareId) return;
+    const mapshareId = await this.appSettingsService.getMapshareId();
+    if (!mapshareId) return;
 
     try {
-      const fetched = await this.fetchGarminPoints(this.mapshareId);
-      const newCount = await this.insertPoints(fetched);
+      const fetched = await this.fetchGarminPoints(mapshareId);
+      const classified = await this.classifyPoints(fetched);
+      const newCount = await this.insertPoints(classified);
       const prunedCount = await this.pruneOutsidePeriods();
 
       this.lastSyncStatus = { time: new Date().toISOString(), newCount, error: null };
@@ -275,6 +286,39 @@ ${trkpts}
       this.logger.error(`Auto-sync error: ${msg}`);
       this.addSyncLog(`Error: ${msg}`);
     }
+  }
+
+  /**
+   * Attributes each fetched point to a hike via HikeClassifierService,
+   * discarding any point that no hike's date range covers. Near-misses
+   * (an overlapping-hike runner-up) are surfaced in the sync log for
+   * admin visibility rather than persisted anywhere structured.
+   */
+  private async classifyPoints(points: NewTrackingPoint[]): Promise<NewTrackingPoint[]> {
+    if (points.length === 0) return [];
+
+    const hikes = await this.hikesService.getClassifiable();
+    const classified: NewTrackingPoint[] = [];
+    let discarded = 0;
+
+    for (const point of points) {
+      const result = this.classifier.classify(point.timestamp, point.latitude, point.longitude, hikes);
+      if (!result) {
+        discarded++;
+        continue;
+      }
+      classified.push({ ...point, hikeId: result.hikeId });
+      if (result.nearMisses.length > 0) {
+        this.logger.warn(
+          `Point at ${point.timestamp} assigned to hike ${result.hikeId}, near-missed hike(s) [${result.nearMisses.join(', ')}]`,
+        );
+      }
+    }
+
+    if (discarded > 0) {
+      this.addSyncLog(`${discarded} point(s) discarded — no hike's date range covers their timestamp`);
+    }
+    return classified;
   }
 
   /**

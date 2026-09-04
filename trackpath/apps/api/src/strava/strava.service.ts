@@ -1,11 +1,13 @@
 import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { asc, eq, count, gte, inArray } from 'drizzle-orm';
+import { asc, eq, count, inArray } from 'drizzle-orm';
 import { stravaActivities, stravaTokens } from '@trackpath/db/schema';
 import { DRIZZLE } from '../database/drizzle.constants.js';
-import { TRIP_START } from '../constants.js';
 import { toUtcDayStart, toUtcDayEnd } from '../common/date-range.util.js';
 import { SyncPeriodsService } from '../sync-periods/sync-periods.service.js';
+import { HikesService } from '../hikes/hikes.service.js';
+import { AppSettingsService } from '../hikes/app-settings.service.js';
+import { HikeClassifierService } from '../hikes/hike-classifier.service.js';
 import type { DrizzleClient } from '../database/drizzle.types.js';
 import type {
   StravaActivityRaw,
@@ -48,6 +50,9 @@ export class StravaService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleClient,
     private readonly syncPeriodsService: SyncPeriodsService,
+    private readonly hikesService: HikesService,
+    private readonly appSettingsService: AppSettingsService,
+    private readonly classifier: HikeClassifierService,
   ) {
     this.clientId = process.env.STRAVA_CLIENT_ID ?? null;
     this.clientSecret = process.env.STRAVA_CLIENT_SECRET ?? null;
@@ -76,11 +81,15 @@ export class StravaService {
     return this.syncLogs;
   }
 
-  getActivities() {
+  /** Defaults to the current default hike when no hikeId is given. */
+  async getActivities(hikeId?: number) {
+    const resolvedHikeId = hikeId ?? (await this.appSettingsService.getDefaultHikeId());
+    if (resolvedHikeId == null) return [];
+
     return this.db
       .select()
       .from(stravaActivities)
-      .where(gte(stravaActivities.startDate, TRIP_START))
+      .where(eq(stravaActivities.hikeId, resolvedHikeId))
       .orderBy(asc(stravaActivities.startDate));
   }
 
@@ -182,7 +191,9 @@ export class StravaService {
       .from(stravaActivities);
     const existingMap = new Map(existing.map((r) => [String(r.stravaId), r.coords]));
 
+    const hikes = await this.hikesService.getClassifiable();
     let synced = 0;
+    let discarded = 0;
     for (const act of activities) {
       const existingCoords = existingMap.get(String(act.id));
       // Skip if we already have non-empty GPS data for this activity.
@@ -191,24 +202,43 @@ export class StravaService {
       const coords = await this.fetchActivityCoords(act.id, accessToken);
 
       if (existingMap.has(String(act.id))) {
-        // Activity exists but was missing GPS — backfill coords only.
+        // Activity exists but was missing GPS — backfill coords only, keep its existing hike.
         await this.db
           .update(stravaActivities)
           .set({ coords: JSON.stringify(coords) })
           .where(eq(stravaActivities.stravaId, act.id));
-      } else {
-        await this.db.insert(stravaActivities).values({
-          stravaId: act.id,
-          name: act.name,
-          type: act.type,
-          distance: act.distance,
-          movingTime: act.moving_time,
-          elevationGain: act.total_elevation_gain || 0,
-          startDate: act.start_date,
-          coords: JSON.stringify(coords),
-        });
+        synced++;
+        continue;
       }
+
+      const [repLat, repLon] = coords[0] ?? [null, null];
+      const result = this.classifier.classify(act.start_date, repLat, repLon, hikes);
+      if (!result) {
+        discarded++;
+        continue;
+      }
+      if (result.nearMisses.length > 0) {
+        this.logger.warn(
+          `Activity ${act.id} (${act.start_date}) assigned to hike ${result.hikeId}, near-missed hike(s) [${result.nearMisses.join(', ')}]`,
+        );
+      }
+
+      await this.db.insert(stravaActivities).values({
+        hikeId: result.hikeId,
+        stravaId: act.id,
+        name: act.name,
+        type: act.type,
+        distance: act.distance,
+        movingTime: act.moving_time,
+        elevationGain: act.total_elevation_gain || 0,
+        startDate: act.start_date,
+        coords: JSON.stringify(coords),
+      });
       synced++;
+    }
+
+    if (discarded > 0) {
+      this.addSyncLog(`${discarded} activity(ies) discarded — no hike's date range covers their start date`);
     }
 
     const pruned = await this.pruneOutsidePeriods();
