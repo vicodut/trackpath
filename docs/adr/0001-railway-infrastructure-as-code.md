@@ -5,9 +5,10 @@
 
 ## Context
 
-Trackpath runs on Railway as one project with a single `production` environment:
-the web service (built from the root `Dockerfile`), a PostgreSQL database, a custom
-domain and the environment variables listed in `CLAUDE.md`. Until now all of that was
+Trackpath runs in the Railway project `stunning-manifestation` (`production`
+environment): the `trackpath` service (custom domain `vico.camp`), the `Postgres` database
+with its `postgres-volume`, and the environment variables listed in `CLAUDE.md`. The same
+project also hosts unrelated apps (calibre-wa, ghost, MySQL, livetrack2, bridgeStatus). Until now all of that was
 configured by hand in the Railway dashboard — nothing in the repo described it, and the
 repo never had a `railway.json` / `railway.toml`.
 
@@ -21,13 +22,18 @@ never at deploy time.
 
 - **Authoring:** TypeScript at `.railway/railway.ts`, using the `railway` SDK
   (`railway/iac`) pinned as a root devDependency. The CLI is installed outside the repo
-  (`brew install railway`).
+  (`npm i -g @railway/cli`; Homebrew has no working build for Intel macOS 26).
 - **Bootstrap:** the file is generated with `railway config pull` from the live project
   and committed only once `railway config plan` reports no changes.
-- **Scope:** everything `pull` emits — service, Postgres, volumes, domain, variables.
-  Only `production` is managed.
+- **Scope:** the file exports the named partial `trackpath` and declares only
+  trackpath's resources: the `trackpath` service, `Postgres` and `postgres-volume`.
+  The other apps in the project are not declared and, because a named partial only
+  deletes resources it owns, are left alone. The first `railway config apply` claims
+  ownership. Only `production` is managed. Variables on owned services are managed by
+  the file (the CLI default).
 - **Secrets:** stay in Railway. Secret variables are written as `preserve()`; never use
-  `--include-variables`. `DATABASE_URL` is a reference to the database resource.
+  `--include-variables`. `DATABASE_URL` is a reference to the database resource
+  (`Postgres.env.DATABASE_URL`).
 - **Deploy behaviour is unchanged:** the `Dockerfile` `CMD` (`npm run migrate && npm run
   start`) stays the single source of truth. The IaC file declares no start or pre-deploy
   command.
@@ -37,6 +43,13 @@ never at deploy time.
   drift check.
 - **PR isolation:** PRs that touch `.railway/` touch nothing else, so a config apply and
   a code deploy triggered by the same merge never race.
+
+## Known drift to fix in a follow-up
+
+The imported `trackpath` service still has `builder: "RAILPACK"` and
+`watchPatterns: ["/trackpath/**"]`, left over from before the app moved to the repo root.
+They were committed as-is so the first commit plans to zero changes; a separate
+`.railway/`-only PR corrects them.
 
 ## Consequences
 
