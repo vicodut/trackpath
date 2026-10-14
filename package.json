@@ -23,6 +23,7 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.4",
+    "railway": "^3.16.0",
     "turbo": "^2.5.4",
     "typescript-eslint": "^8.67.0"
   },

@@ -105,3 +105,5 @@ See `CLAUDE.md` for a full module-by-module breakdown and conventions.
 ## Deployment
 
 Deployed on [Railway](https://railway.app) via the root `Dockerfile` — a multi-stage build that compiles the whole monorepo, then runs `npm run migrate && npm run start` on boot. Railway supplies `DATABASE_URL` and `PORT`; everything else in the table above is set as a Railway environment variable.
+
+The Railway project itself (service, database, domain, variables) is declared in `.railway/railway.ts` — edit that file and run `railway config plan` / `railway config apply` instead of changing settings in the dashboard. Secret values stay in Railway (`preserve()`). See `docs/adr/0001-railway-infrastructure-as-code.md`.
