@@ -1,6 +1,6 @@
 # Trackpath — Architecture
 
-A real-time Appalachian Trail thru-hike tracker with Garmin inReach integration, Strava sync, an interactive map, elevation profiles, trail highlights, a Ghost CMS-powered trail journal, and gear/polls/cheers pages for followers.
+A real-time Appalachian Trail thru-hike tracker with Garmin inReach integration, Strava sync, an interactive map, elevation profiles, trail highlights, and gear/polls/cheers pages for followers.
 
 ## System Overview
 
@@ -13,12 +13,12 @@ A real-time Appalachian Trail thru-hike tracker with Garmin inReach integration,
 ┌──────────────────────────▼──────────────────────────────┐
 │                  Server (NestJS 11)                       │
 │  SWC · better-auth · Drizzle ORM · class-validator        │
-└───────┬──────────┬──────────┬──────────┬────────────────┘
-        │          │          │          │
-   ┌────▼───┐ ┌───▼────┐ ┌───▼───┐ ┌───▼──────┐
-   │Postgres│ │ Garmin  │ │Strava │ │Ghost CMS │
-   │  (DB)  │ │inReach  │ │  API  │ │   API    │
-   └────────┘ └────────┘ └───────┘ └──────────┘
+└───────┬──────────┬──────────┬─────────────────────────────┘
+        │          │          │
+   ┌────▼───┐ ┌───▼────┐ ┌───▼───┐
+   │Postgres│ │ Garmin  │ │Strava │
+   │  (DB)  │ │inReach  │ │  API  │
+   └────────┘ └────────┘ └───────┘
 ```
 
 ## Monorepo Layout
@@ -42,7 +42,6 @@ as static files in production — there is one deployable process, not two.
 |--------|------|-----|
 | **Garmin inReach** | GPS tracking points (lat, lon, alt, timestamp, messages) | Server polls MapShare KML feed on an interval (`POLL_INTERVAL_MIN`, default 5 min) |
 | **Strava** | Hiking activities (distance, elevation, GPS traces) | OAuth2 connect, auto-sync daily at midnight (cron), plus manual/date-range sync |
-| **Ghost CMS** | Trail journal blog posts | Proxied read-only through `/api/blog/*` (Content API) |
 | **OpenStreetMap** | AT trail highlights (shelters, summits, towns, etc.) | Static JSON in `apps/web/public/at-highlights.json` |
 | **Open-Meteo** | Trail elevation data + weather forecast | Elevation: static `at-trail-elevation.json`. Weather: live at last position, cached server-side for 30 min |
 
@@ -106,7 +105,6 @@ apps/web/src/
 │   ├── CheersPage/               # Cheers feed + form
 │   ├── ResourcesPage/            # AT links, location-aware forecast button
 │   ├── TrailLogPage/              # Mobile full-screen point list
-│   ├── Blog/                     # Ghost CMS journal (list + article reader)
 │   ├── LocationBanner/, StatusBar/, CopyCoords/, PoopRain/
 │   └── ErrorBoundary/            # Catches React errors, shows reload page
 │
@@ -115,7 +113,7 @@ apps/web/src/
 ```
 
 `AdminPage`, `StatsPage`, `GearPage`, `PollsPage`, `CheersPage`, `ResourcesPage`,
-`TrailLogPage`, and `Blog` are lazy-loaded to keep them out of the initial bundle.
+and `TrailLogPage` are lazy-loaded to keep them out of the initial bundle.
 
 ## Server Architecture (`apps/api`)
 
@@ -140,7 +138,6 @@ apps/api/src/
 ├── auth/                   # AuthService (session lookup), AdminGuard
 ├── garmin/                 # GarminService (MapShare poll + sync), controller
 ├── strava/                 # StravaService (OAuth + activity sync), controller
-├── blog/                   # BlogService (Ghost CMS proxy), controller
 ├── weather/                # WeatherService (Open-Meteo, 30-min cache), controller
 ├── gear/                   # GearService + controller (categories + items)
 ├── polls/                  # PollsService + controller (polls, votes, suggestions)
@@ -171,8 +168,6 @@ apps/api/src/
 | GET | `/api/strava/connect` | Admin | Start Strava OAuth |
 | GET | `/api/strava/callback` | No | Strava OAuth callback |
 | POST | `/api/strava/sync` | Admin | Manual/date-range Strava sync |
-| GET | `/api/blog/posts` | No | Ghost CMS posts (proxied) |
-| GET | `/api/blog/posts/:slug` | No | Single Ghost post (proxied) |
 | GET | `/api/gear` | No | Gear categories + items |
 | POST/PUT/DELETE | `/api/gear/categories[/:id]` | Admin | Manage gear categories |
 | POST/PUT/DELETE | `/api/gear/items[/:id]` | Admin | Manage gear items |
@@ -202,7 +197,6 @@ is in `ADMIN_EMAILS` (or any authenticated user, if that list is empty).
 - Session auth via better-auth (GitHub OAuth); admin write endpoints gated by `AdminGuard` + `ADMIN_EMAILS`
 - Global rate limiting via `ThrottlerGuard` (120 req/min default), tighter `@Throttle()` limits on sync/write endpoints
 - `ValidationPipe({ whitelist: true, transform: true })` strips unknown fields and coerces types on every request body
-- HTML sanitization with DOMPurify on Ghost blog content (client-side, `Blog/BlogPost.tsx`)
 - Env vars fail-fast validated with Zod at boot (`config/env.schema.ts`) — the app refuses to start with missing/malformed config
 
 ## Database Schema (`packages/db/src/schema.ts`)
@@ -262,8 +256,7 @@ before the server boots on every deploy.
 
 ```
 Railway Project
-├── Web Service (this app) — Dockerfile, PostgreSQL addon, env vars
-└── Ghost CMS (separate service, for the trail journal)
+└── Web Service (this app) — Dockerfile, PostgreSQL addon, env vars
 ```
 
 ## Development

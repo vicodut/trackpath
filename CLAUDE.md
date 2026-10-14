@@ -32,7 +32,6 @@ apps/
       auth/                 # AuthService (better-auth), AdminGuard
       garmin/               # GarminService (MapShare sync), GarminController
       strava/               # StravaService (OAuth + activity sync), StravaController
-      blog/                 # BlogService (Ghost CMS proxy), BlogController
       weather/              # WeatherService (Open-Meteo, 30-min cache), WeatherController
       gear/                 # GearService + GearController (categories + items)
       admin/                # AdminService (dashboard aggregation), AdminController
@@ -73,7 +72,7 @@ packages/
 - **DB imports in API:** use workspace package `import { db } from '@trackpath/db'` and `import { table } from '@trackpath/db/schema'`. Never use relative paths to packages/db.
 - **Server helpers:** add targeted query helpers instead of reusing `getAllPoints()` for everything.
 - **React state:** prefer `useMemo`/`useCallback` for expensive derivations. Use imperative handles (`useImperativeHandle`) for cross-component calls that would otherwise cause full re-renders.
-- **Modal pages** (AdminPage, StatsPage, GearPage, TrailLogPage, Blog) are lazy-loaded — keep them out of the initial bundle.
+- **Modal pages** (AdminPage, StatsPage, GearPage, TrailLogPage) are lazy-loaded — keep them out of the initial bundle.
 - **CSS:** CSS Modules per component (`ComponentName.module.css`). No global styles except `index.css`.
 - **TypeScript Strictness:** Never use `any` or `@ts-ignore`. If a type is missing, define it in `apps/web/src/types.ts` or infer it from the Drizzle schema.
 - **Routing:** Do not add new routes directly to `main.ts`. Create a NestJS module with a controller and register it in `app.module.ts`.
@@ -95,7 +94,6 @@ packages/
 | `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | Strava OAuth |
 | `BETTER_AUTH_URL` | Base URL for auth callbacks |
 | `BETTER_AUTH_SECRET` | Session signing secret |
-| `GHOST_URL` / `GHOST_KEY` | Ghost CMS for blog |
 | `POLL_INTERVAL_MIN` | Garmin auto-sync interval (default 5) |
 | `NEST_PORT` | NestJS port for local dev (default 3001) |
 

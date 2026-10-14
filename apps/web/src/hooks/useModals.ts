@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-type Route = '/' | '/stats' | '/trail-log' | '/blog' | '/admin' | '/gear' | '/polls' | '/resources' | '/cheers';
+type Route = '/' | '/stats' | '/trail-log' | '/admin' | '/gear' | '/polls' | '/resources' | '/cheers';
 
 export function useModals() {
   const [path, setPath] = useState<string>(() => window.location.pathname);
@@ -22,7 +22,6 @@ export function useModals() {
     showAdmin:    path === '/admin',
     showStats:    path === '/stats',
     showTrailLog: path === '/trail-log',
-    showBlog:     path === '/blog',
     showGear:     path === '/gear',
     showPolls:     path === '/polls',
     showResources: path === '/resources',
@@ -30,7 +29,6 @@ export function useModals() {
     openAdmin:     () => { navigate('/admin'); },
     openStats:     () => { navigate('/stats'); },
     openTrailLog:  () => { navigate('/trail-log'); },
-    openBlog:      () => { navigate('/blog'); },
     openGear:      () => { navigate('/gear'); },
     openPolls:     () => { navigate('/polls'); },
     openResources: () => { navigate('/resources'); },

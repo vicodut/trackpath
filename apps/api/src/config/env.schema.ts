@@ -26,10 +26,6 @@ export const envSchema = z.object({
   STRAVA_CLIENT_ID: z.string().optional(),
   STRAVA_CLIENT_SECRET: z.string().optional(),
 
-  // ── Ghost CMS (blog proxy) ────────────────────────────────────────────────
-  GHOST_URL: z.url().optional(),
-  GHOST_CONTENT_API_KEY: z.string().optional(),
-
   // ── Server ────────────────────────────────────────────────────────────────
   // PORT and NEST_PORT are intentionally excluded — they are resolved in
   // main.ts only, not by application modules. Including them here would cause

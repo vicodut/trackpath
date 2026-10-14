@@ -8,7 +8,6 @@ import { AuthModule } from './auth/auth.module.js';
 import { GarminModule } from './garmin/garmin.module.js';
 import { StravaModule } from './strava/strava.module.js';
 import { SyncPeriodsModule } from './sync-periods/sync-periods.module.js';
-import { BlogModule } from './blog/blog.module.js';
 import { WeatherModule } from './weather/weather.module.js';
 import { GearModule } from './gear/gear.module.js';
 import { AdminModule } from './admin/admin.module.js';
@@ -28,7 +27,6 @@ import { HealthController } from './health/health.controller.js';
     GarminModule,
     StravaModule,
     SyncPeriodsModule,
-    BlogModule,
     WeatherModule,
     GearModule,
     AdminModule,
