@@ -29,8 +29,9 @@ never at deploy time.
 - **Scope:** the file exports the named partial `trackpath` and declares only
   trackpath's resources: the `trackpath` service, `Postgres` and `postgres-volume`.
   The other apps in the project are not declared and, because a named partial only
-  deletes resources it owns, are left alone. The first `railway config apply` claims
-  ownership. Only `production` is managed. Variables on owned services are managed by
+  deletes resources it owns, are left alone. Ownership is claimed by the first
+  `railway config apply` that actually changes something: an apply with nothing to change
+  exits early without recording ownership (observed 2026-10-14). Only `production` is managed. Variables on owned services are managed by
   the file (the CLI default).
 - **Secrets:** stay in Railway. Secret variables are written as `preserve()`; never use
   `--include-variables`. `DATABASE_URL` is a reference to the database resource
