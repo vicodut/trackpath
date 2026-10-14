@@ -1,0 +1,38 @@
+# Daily check that production still matches .railway/railway.ts.
+# A failure means someone changed Railway outside the file (e.g. in the dashboard);
+# GitHub emails on failed scheduled runs. See docs/adr/0001-railway-infrastructure-as-code.md.
+name: Railway drift
+
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  RAILWAY_CLI_VERSION: "5.68.0"
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-engines
+      - name: Plan (exit 2 = drift)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm i -g "@railway/cli@${RAILWAY_CLI_VERSION}"
+          set +e
+          railway config plan --detailed-exit-code
+          code=$?
+          if [ "$code" -eq 2 ]; then
+            echo "::error::Railway production has drifted from .railway/railway.ts."
+          fi
+          exit "$code"

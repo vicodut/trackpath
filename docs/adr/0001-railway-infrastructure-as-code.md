@@ -39,10 +39,13 @@ never at deploy time.
 - **Deploy behaviour is unchanged:** the `Dockerfile` `CMD` (`npm run migrate && npm run
   start`) stays the single source of truth. The IaC file declares no start or pre-deploy
   command.
-- **Applying:** manually with `railway config plan` / `railway config apply` for now. A
-  follow-up adds the `railwayapp/config` GitHub Action (plan on PR, apply on merge), a
-  guard that refuses destructive plans in both the plan and apply jobs, and a daily
-  drift check.
+- **Applying:** from GitHub Actions (`.github/workflows/railway-config.yml`): PRs touching
+  `.railway/**` get a plan comment from `railwayapp/config@v1` and a check that fails on
+  any `to destroy` count; merging applies with the CLI (`railway config apply --yes`,
+  never `--confirm-destructive`, so the CLI refuses destructive changes). Destructive
+  changes are applied by hand. `.github/workflows/railway-drift.yml` runs
+  `railway config plan --detailed-exit-code` daily and fails on drift. Both authenticate
+  with the production-scoped project token in the `RAILWAY_TOKEN` repo secret.
 - **PR isolation:** PRs that touch `.railway/` touch nothing else, so a config apply and
   a code deploy triggered by the same merge never race.
 

@@ -82,7 +82,7 @@ packages/
 - **Rate limiting:** Sync/write endpoints use `@Throttle({ default: { ttl: 60_000, limit: 5 } })`. The global default is 120 req/min.
 - **System design diagrams:** when changing an ingestion or data-flow module (`garmin/`, `strava/`, `hikes/`, `weather/`, the points/activities read path, or the bundled trail JSON), update all three: `docs/SYSTEM_DESIGN.md` (overview + flow table + Garmin sequence), the identical overview Mermaid block in `README.md`, and the ASCII system diagram in `docs/ARCHITECTURE.md`.
 - **Package Management:** Use standard Node/Vite/React APIs first. Ask for permission before running `npm install` for any new dependency.
-- **Railway config:** change `.railway/railway.ts`, never the Railway dashboard. Secrets stay `preserve()`. PRs that touch `.railway/` touch nothing else (the PR that introduced `.railway/` is the one exception). Run `railway config plan` before `apply`; destructive plans are only ever applied by hand.
+- **Railway config:** change `.railway/railway.ts`, never the Railway dashboard. Secrets stay `preserve()`. PRs that touch `.railway/` touch nothing else (the PR that introduced `.railway/` is the one exception). Merging a `.railway/` PR applies it via `.github/workflows/railway-config.yml`; destructive plans are refused there and only ever applied by hand. A daily workflow fails on drift.
 
 ## Domain Rules (The Trail Reality)
 - **Spotty Connectivity:** Assume Garmin MapShare pings or user-generated logs might arrive out of order, in batches, or delayed by several days. Always rely on the device timestamp, not the server ingestion time.
