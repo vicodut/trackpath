@@ -13,13 +13,15 @@ A real-time Appalachian Trail thru-hike tracker with Garmin inReach integration,
 ┌──────────────────────────▼──────────────────────────────┐
 │                  Server (NestJS 11)                       │
 │  SWC · better-auth · Drizzle ORM · class-validator        │
-└───────┬──────────┬──────────┬─────────────────────────────┘
-        │          │          │
-   ┌────▼───┐ ┌───▼────┐ ┌───▼───┐
-   │Postgres│ │ Garmin  │ │Strava │
-   │  (DB)  │ │inReach  │ │  API  │
-   └────────┘ └────────┘ └───────┘
+└───────┬──────────┬──────────┬──────────┬────────────────┘
+        │          │          │          │
+   ┌────▼───┐ ┌────▼───┐ ┌────▼──┐ ┌─────▼─────┐
+   │Postgres│ │ Garmin │ │Strava │ │Open-Meteo │
+   │  (DB)  │ │inReach │ │  API  │ │ (weather) │
+   └────────┘ └────────┘ └───────┘ └───────────┘
 ```
+
+For how data flows between these boxes (ingestion, hike classification, live updates, weather caching), see [`SYSTEM_DESIGN.md`](SYSTEM_DESIGN.md).
 
 ## Monorepo Layout
 
@@ -190,7 +192,7 @@ apps/api/src/
 is in `ADMIN_EMAILS` (or any authenticated user, if that list is empty).
 
 ### Background Jobs
-- **Garmin auto-poll**: `setInterval`, every `POLL_INTERVAL_MIN` minutes (default 5), registered via `SchedulerRegistry` — only runs when `MAPSHARE_ID` is set
+- **Garmin auto-poll**: `setInterval`, every `POLL_INTERVAL_MIN` minutes (default 5), registered via `SchedulerRegistry` — each tick no-ops unless a MapShare ID is set in `app_settings` (admin panel; seeded from `MAPSHARE_ID` by the AT backfill)
 - **Strava auto-sync**: `@Cron('0 0 * * *')` — daily at midnight
 
 ### Security

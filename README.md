@@ -29,7 +29,45 @@ packages/
   db/       Drizzle ORM schema + migrations (@trackpath/db), PostgreSQL
 ```
 
-See `CLAUDE.md` for a full module-by-module breakdown and conventions.
+### How data flows
+
+```mermaid
+flowchart LR
+  subgraph External
+    garmin["Garmin inReach<br/>MapShare KML feed"]
+    strava["Strava API"]
+    meteo["Open-Meteo"]
+  end
+
+  subgraph Railway["Railway (one NestJS process)"]
+    gsvc["GarminService<br/>polls every few minutes"]
+    ssvc["StravaService<br/>daily + on demand"]
+    cls{{"HikeClassifierService<br/>which hike is this?"}}
+    wsvc["WeatherService<br/>30-min cache"]
+    api["REST /api/*<br/>+ SSE /api/stream"]
+    files["Bundled trail data<br/>line, elevation, highlights"]
+    db[("Postgres")]
+  end
+
+  subgraph Browser
+    spa["React SPA<br/>map, stats, weather"]
+  end
+
+  garmin -- "GPS pings" --> gsvc
+  strava -- "activities + GPS streams" --> ssvc
+  gsvc <--> cls
+  ssvc <--> cls
+  gsvc -- "tracking points" --> db
+  ssvc -- "activities" --> db
+  db -- "last device fix" --> wsvc
+  meteo -- "forecast" --> wsvc
+  db --> api
+  wsvc --> api
+  api -- "JSON + live push" --> spa
+  files -- "static JSON" --> spa
+```
+
+See [`docs/SYSTEM_DESIGN.md`](docs/SYSTEM_DESIGN.md) for a walkthrough of each flow, and `CLAUDE.md` for a full module-by-module breakdown and conventions.
 
 ## Prerequisites
 

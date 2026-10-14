@@ -78,6 +78,7 @@ packages/
 - **Routing:** Do not add new routes directly to `main.ts`. Create a NestJS module with a controller and register it in `app.module.ts`.
 - **Validation:** Use `class-validator` DTO classes for all request bodies. The global `ValidationPipe` (whitelist + transform) is active — unknown fields are stripped automatically.
 - **Rate limiting:** Sync/write endpoints use `@Throttle({ default: { ttl: 60_000, limit: 5 } })`. The global default is 120 req/min.
+- **System design diagrams:** when changing an ingestion or data-flow module (`garmin/`, `strava/`, `hikes/`, `weather/`, the points/activities read path, or the bundled trail JSON), update all three: `docs/SYSTEM_DESIGN.md` (overview + flow table + Garmin sequence), the identical overview Mermaid block in `README.md`, and the ASCII system diagram in `docs/ARCHITECTURE.md`.
 - **Package Management:** Use standard Node/Vite/React APIs first. Ask for permission before running `npm install` for any new dependency.
 
 ## Domain Rules (The Trail Reality)
