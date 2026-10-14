@@ -14,7 +14,7 @@
     "type-check": "turbo type-check",
     "lint": "turbo lint",
     "test": "turbo test",
-    "migrate": "npm run migrate --workspace=@trackpath/db",
+    "migrate": "npm run migrate --workspace=@trackpath/db && npm run backfill-at-hike --workspace=@trackpath/db",
     "db:generate": "npm run db:generate --workspace=@trackpath/db",
     "db:migrate": "npm run db:migrate --workspace=@trackpath/db",
     "db:studio": "npm run db:studio --workspace=@trackpath/db"
