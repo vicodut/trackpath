@@ -1,0 +1,29 @@
+{
+  "name": "@trackpath/db",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./schema": "./dist/schema.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "migrate": "tsx src/migrate.ts",
+    "backfill-at-hike": "tsx src/backfill-at-hike.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.8",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^6.0.2"
+  }
+}

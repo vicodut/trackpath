@@ -1,8 +1,0 @@
-node_modules/
-dist/
-.turbo/
-tracking.db
-tracking.db-shm
-tracking.db-wal
-auth-schema.ts
-.env

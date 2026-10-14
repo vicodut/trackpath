@@ -1,0 +1,38 @@
+import { useState, useEffect, useCallback } from 'react';
+
+type Route = '/' | '/stats' | '/trail-log' | '/admin' | '/gear' | '/polls' | '/resources' | '/cheers';
+
+export function useModals() {
+  const [path, setPath] = useState<string>(() => window.location.pathname);
+
+  useEffect(() => {
+    const onPop = () => { setPath(window.location.pathname); };
+    window.addEventListener('popstate', onPop);
+    return () => { window.removeEventListener('popstate', onPop); };
+  }, []);
+
+  const navigate = useCallback((to: Route) => {
+    history.pushState(null, '', to);
+    setPath(to);
+  }, []);
+
+  const closeModal = useCallback(() => { navigate('/'); }, [navigate]);
+
+  return {
+    showAdmin:    path === '/admin',
+    showStats:    path === '/stats',
+    showTrailLog: path === '/trail-log',
+    showGear:     path === '/gear',
+    showPolls:     path === '/polls',
+    showResources: path === '/resources',
+    showCheers:    path === '/cheers',
+    openAdmin:     () => { navigate('/admin'); },
+    openStats:     () => { navigate('/stats'); },
+    openTrailLog:  () => { navigate('/trail-log'); },
+    openGear:      () => { navigate('/gear'); },
+    openPolls:     () => { navigate('/polls'); },
+    openResources: () => { navigate('/resources'); },
+    openCheers:    () => { navigate('/cheers'); },
+    closeModal,
+  };
+}

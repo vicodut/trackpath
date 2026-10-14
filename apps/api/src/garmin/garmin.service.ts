@@ -1,0 +1,480 @@
+import {
+  Injectable,
+  Inject,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { asc, desc, not, like, count, eq, inArray } from 'drizzle-orm';
+import { parseString } from 'xml2js';
+import { Subject, Observable, from, startWith, switchMap, map } from 'rxjs';
+import { trackingPoints } from '@trackpath/db/schema';
+import type { NewTrackingPoint, TrackingPoint } from '@trackpath/db/schema';
+import { DRIZZLE } from '../database/drizzle.constants.js';
+import type { DrizzleClient } from '../database/drizzle.types.js';
+import { toUtcDayStart, toUtcDayEnd } from '../common/date-range.util.js';
+import { SyncPeriodsService } from '../sync-periods/sync-periods.service.js';
+import { HikesService } from '../hikes/hikes.service.js';
+import { AppSettingsService } from '../hikes/app-settings.service.js';
+import { HikeClassifierService } from '../hikes/hike-classifier.service.js';
+import type {
+  GarminExtData,
+  KmlDataEntry,
+  KmlPlacemark,
+  KmlRoot,
+  ManualPointBody,
+  SyncLog,
+  SyncStatus,
+} from './garmin.types.js';
+
+/** Fetch timeout for spotty satellite connectivity (30 s). */
+const FETCH_TIMEOUT_MS = 30_000;
+
+const MAPSHARE_BASE = 'https://share.garmin.com/Feed/Share';
+const INTERVAL_NAME = 'garmin-auto-sync';
+
+/**
+ * Garmin's "Time UTC" extended-data field is formatted as
+ * "M/D/YYYY H:MM:SS AM/PM" (no zero-padding, 12-hour clock) and represents
+ * a UTC instant despite carrying no timezone marker. Passing that string
+ * straight to `new Date()` would have Node parse it as local time — and
+ * storing it as-is (the previous behaviour) made lexicographic sort wrong,
+ * since "4" sorts after "10" as a string ("5/4/2026" > "5/10/2026").
+ * Parse the components explicitly and re-serialise as zero-padded ISO8601
+ * so both chronological and string ordering agree.
+ */
+const GARMIN_TIME_UTC_RE =
+  /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)$/i;
+
+function parseGarminTimeUtc(raw: string): string {
+  const match = GARMIN_TIME_UTC_RE.exec(raw.trim());
+  if (!match) return raw;
+
+  const [, month, day, year, hour12, minute, second, meridiem] = match;
+  let hour = parseInt(hour12, 10) % 12;
+  if (meridiem.toUpperCase() === 'PM') hour += 12;
+
+  const utcMs = Date.UTC(
+    parseInt(year, 10),
+    parseInt(month, 10) - 1,
+    parseInt(day, 10),
+    hour,
+    parseInt(minute, 10),
+    parseInt(second, 10),
+  );
+  return new Date(utcMs).toISOString();
+}
+
+@Injectable()
+export class GarminService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(GarminService.name);
+
+  private readonly pollIntervalMs: number;
+
+  private lastSyncStatus: SyncStatus = { time: null, newCount: 0, error: null };
+  private readonly syncLogs: SyncLog[] = [];
+  private readonly pointsChanged$ = new Subject<void>();
+
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleClient,
+    private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly syncPeriodsService: SyncPeriodsService,
+    private readonly hikesService: HikesService,
+    private readonly appSettingsService: AppSettingsService,
+    private readonly classifier: HikeClassifierService,
+  ) {
+    this.pollIntervalMs =
+      (parseInt(process.env.POLL_INTERVAL_MIN ?? '5', 10) || 5) * 60_000;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
+  /**
+   * The Garmin device (mapshareId) is now admin-editable via AppSettingsService
+   * rather than fixed at boot, so the poll interval is always registered —
+   * each tick checks for a configured device itself and no-ops if absent.
+   */
+  onModuleInit(): void {
+    const interval = setInterval(() => void this.autoSync(), this.pollIntervalMs);
+    this.schedulerRegistry.addInterval(INTERVAL_NAME, interval);
+
+    void this.autoSync();
+
+    this.logger.log(`Auto-sync started: every ${this.pollIntervalMs / 60_000} min`);
+  }
+
+  onModuleDestroy(): void {
+    try {
+      this.schedulerRegistry.deleteInterval(INTERVAL_NAME);
+    } catch {
+      // Interval was never registered — nothing to clean up.
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public query methods
+  // ---------------------------------------------------------------------------
+
+  /** Defaults to the current default hike when no hikeId is given. */
+  async getAllPoints(hikeId?: number): Promise<TrackingPoint[]> {
+    const resolvedHikeId = hikeId ?? (await this.appSettingsService.getDefaultHikeId());
+    if (resolvedHikeId == null) return [];
+
+    return this.db
+      .select()
+      .from(trackingPoints)
+      .where(eq(trackingPoints.hikeId, resolvedHikeId))
+      .orderBy(asc(trackingPoints.timestamp));
+  }
+
+  async getLastGarminPoint(): Promise<TrackingPoint | null> {
+    const rows = await this.db
+      .select()
+      .from(trackingPoints)
+      .where(not(like(trackingPoints.garminId, 'manual-%')))
+      .orderBy(desc(trackingPoints.timestamp))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  async countPoints(): Promise<number> {
+    const [row] = await this.db.select({ total: count() }).from(trackingPoints);
+    // node-postgres returns COUNT(*)/bigint as a string at runtime despite Drizzle's `number` type.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
+    return Number(row?.total ?? 0);
+  }
+
+  async getSyncStatus(): Promise<SyncStatus & { pollIntervalMin: number; mapshareConfigured: boolean }> {
+    const mapshareId = await this.appSettingsService.getMapshareId();
+    return {
+      ...this.lastSyncStatus,
+      pollIntervalMin: this.pollIntervalMs / 60_000,
+      mapshareConfigured: !!mapshareId,
+    };
+  }
+
+  getSyncLogs(): SyncLog[] {
+    return this.syncLogs;
+  }
+
+  /** SSE stream: emits all points on connect and after each sync that adds new points. */
+  getPointsStream(): Observable<{ data: TrackingPoint[] }> {
+    return this.pointsChanged$.pipe(
+      startWith(undefined),
+      switchMap(() => from(this.getAllPoints())),
+      map(points => ({ data: points })),
+    );
+  }
+
+  /** Builds a GPX 1.1 XML string from all tracking points. */
+  buildGpx(points: TrackingPoint[]): string {
+    const trkpts = points
+      .map(p => `    <trkpt lat="${p.latitude}" lon="${p.longitude}">
+      <ele>${p.altitude ?? 0}</ele>
+      <time>${new Date(p.timestamp).toISOString()}</time>
+    </trkpt>`)
+      .join('\n');
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="trackpath" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Appalachian Trail</name>
+    <trkseg>
+${trkpts}
+    </trkseg>
+  </trk>
+</gpx>`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Manual point CRUD
+  // ---------------------------------------------------------------------------
+
+  async addManualPoint(body: ManualPointBody): Promise<TrackingPoint> {
+    this.validateManualPointBody(body);
+
+    const hikeId = body.hikeId ?? (await this.appSettingsService.getDefaultHikeId());
+    if (hikeId == null) throw new BadRequestException('No hike to assign this point to — set a default hike first');
+
+    const point: NewTrackingPoint = {
+      garminId: `manual-${Date.now()}`,
+      hikeId,
+      latitude: body.latitude,
+      longitude: body.longitude,
+      altitude: body.altitude ?? null,
+      timestamp: new Date().toISOString(),
+      velocity: null,
+      course: null,
+      message: body.message ?? null,
+      eventType: body.tag ?? 'manual',
+    };
+
+    const [inserted] = await this.db.insert(trackingPoints).values(point).returning();
+    this.pointsChanged$.next();
+    return inserted;
+  }
+
+  async deletePoint(id: number): Promise<void> {
+    await this.db.delete(trackingPoints).where(eq(trackingPoints.id, id));
+    this.pointsChanged$.next();
+  }
+
+  // ---------------------------------------------------------------------------
+  // MapShare sync
+  // ---------------------------------------------------------------------------
+
+  async syncFromMapShare(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<{ synced: number; pruned: number; total: number; points: TrackingPoint[] }> {
+    const mapshareId = await this.appSettingsService.getMapshareId();
+    if (!mapshareId) {
+      throw new BadRequestException('Garmin MapShare ID not configured — set it in the admin settings panel');
+    }
+
+    let fetched: NewTrackingPoint[];
+    try {
+      fetched = await this.fetchGarminPoints(mapshareId, startDate, endDate);
+    } catch (err) {
+      const msg = (err as Error).message;
+      this.addSyncLog(`Manual sync error: ${msg}`);
+      throw new InternalServerErrorException(msg);
+    }
+
+    const classified = await this.classifyPoints(fetched);
+    const newCount = await this.insertPoints(classified);
+    const prunedCount = await this.pruneOutsidePeriods();
+    const all = await this.getAllPoints();
+
+    const rangeLabel = startDate || endDate ? ` (${startDate ?? '…'} to ${endDate ?? '…'})` : '';
+    const prunedLabel = prunedCount > 0 ? `, ${prunedCount} pruned (outside sync periods)` : '';
+    this.addSyncLog(`Manual sync${rangeLabel}: ${newCount} new points${prunedLabel} (${all.length} total)`);
+    if (newCount > 0 || prunedCount > 0) this.pointsChanged$.next();
+    return { synced: newCount, pruned: prunedCount, total: all.length, points: all };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
+
+  private async autoSync(): Promise<void> {
+    const mapshareId = await this.appSettingsService.getMapshareId();
+    if (!mapshareId) return;
+
+    try {
+      const fetched = await this.fetchGarminPoints(mapshareId);
+      const classified = await this.classifyPoints(fetched);
+      const newCount = await this.insertPoints(classified);
+      const prunedCount = await this.pruneOutsidePeriods();
+
+      this.lastSyncStatus = { time: new Date().toISOString(), newCount, error: null };
+
+      if (newCount > 0 || prunedCount > 0) {
+        const prunedLabel = prunedCount > 0 ? `, ${prunedCount} pruned (outside sync periods)` : '';
+        this.logger.log(`Auto-sync: ${newCount} new points${prunedLabel}`);
+        this.addSyncLog(`${newCount} new points synced${prunedLabel}`);
+        this.pointsChanged$.next();
+      }
+    } catch (err) {
+      const msg = (err as Error).message;
+      this.lastSyncStatus = { time: new Date().toISOString(), newCount: 0, error: msg };
+      // Log but do not throw — spotty connectivity must not crash the poll loop.
+      this.logger.error(`Auto-sync error: ${msg}`);
+      this.addSyncLog(`Error: ${msg}`);
+    }
+  }
+
+  /**
+   * Attributes each fetched point to a hike via HikeClassifierService,
+   * discarding any point that no hike's date range covers. Near-misses
+   * (an overlapping-hike runner-up) are surfaced in the sync log for
+   * admin visibility rather than persisted anywhere structured.
+   */
+  private async classifyPoints(points: NewTrackingPoint[]): Promise<NewTrackingPoint[]> {
+    if (points.length === 0) return [];
+
+    const hikes = await this.hikesService.getClassifiable();
+    const classified: NewTrackingPoint[] = [];
+    let discarded = 0;
+
+    for (const point of points) {
+      const result = this.classifier.classify(point.timestamp, point.latitude, point.longitude, hikes);
+      if (!result) {
+        discarded++;
+        continue;
+      }
+      classified.push({ ...point, hikeId: result.hikeId });
+      if (result.nearMisses.length > 0) {
+        this.logger.warn(
+          `Point at ${point.timestamp} assigned to hike ${result.hikeId}, near-missed hike(s) [${result.nearMisses.join(', ')}]`,
+        );
+      }
+    }
+
+    if (discarded > 0) {
+      this.addSyncLog(`${discarded} point(s) discarded — no hike's date range covers their timestamp`);
+    }
+    return classified;
+  }
+
+  /**
+   * Fetches the MapShare KML feed with a 30 s AbortController timeout.
+   *
+   * Timestamp rule: "Time UTC" from the device is the canonical timestamp.
+   * The device clock reflects when the GPS fix was recorded, not when the
+   * satellite uplink delivered it — critical for correct track ordering when
+   * points arrive in bursts after connectivity gaps.
+   *
+   * startDate/endDate (when given) are sent as the feed's "d1"/"d2" query
+   * params, restricting the feed to a date range for manual backfill syncs.
+   */
+  private async fetchGarminPoints(
+    mapshareId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<NewTrackingPoint[]> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => { controller.abort(); }, FETCH_TIMEOUT_MS);
+
+    const url = new URL(`${MAPSHARE_BASE}/${mapshareId}`);
+    if (startDate) url.searchParams.set('d1', toUtcDayStart(startDate));
+    if (endDate) url.searchParams.set('d2', toUtcDayEnd(endDate));
+
+    let xml: string;
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`Garmin feed returned HTTP ${res.status}`);
+      xml = await res.text();
+    } finally {
+      clearTimeout(timer);
+    }
+
+    return this.extractPoints(await this.parseKml(xml));
+  }
+
+  private parseKml(xml: string): Promise<KmlRoot> {
+    return new Promise((resolve, reject) => {
+      parseString(xml, { explicitArray: false }, (err, result) => {
+        if (err) { reject(err); return; }
+        resolve(result as KmlRoot);
+      });
+    });
+  }
+
+  private extractPoints(kml: KmlRoot): NewTrackingPoint[] {
+    const doc = kml?.kml?.Document;
+    if (!doc) return [];
+
+    let placemarks: KmlPlacemark | KmlPlacemark[] | undefined =
+      doc.Folder?.Placemark ?? doc.Placemark;
+    if (!placemarks) return [];
+    if (!Array.isArray(placemarks)) placemarks = [placemarks];
+
+    const points: NewTrackingPoint[] = [];
+
+    for (const pm of placemarks) {
+      const coords = pm.Point?.coordinates;
+      if (!coords) continue;
+
+      const [lng, lat, alt] = coords.split(',').map(Number);
+      if (isNaN(lat) || isNaN(lng)) continue;
+
+      const ext = this.normaliseExtData(pm);
+
+      const elevation = ext['Elevation'] != null ? parseFloat(ext['Elevation']) : null;
+      const finalAlt = alt != null && !isNaN(alt) ? alt : elevation;
+      const timestamp = ext['Time UTC'] ? parseGarminTimeUtc(ext['Time UTC']) : new Date().toISOString();
+      const garminId = ext['Id'] ?? `${lat}-${lng}-${timestamp}`;
+
+      const messageText = ext['Text'] ?? pm.description ?? null;
+      const eventType = /poop/i.test(messageText ?? '')
+        ? 'poop'
+        : (ext['Event'] ?? null);
+
+      points.push({
+        garminId,
+        latitude: lat,
+        longitude: lng,
+        altitude: finalAlt,
+        timestamp,
+        velocity: ext['Velocity'] != null ? parseFloat(ext['Velocity']) : null,
+        course: ext['Course'] != null ? parseFloat(ext['Course']) : null,
+        message: messageText,
+        eventType,
+      });
+    }
+
+    return points;
+  }
+
+  private normaliseExtData(pm: KmlPlacemark): GarminExtData {
+    const ext: GarminExtData = {};
+    if (!pm.ExtendedData?.Data) return ext;
+
+    const entries: KmlDataEntry[] = Array.isArray(pm.ExtendedData.Data)
+      ? pm.ExtendedData.Data
+      : [pm.ExtendedData.Data];
+
+    for (const d of entries) ext[d.$.name] = d.value;
+    return ext;
+  }
+
+  private async insertPoints(points: NewTrackingPoint[]): Promise<number> {
+    if (points.length === 0) return 0;
+    const inserted = await this.db
+      .insert(trackingPoints)
+      .values(points)
+      .onConflictDoNothing()
+      .returning({ id: trackingPoints.id });
+    return inserted.length;
+  }
+
+  /**
+   * Deletes previously-synced (non-manual) points whose device timestamp
+   * falls outside every configured sync period. No-op when no periods are
+   * configured, so syncing stays unrestricted until the admin opts in.
+   */
+  private async pruneOutsidePeriods(): Promise<number> {
+    const periods = await this.syncPeriodsService.getAll();
+    if (periods.length === 0) return 0;
+
+    const rows = await this.db
+      .select({ id: trackingPoints.id, timestamp: trackingPoints.timestamp })
+      .from(trackingPoints)
+      .where(not(like(trackingPoints.garminId, 'manual-%')));
+
+    const staleIds = rows
+      .filter((r) => !SyncPeriodsService.isWithinPeriods(r.timestamp, periods))
+      .map((r) => r.id);
+    if (staleIds.length === 0) return 0;
+
+    await this.db.delete(trackingPoints).where(inArray(trackingPoints.id, staleIds));
+    return staleIds.length;
+  }
+
+  private addSyncLog(message: string): void {
+    this.syncLogs.unshift({ source: 'garmin', time: new Date().toISOString(), message });
+    if (this.syncLogs.length > 50) this.syncLogs.length = 50;
+  }
+
+  private validateManualPointBody(body: ManualPointBody): void {
+    const { latitude, longitude, altitude, message, tag } = body;
+    if (
+      typeof latitude !== 'number' || typeof longitude !== 'number' ||
+      latitude < -90 || latitude > 90 ||
+      longitude < -180 || longitude > 180
+    ) throw new BadRequestException('Invalid latitude/longitude');
+    if (altitude != null && typeof altitude !== 'number')
+      throw new BadRequestException('altitude must be a number');
+    if (message != null && typeof message !== 'string')
+      throw new BadRequestException('message must be a string');
+    if (tag != null && typeof tag !== 'string')
+      throw new BadRequestException('tag must be a string');
+  }
+}
