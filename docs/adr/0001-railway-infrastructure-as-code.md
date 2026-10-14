@@ -29,8 +29,9 @@ never at deploy time.
 - **Scope:** the file exports the named partial `trackpath` and declares only
   trackpath's resources: the `trackpath` service, `Postgres` and `postgres-volume`.
   The other apps in the project are not declared and, because a named partial only
-  deletes resources it owns, are left alone. The first `railway config apply` claims
-  ownership. Only `production` is managed. Variables on owned services are managed by
+  deletes resources it owns, are left alone. Ownership is claimed by the first
+  `railway config apply` that actually changes something: an apply with nothing to change
+  exits early without recording ownership (observed 2026-10-14). Only `production` is managed. Variables on owned services are managed by
   the file (the CLI default).
 - **Secrets:** stay in Railway. Secret variables are written as `preserve()`; never use
   `--include-variables`. `DATABASE_URL` is a reference to the database resource
@@ -45,16 +46,19 @@ never at deploy time.
 - **PR isolation:** PRs that touch `.railway/` touch nothing else, so a config apply and
   a code deploy triggered by the same merge never race.
 
-## Known drift to fix in a follow-up
+## Drift found at import (fixed 2026-10-14, #6 and #7)
 
-The imported `trackpath` service still has `builder: "RAILPACK"` and
+The imported `trackpath` service had `builder: "RAILPACK"` and
 `watchPatterns: ["/trackpath/**"]`, left over from before the app moved to the repo root.
-Because of the watch pattern, merges to `main` are currently **skipped** instead of
-deployed (e.g. PR #4). The `RAILPACK` builder also contradicts the docs, which say the
-app deploys through the root `Dockerfile`. The `Postgres` TCP proxy
-(`tcpProxies: { "5432": {} }`) exposes the database publicly. All of this was committed
-as-is so the first commit plans to zero changes; a separate `.railway/`-only PR corrects
-it, and that PR changes deploy behaviour.
+The watch pattern matched nothing, so merges to `main` were **skipped** instead of
+deployed (e.g. #4, #5). `Postgres` also had a public TCP proxy on 5432. These were
+committed as pulled so the first commit planned to zero changes, then fixed in
+`.railway/`-only follow-ups: the builder is now `DOCKERFILE`, there are no watch patterns,
+and the proxy is removed.
+
+Authoring gotchas learned on the way:
+- An empty `tcpProxies: {}` does not remove a proxy; write `{ "5432": null }`.
+- `watchPatterns: []` is stored as `null` and shows as a perpetual change; omit the key.
 
 `calibre-wa` still builds from this repo's deleted `/calibre-wa` directory, so its deploys
 fail on every push to `main` (the last good build keeps serving `books.vico.camp`). It is
