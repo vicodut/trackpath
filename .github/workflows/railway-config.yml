@@ -1,0 +1,81 @@
+# Railway IaC: plan on PRs that touch .railway/, apply when they merge.
+# See docs/adr/0001-railway-infrastructure-as-code.md.
+#
+# Destructive changes (deleting a service, database, volume or variable) are never applied
+# from CI: the apply step runs the CLI non-interactively WITHOUT --confirm-destructive, so the
+# CLI refuses them. Apply those by hand with `railway config apply`.
+name: Railway config
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - ".railway/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+  id-token: write
+
+concurrency:
+  group: railway-config
+  cancel-in-progress: false
+
+env:
+  RAILWAY_CLI_VERSION: "5.68.0"
+
+jobs:
+  plan:
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-engines
+
+      # Posts the plan as a PR comment.
+      - uses: railwayapp/config@v1
+        with:
+          command: plan
+          railway-token: ${{ secrets.RAILWAY_TOKEN }}
+
+      # Early warning only: GitHub Free cannot make this check required on a private repo.
+      # The apply job below is the real guard.
+      - name: Fail on destructive plan
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm i -g "@railway/cli@${RAILWAY_CLI_VERSION}"
+          railway config plan | tee plan.txt
+          if grep -Eq '[1-9][0-9]* to destroy' plan.txt; then
+            echo "::error::Plan deletes resources. Apply it by hand with 'railway config apply'; CI will refuse it."
+            exit 1
+          fi
+
+  apply:
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-engines
+      - name: Apply (destructive changes refused)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm i -g "@railway/cli@${RAILWAY_CLI_VERSION}"
+          railway config apply --yes
