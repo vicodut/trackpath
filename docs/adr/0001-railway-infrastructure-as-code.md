@@ -8,7 +8,8 @@
 Trackpath runs in the Railway project `stunning-manifestation` (`production`
 environment): the `trackpath` service (custom domain `vico.camp`), the `Postgres` database
 with its `postgres-volume`, and the environment variables listed in `CLAUDE.md`. The same
-project also hosts unrelated apps (calibre-wa, ghost, MySQL, livetrack2, bridgeStatus). Until now all of that was
+project also hosts unrelated apps (calibre-wa, livetrack2, bridgeStatus); the dead
+Ghost blog and its MySQL database were deleted on 2026-10-14. Until now all of that was
 configured by hand in the Railway dashboard — nothing in the repo described it, and the
 repo never had a `railway.json` / `railway.toml`.
 
@@ -54,6 +55,10 @@ app deploys through the root `Dockerfile`. The `Postgres` TCP proxy
 (`tcpProxies: { "5432": {} }`) exposes the database publicly. All of this was committed
 as-is so the first commit plans to zero changes; a separate `.railway/`-only PR corrects
 it, and that PR changes deploy behaviour.
+
+`calibre-wa` still builds from this repo's deleted `/calibre-wa` directory, so its deploys
+fail on every push to `main` (the last good build keeps serving `books.vico.camp`). It is
+not declared here; giving it its own repo is tracked separately.
 
 This PR (the one introducing `.railway/`) is the only exception to the PR-isolation rule.
 
