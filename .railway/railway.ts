@@ -1,8 +1,8 @@
 import { defineRailway, github, postgres, preserve, project, service, volume } from "railway/iac";
 
-// The Railway project also hosts unrelated apps (calibre-wa, ghost, MySQL, livetrack2,
-// bridgeStatus). This partial owns only trackpath's resources; anything not declared here
-// is left alone. See docs/adr/0001-railway-infrastructure-as-code.md.
+// The Railway project also hosts unrelated apps. This partial owns only trackpath's
+// resources; anything not declared here is left alone.
+// See docs/adr/0001-railway-infrastructure-as-code.md.
 export const partial = "trackpath";
 
 export default defineRailway(() => {

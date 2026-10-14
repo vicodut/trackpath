@@ -21,7 +21,7 @@ never at deploy time.
 ## Decision
 
 - **Authoring:** TypeScript at `.railway/railway.ts`, using the `railway` SDK
-  (`railway/iac`) pinned as a root devDependency. The CLI is installed outside the repo
+  (`railway/iac`) as a root devDependency. The CLI is installed outside the repo
   (`npm i -g @railway/cli`; Homebrew has no working build for Intel macOS 26).
 - **Bootstrap:** the file is generated with `railway config pull` from the live project
   and committed only once `railway config plan` reports no changes.
@@ -48,8 +48,14 @@ never at deploy time.
 
 The imported `trackpath` service still has `builder: "RAILPACK"` and
 `watchPatterns: ["/trackpath/**"]`, left over from before the app moved to the repo root.
-They were committed as-is so the first commit plans to zero changes; a separate
-`.railway/`-only PR corrects them.
+Because of the watch pattern, merges to `main` are currently **skipped** instead of
+deployed (e.g. PR #4). The `RAILPACK` builder also contradicts the docs, which say the
+app deploys through the root `Dockerfile`. The `Postgres` TCP proxy
+(`tcpProxies: { "5432": {} }`) exposes the database publicly. All of this was committed
+as-is so the first commit plans to zero changes; a separate `.railway/`-only PR corrects
+it, and that PR changes deploy behaviour.
+
+This PR (the one introducing `.railway/`) is the only exception to the PR-isolation rule.
 
 ## Consequences
 

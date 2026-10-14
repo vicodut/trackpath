@@ -81,7 +81,7 @@ packages/
 - **Validation:** Use `class-validator` DTO classes for all request bodies. The global `ValidationPipe` (whitelist + transform) is active — unknown fields are stripped automatically.
 - **Rate limiting:** Sync/write endpoints use `@Throttle({ default: { ttl: 60_000, limit: 5 } })`. The global default is 120 req/min.
 - **Package Management:** Use standard Node/Vite/React APIs first. Ask for permission before running `npm install` for any new dependency.
-- **Railway config:** change `.railway/railway.ts`, never the Railway dashboard. Secrets stay `preserve()`. PRs that touch `.railway/` touch nothing else. Run `railway config plan` before `apply`; destructive plans are only ever applied by hand.
+- **Railway config:** change `.railway/railway.ts`, never the Railway dashboard. Secrets stay `preserve()`. PRs that touch `.railway/` touch nothing else (the PR that introduced `.railway/` is the one exception). Run `railway config plan` before `apply`; destructive plans are only ever applied by hand.
 
 ## Domain Rules (The Trail Reality)
 - **Spotty Connectivity:** Assume Garmin MapShare pings or user-generated logs might arrive out of order, in batches, or delayed by several days. Always rely on the device timestamp, not the server ingestion time.
@@ -94,6 +94,7 @@ packages/
 | `DATABASE_URL` | PostgreSQL connection string |
 | `MAPSHARE_ID` | Garmin inReach MapShare ID |
 | `ADMIN_EMAILS` | Comma-separated list of admin emails |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth login |
 | `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | Strava OAuth |
 | `BETTER_AUTH_URL` | Base URL for auth callbacks |
 | `BETTER_AUTH_SECRET` | Session signing secret |
