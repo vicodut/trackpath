@@ -7,11 +7,15 @@ export const partial = "trackpath";
 
 export default defineRailway(() => {
   const Postgres = postgres("Postgres", { region: "us-west2" });
-  Postgres.networking = { privateNetworkEndpoint: "postgres", tcpProxies: { "5432": {} } };
+  // No public TCP proxy: trackpath reaches Postgres over the private network. Re-add one
+  // temporarily if you need to reach the database from outside Railway.
+  Postgres.networking = { privateNetworkEndpoint: "postgres", tcpProxies: {} };
   const postgresVolume = volume("postgres-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-west2", sizeMB: 500 });
   const trackpath = service("trackpath", {
     source: github("vicodut/trackpath", { branch: "main", checkSuites: false, rootDirectory: "/" }),
-    build: { builder: "RAILPACK", watchPatterns: ["/trackpath/**"] },
+    // Root Dockerfile is the source of truth (its CMD runs `npm run migrate && npm run start`).
+    // No watch patterns: every push to main deploys.
+    build: { builder: "DOCKERFILE", dockerfilePath: "Dockerfile", watchPatterns: [] },
     replicas: { "us-west2": 1 },
     domains: ["vico.camp"],
     env: {
