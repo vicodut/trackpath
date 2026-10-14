@@ -6,7 +6,7 @@ Appalachian Trail hike tracker. NestJS API + React SPA, deployed on Railway.
 - **Backend:** Node.js + NestJS 11, TypeScript (SWC), Drizzle ORM, PostgreSQL
 - **Frontend:** React 19, Vite, react-leaflet, CSS Modules
 - **Auth:** better-auth (GitHub OAuth)
-- **Deploy:** Railway via Dockerfile; runs `npm run migrate && npm run start`
+- **Deploy:** Railway via Dockerfile; runs `npm run migrate && npm run start`. Railway project config is code in `.railway/railway.ts` (see `docs/adr/0001-railway-infrastructure-as-code.md`)
 - **Monorepo:** Turborepo + npm workspaces (`apps/api`, `apps/web`, `packages/db`)
 
 ## Commands
@@ -19,6 +19,8 @@ npm run migrate      # drizzle migrator in packages/db (runs at Railway deploy)
 npm run db:generate  # drizzle-kit generate → SQL in packages/db/drizzle/
 npm run type-check   # turbo type-check across all packages
 npm run lint         # turbo lint across all packages
+railway config plan  # diff .railway/railway.ts against the linked Railway environment
+railway config apply # apply that diff (asks for confirmation)
 ```
 
 ## Architecture
@@ -80,6 +82,7 @@ packages/
 - **Rate limiting:** Sync/write endpoints use `@Throttle({ default: { ttl: 60_000, limit: 5 } })`. The global default is 120 req/min.
 - **System design diagrams:** when changing an ingestion or data-flow module (`garmin/`, `strava/`, `hikes/`, `weather/`, the points/activities read path, or the bundled trail JSON), update all three: `docs/SYSTEM_DESIGN.md` (overview + flow table + Garmin sequence), the identical overview Mermaid block in `README.md`, and the ASCII system diagram in `docs/ARCHITECTURE.md`.
 - **Package Management:** Use standard Node/Vite/React APIs first. Ask for permission before running `npm install` for any new dependency.
+- **Railway config:** change `.railway/railway.ts`, never the Railway dashboard. Secrets stay `preserve()`. PRs that touch `.railway/` touch nothing else (the PR that introduced `.railway/` is the one exception). Run `railway config plan` before `apply`; destructive plans are only ever applied by hand.
 
 ## Domain Rules (The Trail Reality)
 - **Spotty Connectivity:** Assume Garmin MapShare pings or user-generated logs might arrive out of order, in batches, or delayed by several days. Always rely on the device timestamp, not the server ingestion time.
@@ -92,6 +95,7 @@ packages/
 | `DATABASE_URL` | PostgreSQL connection string |
 | `MAPSHARE_ID` | Garmin inReach MapShare ID |
 | `ADMIN_EMAILS` | Comma-separated list of admin emails |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth login |
 | `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | Strava OAuth |
 | `BETTER_AUTH_URL` | Base URL for auth callbacks |
 | `BETTER_AUTH_SECRET` | Session signing secret |
@@ -115,6 +119,7 @@ Single-context layout: `CONTEXT.md` + `docs/adr/` at the project root. See `docs
 - Add `--no-verify` to git commands or skip migration on deploy
 - Import modal page components statically in App.tsx
 - Push directly
+- Edit Railway settings in the dashboard, inline secrets in `.railway/railway.ts`, or pass `--include-variables` / `--confirm-destructive` in automation
 - Hallucinate or install new npm packages without explicit permission.
 - Write raw SQL queries; always use the Drizzle ORM query builder or relational queries.
 - Delete existing comments or JSDoc strings when modifying a function.

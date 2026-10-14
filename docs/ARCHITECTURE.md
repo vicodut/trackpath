@@ -261,6 +261,10 @@ Railway Project
 └── Web Service (this app) — Dockerfile, PostgreSQL addon, env vars
 ```
 
+The project configuration is code: `.railway/railway.ts` (Railway IaC, `railway/iac`
+SDK), applied with `railway config plan` / `railway config apply`. Secrets stay in Railway
+as `preserve()`. See `docs/adr/0001-railway-infrastructure-as-code.md`.
+
 ## Development
 
 ```bash
