@@ -27,5 +27,7 @@ COPY --from=builder /app/packages/db/dist ./packages/db/dist
 COPY packages/db/src ./packages/db/src
 COPY packages/db/drizzle ./packages/db/drizzle
 COPY packages/db/drizzle.config.ts ./packages/db/
+# Static AT trail data read by the backfill-at-hike script (runs as part of migrate)
+COPY apps/web/public/at-trail.json apps/web/public/at-trail-elevation.json apps/web/public/at-highlights.json ./apps/web/public/
 EXPOSE 3000
 CMD ["sh", "-c", "npm run migrate && npm run start"]
