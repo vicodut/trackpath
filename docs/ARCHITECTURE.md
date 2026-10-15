@@ -189,7 +189,7 @@ apps/api/src/
 | ALL | `/api/auth/*` | No | better-auth handlers (GitHub OAuth, session) |
 
 "Admin" = `AdminGuard`, which requires a valid better-auth session whose email
-is in `ADMIN_EMAILS` (or any authenticated user, if that list is empty).
+is in `ADMIN_EMAILS`. An empty list means no one is an admin.
 
 ### Background Jobs
 - **Garmin auto-poll**: `setInterval`, every `POLL_INTERVAL_MIN` minutes (default 5), registered via `SchedulerRegistry` — each tick no-ops unless a MapShare ID is set in `app_settings` (admin panel; seeded from `MAPSHARE_ID` by the AT backfill)

@@ -40,10 +40,8 @@ providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
 ```
 Then re-verify the tighter per-route limits on `garmin.controller.ts:40`, `strava.controller.ts:60` actually return `429` under load (a quick `ab`/`autocannon` smoke test would confirm).
 
-### 2.3 Hardcoded fallback credential in source — **P1**
-`blog/blog.service.ts:4-5,14-15` defines a hardcoded production Ghost URL and `DEFAULT_GHOST_KEY = '0d6476834a0eeaa76e910081c9'`, used silently whenever `GHOST_URL`/`GHOST_CONTENT_API_KEY` are unset. This defeats fail-fast config validation and puts a real-looking key in git history permanently.
-
-**Proposal:** remove the hardcoded fallback; throw at boot (or return a clear 503) if the env vars are missing, matching the "Environment variables" table's intent in `CLAUDE.md`. Rotate the key if it is in fact live.
+### 2.3 Hardcoded fallback credential in source — **resolved**
+**Resolved:** the Ghost blog integration that carried a hardcoded fallback URL and Content API key was removed entirely, and the Ghost service was deleted on Railway (2026-10-14), so the key is dead.
 
 ### 2.4 Unvalidated bulk-import endpoint — **P1**
 `gear.controller.ts:87` — `importItems(@Body() rows: ImportRowDto[])` takes a bare array body. NestJS's `ValidationPipe` does not validate array-typed bodies (only object metatypes), so `ImportRowDto`'s `class-validator` decorators never run despite being fully annotated. There's already an unused `ImportItemsDto` (wraps `rows` in `@ValidateNested`) in `gear.dto.ts:143-148` that looks like an abandoned fix.
@@ -104,7 +102,7 @@ Nothing urgent, but notable gaps as of this review:
 ### 3.3 Library-usage findings (not version issues)
 
 - **`@nestjs/throttler` is installed and imported but its guard is never wired up** (§2.2) — this is the single highest-value fix in the whole audit relative to effort.
-- **`@nestjs/config` is dead weight at runtime.** `ConfigModule` validates env vars with a Zod schema at boot (good), but `ConfigService` is never injected anywhere in `apps/api/src` — every consumer (e.g. `blog.service.ts:14-15`) reads raw `process.env.X` directly instead. The validated/typed values the Zod schema produces are never actually used, so a typo'd env var is only caught if it happens to match a pattern the Zod schema checks, not for any value read outside `config.module.ts` itself.
+- **`@nestjs/config` is dead weight at runtime.** `ConfigModule` validates env vars with a Zod schema at boot (good), but `ConfigService` is never injected anywhere in `apps/api/src` — every consumer (e.g. `auth.service.ts`, `strava.service.ts`) reads raw `process.env.X` directly instead. The validated/typed values the Zod schema produces are never actually used, so a typo'd env var is only caught if it happens to match a pattern the Zod schema checks, not for any value read outside `config.module.ts` itself.
   **Proposal:** either inject `ConfigService` everywhere env vars are read, or drop `@nestjs/config` + Zod and keep the validation as a single fail-fast boot check that populates a typed `AppConfig` object services import directly — pick one, not both.
 - **Two validation paradigms in one backend:** `zod` for env vars, `class-validator`/`class-transformer` for DTOs. Not wrong (they solve different problems), but worth being deliberate about — if `@nestjs/config` is dropped per above, Zod's footprint shrinks to just `env.schema.ts`.
 - **`tsx` is listed as a production `dependency` of `apps/api`** (`apps/api/package.json`) but is never imported anywhere in `apps/api/src` — it's only used by `packages/db`'s migration script. Move it to `apps/api`'s `devDependencies` or remove it; it's shipping into the production Docker image for no reason.
@@ -117,10 +115,10 @@ Nothing urgent, but notable gaps as of this review:
 
 | Finding | File:line | Severity |
 |---|---|---|
-| Ghost/weather external-API error handling is inconsistent — `blog.service.ts` wraps fetch failures in `BadGatewayException`; `weather.service.ts:56-57` has no try/catch and never checks `res.ok`, so a network blip becomes an unhandled 500 with a stack leak | `weather/weather.service.ts:56-57` | Medium |
+| Weather external-API error handling is weak — `weather.service.ts:56-57` has no try/catch and never checks `res.ok`, so a network blip becomes an unhandled 500 with a stack leak | `weather/weather.service.ts:56-57` | Medium |
 | `gear.service.ts` update/delete methods don't check affected-row count — acting on a nonexistent id returns `200 {ok:true}` instead of `404`, unlike `polls.service.ts:82-89`'s `close()` which correctly throws `NotFoundException` | `gear/gear.service.ts:49-59,84-99` | Low-Medium |
 | Raw `sql\`...DESC\`` template used for ordering instead of Drizzle's `desc()` helper (the established convention elsewhere, e.g. `cheers.service.ts:17`) — minor violation of the "no raw SQL" rule in `CLAUDE.md` | `polls/polls.service.ts:40,109` | Low |
-| `weather`/`blog` controllers call external APIs but have no `@Throttle()`, unlike comparable `garmin`/`strava` sync endpoints (moot until §2.2 lands, but worth doing together) | `weather/weather.controller.ts:8-11`, `blog/blog.controller.ts:8-16` | Low (blocked on §2.2) |
+| `weather` controller calls an external API but has no `@Throttle()`, unlike comparable `garmin`/`strava` sync endpoints (moot until §2.2 lands, but worth doing together) | `weather/weather.controller.ts:8-11` | Low (blocked on §2.2) |
 | `cheers.dto.ts` fails `tsc --noEmit` today: `name`/`message` have no initializer under `strict`'s definite-assignment check | `cheers/cheers.dto.ts:4-5` | High (build-breaking) |
 
 **Proposed fix for the `cheers.dto.ts` build break** (smallest possible patch):
@@ -204,7 +202,7 @@ Currently:
 | P0 | Fix `cheers.dto.ts` build-breaking TS error | §4 | 5min |
 | P1 | Fix `App.tsx:83` unsound cast + 3 unused-decl errors | §5.4 | 30min |
 | P1 | Fix gear bulk-import validation bypass | §2.4 | 30min |
-| P1 | Remove hardcoded Ghost fallback credential | §2.3 | 20min |
+| ~~P1~~ | ~~Remove hardcoded Ghost fallback credential~~ (done) | §2.3 | — |
 | P1 | Reconcile Katahdin/AT-length constants | §5.1 | 20min |
 | P2 | `npm audit fix` (dompurify, drizzle-kit chain) | §3.1 | 10min |
 | P2 | Unique index on `poll_votes(poll_id, ip_address)` | §2.5 | 30min (+migration) |
