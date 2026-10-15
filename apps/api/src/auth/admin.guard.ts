@@ -11,8 +11,8 @@ import { AuthService } from './auth.service.js';
 /**
  * Mirrors the Express `requireAuth` middleware:
  *   - 401 when there is no valid better-auth session
- *   - 403 when the session user is not in ADMIN_EMAILS (or ADMIN_EMAILS is
- *     empty, in which case any authenticated user is permitted)
+ *   - 403 when the session user is not in ADMIN_EMAILS (an empty
+ *     ADMIN_EMAILS means no user is permitted)
  *
  * Apply at method level with @UseGuards(AdminGuard) on individual handlers,
  * or at controller level to protect all routes in the controller.

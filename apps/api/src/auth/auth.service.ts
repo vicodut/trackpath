@@ -31,6 +31,10 @@ export class AuthService {
       .map((e) => e.trim())
       .filter(Boolean);
 
+    if (this.adminEmails.length === 0) {
+      this.logger.warn('ADMIN_EMAILS not set — no user has admin access');
+    }
+
     if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
       this.logger.warn(
         'GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET not set — GitHub login disabled',
@@ -49,10 +53,10 @@ export class AuthService {
   }
 
   /**
-   * Returns true when the email belongs to the admin list, or when the list
-   * is empty (dev default: any authenticated user is an admin).
+   * Returns true when the email belongs to the admin list. An empty list
+   * means no one is an admin (fail closed).
    */
   isAdmin(email: string): boolean {
-    return this.adminEmails.length === 0 || this.adminEmails.includes(email);
+    return this.adminEmails.includes(email);
   }
 }

@@ -99,7 +99,7 @@ See [`docs/SYSTEM_DESIGN.md`](docs/SYSTEM_DESIGN.md) for a walkthrough of each f
    | `DATABASE_URL` | yes | PostgreSQL connection string |
    | `BETTER_AUTH_SECRET` | yes | Session signing secret — generate with `openssl rand -base64 32` |
    | `BETTER_AUTH_URL` | no | Base URL for auth callbacks (defaults to `http://localhost:3001`) |
-   | `ADMIN_EMAILS` | no | Comma-separated emails allowed to write; empty means any signed-in user is admin |
+   | `ADMIN_EMAILS` | no | Comma-separated emails allowed to write; empty means no one is admin |
    | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | no | GitHub OAuth login ([create one](https://github.com/settings/developers)) — login is disabled without these |
    | `MAPSHARE_ID` | no | Garmin inReach MapShare ID — enables Garmin sync |
    | `POLL_INTERVAL_MIN` | no | Garmin auto-sync interval in minutes (default `5`) |
