@@ -100,11 +100,25 @@ Validated at boot by `apps/api/src/config/env.schema.ts` (Zod); `.env.example` d
 
 ### Issue tracker
 
-Issues are tracked as local markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+Issues are tracked as GitHub issues in `vicodut/trackpath` (via `gh`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five roles map to labels of the same name: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
 Single-context layout: one glossary + `docs/adr/` at the project root. See `docs/agents/domain.md`.
+
+## Agent models and specialists
+
+- **Grilling runs on Opus 5.5** (`claude-opus-5-5`). This covers the `grilling`, `grill-with-docs` and `domain-modeling` skills, and every subagent they spawn, including fact-finding subagents. When a grilling subagent is spawned, pass `model: "opus"` (the Agent tool takes aliases only: `opus`, `sonnet`, `haiku`). Grilling runs inline in the main session, so start that session on Opus 5.5 (`/model`).
+- **Implementation runs on Sonnet 5.5** (`claude-sonnet-5-5`). This covers the `implement`, `implement-spec` and `tdd` skills and every implementer, merger and exploration subagent they spawn. Pass `model: "sonnet"` to each.
+- **Specialists.** During an implement run, spawn the matching project agent for a ticket's area with `subagent_type`:
+  - `react-specialist` for React components, hooks, state and CSS Modules in `apps/web`.
+  - `nextjs-specialist` for Next.js routing, server/client boundaries and config. This repo does not use Next.js today, so use it only if a ticket adds or targets a Next.js app.
+  - Definitions live in `.claude/agents/`.
+- **Code review runs on Opus 5.5.** This covers the `code-review` skill and every reviewer subagent it spawns (standards and spec reviews). When a review subagent is spawned, pass `model: "opus"`.
 
 ## Do not
 
