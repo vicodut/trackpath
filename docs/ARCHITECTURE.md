@@ -42,9 +42,9 @@ as static files in production — there is one deployable process, not two.
 
 | Source | What | How |
 |--------|------|-----|
-| **Garmin inReach** | GPS tracking points (lat, lon, alt, timestamp, messages) | Server polls MapShare KML feed on an interval (`POLL_INTERVAL_MIN`, default 5 min) |
+| **Garmin inReach** | GPS tracking points (lat, lon, alt, timestamp, messages) | Server polls the MapShare KML feed on an interval (`POLL_INTERVAL_MIN`, default 5 min); the MapShare ID is read from `app_settings` |
 | **Strava** | Hiking activities (distance, elevation, GPS traces) | OAuth2 connect, auto-sync daily at midnight (cron), plus manual/date-range sync |
-| **OpenStreetMap** | AT trail highlights (shelters, summits, towns, etc.) | Static JSON in `apps/web/public/at-highlights.json` |
+| **OpenStreetMap** | AT trail highlights (shelters, summits, towns, etc.) | Static JSON in `apps/web/public/at-highlights.json`. The same data is also copied into the `hikes` row by the AT backfill, but the SPA still reads the static files |
 | **Open-Meteo** | Trail elevation data + weather forecast | Elevation: static `at-trail-elevation.json`. Weather: live at last position, cached server-side for 30 min |
 
 ## Client Architecture (`apps/web`)
@@ -79,12 +79,13 @@ apps/web/src/
 │   └── useIsMobile.ts          # Responsive breakpoint hook
 │
 ├── api/                        # Thin fetch wrappers per resource
-│   ├── points.ts, gear.ts, polls.ts, cheers.ts
+│   ├── points.ts, gear.ts, polls.ts, cheers.ts, syncPeriods.ts
 │
 ├── lib/
 │   ├── constants.ts             # TAG_EMOJIS, TAGS, breakpoints
 │   ├── geo.ts                   # Haversine distance formula
 │   ├── format.ts                # formatDuration and friends
+│   ├── stravaHike.ts, tripDays.ts # Strava/hike-day helpers for stats
 │   └── auth-client.ts           # better-auth client (better-auth/react)
 │
 ├── data/
@@ -125,7 +126,7 @@ and `TrailLogPage` are lazy-loaded to keep them out of the initial bundle.
 - **Drizzle ORM** + PostgreSQL, via the workspace package `@trackpath/db`
 - **class-validator** / **class-transformer** for request DTOs (global `ValidationPipe({ whitelist: true, transform: true })`)
 - **Zod** for env var validation only (`config/env.schema.ts`, fail-fast at boot)
-- **@nestjs/throttler**, bound globally via `APP_GUARD` — default 120 req/min, tighter per-route `@Throttle()` limits on sync/write endpoints
+- **@nestjs/throttler**, bound globally via `APP_GUARD` — default 120 req/min, 5 req/min via `@Throttle()` on the two manual sync endpoints
 - **@nestjs/schedule** for cron-based background jobs
 
 ### File Structure
@@ -138,8 +139,11 @@ apps/api/src/
 │                           # binds ThrottlerGuard
 ├── auth.ts                 # better-auth instance config (GitHub OAuth)
 ├── auth/                   # AuthService (session lookup), AdminGuard
-├── garmin/                 # GarminService (MapShare poll + sync), controller
+├── garmin/                 # GarminService (MapShare poll + sync, SSE, GPX), controller
 ├── strava/                 # StravaService (OAuth + activity sync), controller
+├── hikes/                  # HikesService, AppSettingsService, HikeClassifierService (no controller)
+├── sync-periods/           # SyncPeriodsService + controller (date ranges that limit kept data)
+├── common/                 # Pure helpers: UTC day bounds, haversine
 ├── weather/                # WeatherService (Open-Meteo, 30-min cache), controller
 ├── gear/                   # GearService + controller (categories + items)
 ├── polls/                  # PollsService + controller (polls, votes, suggestions)
@@ -148,7 +152,56 @@ apps/api/src/
 ├── health/                 # HealthController (/api/health, /api/health/db)
 ├── config/                 # ConfigModule — Zod env schema + validation
 └── database/               # DatabaseModule — global Drizzle + SQL_CLIENT providers
+apps/api/scripts/           # One-off dev scripts (seed/delete simulated GPS, fetch elevations/highlights)
 ```
+
+### Module dependencies
+
+Arrows are NestJS module imports. `ConfigModule`, `DatabaseModule` (`DRIZZLE`) and
+`AuthModule` (`AuthService`, `AdminGuard`) are global, so every feature module uses
+them without importing them; they are left out of the arrows.
+
+```mermaid
+flowchart TB
+  app["AppModule<br/>+ HealthController<br/>+ global ThrottlerGuard"]
+
+  subgraph global["Global modules"]
+    config["ConfigModule<br/>Zod env validation"]
+    database["DatabaseModule<br/>DRIZZLE, SQL_CLIENT"]
+    auth["AuthModule<br/>AuthService, AdminGuard"]
+  end
+
+  subgraph ingestion["Ingestion"]
+    garmin["GarminModule<br/>MapShare poll, points, SSE, GPX"]
+    strava["StravaModule<br/>OAuth, daily cron"]
+    hikes["HikesModule<br/>hikes, app_settings, classifier"]
+    periods["SyncPeriodsModule"]
+  end
+
+  subgraph features["Read and community features"]
+    weather["WeatherModule"]
+    admin["AdminModule"]
+    gear["GearModule"]
+    polls["PollsModule"]
+    cheers["CheersModule"]
+  end
+
+  app --> global
+  app --> ingestion
+  app --> features
+  garmin --> hikes
+  garmin --> periods
+  strava --> hikes
+  strava --> periods
+  weather --> garmin
+  admin --> garmin
+  admin --> strava
+  admin --> hikes
+```
+
+`GearModule`, `PollsModule` and `CheersModule` depend only on the database. Their
+tables carry a `hike_id`, but the services don't set or filter on it yet: only
+Garmin and Strava data is hike-scoped today.
 
 ### API Routes
 
@@ -165,6 +218,8 @@ apps/api/src/
 | GET | `/api/stream` | No | SSE stream of new points |
 | GET | `/api/export.gpx` | No | GPX export of the trail |
 | GET | `/api/weather` | No | Forecast at last position |
+| GET | `/api/admin/sync-periods` | No | List sync periods (read by the public location banner) |
+| POST/DELETE | `/api/admin/sync-periods[/:id]` | Admin | Add or remove a sync period |
 | GET | `/api/strava/status` | No | Strava connection status |
 | GET | `/api/strava/activities` | No | All synced Strava activities |
 | GET | `/api/strava/connect` | Admin | Start Strava OAuth |
@@ -176,14 +231,14 @@ apps/api/src/
 | POST | `/api/gear/import` | Admin | Bulk CSV import |
 | GET | `/api/polls` | No | Open/closed polls with vote counts |
 | POST | `/api/polls` | Admin | Create a poll |
-| POST | `/api/polls/:id/vote` | No (IP-limited) | Vote on a poll |
+| POST | `/api/polls/:id/vote` | No (one vote per IP) | Vote on a poll |
 | PATCH | `/api/polls/:id/close` | Admin | Close a poll |
 | DELETE | `/api/polls/:id` | Admin | Delete a poll |
 | GET/POST | `/api/polls/suggestions` | Admin (GET) / No (POST) | Follower-suggested polls |
 | POST/DELETE | `/api/polls/suggestions/:id[/accept]` | Admin | Accept or reject a suggestion |
 | GET | `/api/cheers` | No | Today's public cheers |
 | GET | `/api/cheers/all` | Admin | Full cheers history |
-| POST | `/api/cheers` | No (rate-limited) | Post a cheer |
+| POST | `/api/cheers` | No (global 120 req/min only) | Post a cheer |
 | DELETE | `/api/cheers/:id` | Admin | Delete a cheer |
 | GET | `/api/admin/status` | Admin | Dashboard aggregation (sync status, pending suggestions, etc.) |
 | ALL | `/api/auth/*` | No | better-auth handlers (GitHub OAuth, session) |
@@ -192,55 +247,212 @@ apps/api/src/
 is in `ADMIN_EMAILS`. An empty list means no one is an admin.
 
 ### Background Jobs
-- **Garmin auto-poll**: `setInterval`, every `POLL_INTERVAL_MIN` minutes (default 5), registered via `SchedulerRegistry` — each tick no-ops unless a MapShare ID is set in `app_settings` (admin panel; seeded from `MAPSHARE_ID` by the AT backfill)
-- **Strava auto-sync**: `@Cron('0 0 * * *')` — daily at midnight
+- **Garmin auto-poll**: `setInterval`, every `POLL_INTERVAL_MIN` minutes (default 5), registered via `SchedulerRegistry` — runs once at boot, then each tick no-ops unless a MapShare ID is set in `app_settings` (seeded once from `MAPSHARE_ID` by the AT backfill; shown read-only in the admin panel, no API route edits it)
+- **Strava auto-sync**: `@Cron('0 0 * * *')` — daily at midnight server time, skipped when Strava credentials are unset
+
+Both jobs live in the single API process (`replicas: 1` in `.railway/railway.ts`); a second replica would poll twice.
+
+### Auth
+
+better-auth owns `/api/auth/*`: `main.ts` mounts its Node handler before Nest's body
+parser. Nest controllers never see those routes. Admin-only handlers carry
+`@UseGuards(AdminGuard)`; everything else is public.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant B as Browser
+  participant BA as better-auth<br/>/api/auth/*
+  participant GH as GitHub OAuth
+  participant N as Nest controller
+  participant AG as AdminGuard
+  participant DB as Postgres
+
+  B->>BA: sign in with GitHub
+  BA->>GH: OAuth redirect
+  GH-->>BA: callback with code
+  BA->>DB: upsert user, account, session
+  BA-->>B: session cookie
+  B->>N: admin request (cookie)
+  N->>AG: canActivate
+  AG->>BA: getSession(headers)
+  BA->>DB: look up session
+  alt no session
+    AG-->>B: 401
+  else email not in ADMIN_EMAILS
+    AG-->>B: 403
+  else admin
+    AG-->>N: allowed
+    N-->>B: 200
+  end
+```
 
 ### Security
 - Session auth via better-auth (GitHub OAuth); admin write endpoints gated by `AdminGuard` + `ADMIN_EMAILS`
-- Global rate limiting via `ThrottlerGuard` (120 req/min default), tighter `@Throttle()` limits on sync/write endpoints
+- Global rate limiting via `ThrottlerGuard` (120 req/min default), 5 req/min on the two manual sync endpoints (`POST /api/sync`, `POST /api/strava/sync`)
 - `ValidationPipe({ whitelist: true, transform: true })` strips unknown fields and coerces types on every request body
 - Env vars fail-fast validated with Zod at boot (`config/env.schema.ts`) — the app refuses to start with missing/malformed config
 
 ## Database Schema (`packages/db/src/schema.ts`)
 
+`schema.ts` is the source of truth; this diagram shows tables, keys and relations,
+not every column. Dates in `hikes`, `sync_periods`, `tracking_points.timestamp` and
+`strava_activities.start_date` are ISO 8601 `text`, not `timestamp`.
+
+```mermaid
+erDiagram
+  hikes ||--o{ tracking_points : "hike_id (cascade)"
+  hikes ||--o{ strava_activities : "hike_id (cascade)"
+  hikes ||--o{ gear_categories : "hike_id (cascade)"
+  hikes ||--o{ polls : "hike_id (cascade)"
+  hikes ||--o{ poll_suggestions : "hike_id (cascade)"
+  hikes ||--o{ cheers : "hike_id (cascade)"
+  hikes |o--o{ app_settings : "default_hike_id"
+  gear_categories ||--o{ gear_items : "category_id (cascade)"
+  polls ||--o{ poll_options : "poll_id (cascade)"
+  polls ||--o{ poll_votes : "poll_id (cascade)"
+  poll_options ||--o{ poll_votes : "option_id (cascade)"
+  user ||--o{ session : "user_id"
+  user ||--o{ account : "user_id"
+
+  hikes {
+    serial id PK
+    text slug UK
+    text name
+    text start_date
+    text end_date "null = ongoing"
+    text trail_coords "JSON [[lat, lon]]"
+    text elevation_profile "JSON"
+    float distance_km
+    text highlights "JSON"
+  }
+  app_settings {
+    serial id PK "single row"
+    int default_hike_id FK
+    text mapshare_id
+  }
+  tracking_points {
+    serial id PK
+    text garmin_id UK "manual-{ts} for admin points"
+    int hike_id FK
+    float latitude
+    float longitude
+    float altitude
+    text timestamp "device time, indexed"
+    text message
+    text event_type
+  }
+  sync_periods {
+    serial id PK
+    text start_date
+    text end_date
+  }
+  strava_activities {
+    serial id PK
+    bigint strava_id UK
+    int hike_id FK
+    text name
+    float distance
+    int moving_time
+    float elevation_gain
+    text start_date
+    text coords "JSON"
+  }
+  strava_tokens {
+    serial id PK
+    text access_token
+    text refresh_token
+    int expires_at
+    text athlete_id
+  }
+  gear_categories {
+    serial id PK
+    int hike_id FK
+    text name
+    int sort_order
+  }
+  gear_items {
+    serial id PK
+    int category_id FK
+    text name
+    real weight_g
+    int qty
+    bool worn
+    bool consumable
+  }
+  polls {
+    serial id PK
+    int hike_id FK
+    text question
+    bool closed
+  }
+  poll_options {
+    serial id PK
+    int poll_id FK
+    text text
+  }
+  poll_votes {
+    serial id PK
+    int poll_id FK
+    int option_id FK
+    text ip_address
+  }
+  poll_suggestions {
+    serial id PK
+    int hike_id FK
+    text question
+    text options "JSON"
+    text ip_address
+  }
+  cheers {
+    serial id PK
+    int hike_id FK
+    text name
+    text message
+    bool is_public
+  }
+  user {
+    text id PK
+    text email UK
+  }
+  session {
+    text id PK
+    text token UK
+    text user_id FK
+  }
+  account {
+    text id PK
+    text user_id FK
+    text provider_id
+    text issuer
+  }
+  verification {
+    text id PK
+    text identifier
+  }
 ```
-tracking_points           # Garmin + manual GPS points (source of truth — never mutated once written)
-├── id (SERIAL PK)
-├── garmin_id (TEXT UNIQUE) — "manual-{timestamp}" for admin-added points
-├── latitude, longitude, altitude
-├── timestamp (TEXT, ISO8601) — device timestamp, indexed
-├── velocity, course, message, event_type
-└── created_at
 
-strava_activities          # Synced Strava workouts
-├── id (SERIAL PK), strava_id (BIGINT UNIQUE)
-├── name, type, distance, moving_time, elevation_gain
-├── start_date (TEXT), coords (TEXT, JSON)
-└── synced_at, created_at
+- **`hikes`** organise everything: `HikeClassifierService` attributes each Garmin point and
+  Strava activity to the hike whose date range covers its device timestamp (trail
+  proximity breaks overlaps). Data no hike covers is never inserted. `hike_id` is
+  nullable at the DB level only to avoid a not-null migration on live data.
+- **`app_settings`** is a single global row: the default hike that public reads resolve
+  to, and the Garmin MapShare ID.
+- **`sync_periods`** are global (not per hike). When any exist, synced points and
+  activities outside all of them are pruned; manual points are kept.
+- **`tracking_points`** are the source of truth for coordinates and are never mutated
+  once written (only inserted, pruned, or deleted by an admin).
+- **better-auth tables** (`user`, `session`, `account`, `verification`) are managed by
+  better-auth. `account.issuer` (migration `0007`) is a synthetic key
+  (`local:oauth:<providerId>`) better-auth 1.7+ uses instead of the raw `provider_id`.
 
-strava_tokens               # OAuth tokens
-├── id (SERIAL PK)
-├── access_token, refresh_token, expires_at
-└── athlete_id
-
-gear_categories, gear_items  # Gear list (categories → items, weight/qty/worn/consumable)
-
-polls, poll_options,
-poll_votes, poll_suggestions # Voting: polls with options, IP-limited votes,
-                              # follower-suggested polls awaiting admin review
-
-cheers                       # Motivation messages from followers (name, message, is_public)
-
-user, session, account,      # better-auth tables. `account.issuer` (added in
-verification                 # migration 0007) is a synthetic namespaced key
-                              # (`local:oauth:<providerId>`) better-auth 1.7+
-                              # uses instead of raw provider_id to look up accounts.
-```
-
-Migrations live in `packages/db/drizzle/` (currently 8, `0000`–`0007`) and are
-generated with `npm run db:generate` — never hand-edited. A couple are custom
-data-migration SQL files (not schema diffs) for backfills, e.g. `0006` reformats
-malformed Garmin timestamps, `0007` backfills the new `account.issuer` column.
+Migrations live in `packages/db/drizzle/` (currently 10, `0000`–`0009`) and are
+generated with `npm run db:generate` — never hand-edited. `0006` and `0007` are custom
+data migrations (reformat malformed Garmin timestamps, backfill `account.issuer`);
+`0008` adds `sync_periods`, `0009` adds `hikes`, `app_settings` and the `hike_id`
+columns. `npm run migrate` then runs `packages/db/src/backfill-at-hike.ts`, an
+idempotent script that creates the `at` hike from the bundled AT JSON files on first
+run, points `app_settings` at it, and backfills `hike_id` on existing rows.
 
 ## Deployment (Railway)
 
@@ -251,15 +463,31 @@ Multi-stage `Dockerfile`:
    `apps/api/dist/client`).
 2. **Production** (`node:22-slim`): `npm ci --omit=dev`, copies the compiled
    `apps/api/dist` and `packages/db/dist`, plus `packages/db/src` + `drizzle/`
-   (needed at runtime by the migration script, which runs via `tsx`).
+   (needed at runtime by the migration script, which runs via `tsx`), and the three
+   `apps/web/public/at-*.json` files read by the AT backfill.
 
-Container start command: `npm run migrate && npm run start` — migrations run
-before the server boots on every deploy.
+Container start command: `npm run migrate && npm run start` — migrations and the
+AT backfill run before the server boots on every deploy.
 
+```mermaid
+flowchart LR
+  dev["Developer"] -- "PR merged to main" --> gh["GitHub<br/>vicodut/trackpath"]
+  gh -- "every push to main<br/>(no CI gate)" --> build["Railway build<br/>root Dockerfile"]
+  gh -- "PR touching .railway/" --> wf["GitHub Actions<br/>railway-config.yml<br/>plan on PR, apply on merge"]
+  wf -- "railway config apply" --> proj
+  drift["GitHub Actions<br/>railway-drift.yml (daily)"] -.->|railway config plan| proj
+
+  subgraph proj["Railway project (partial: trackpath, us-west2)"]
+    svc["trackpath service, 1 replica<br/>migrate + backfill, then NestJS<br/>API + SPA on vico.camp"]
+    pg[("Postgres<br/>+ postgres-volume")]
+  end
+
+  build --> svc
+  svc -- "private network" --> pg
 ```
-Railway Project
-└── Web Service (this app) — Dockerfile, PostgreSQL addon, env vars
-```
+
+The Railway project also hosts unrelated apps; `.railway/railway.ts` declares only
+trackpath's resources (the `trackpath` partial).
 
 The project configuration is code: `.railway/railway.ts` (Railway IaC, `railway/iac`
 SDK), applied with `railway config plan` / `railway config apply`. Secrets stay in Railway
@@ -280,14 +508,16 @@ npm run dev              # turbo dev → db watcher + nest --watch (3001) + vite
 | `npm run dev` | Start API (watch) + web dev server + db type watcher |
 | `npm run build` | `turbo build` — packages/db → apps/api + apps/web in parallel |
 | `npm run start` | Production start (`node apps/api/dist/main.js`) |
-| `npm run migrate` | Run pending Drizzle migrations |
+| `npm run migrate` | Run pending Drizzle migrations, then the idempotent AT backfill |
+| `npm test` | Jest unit tests (`apps/api` only) |
 | `npm run type-check` | TypeScript check across all packages |
 | `npm run lint` | ESLint (flat config, `strictTypeChecked`) across all packages |
 | `npm run db:generate` | Generate SQL migration from schema changes |
+| `npm run db:migrate` | `drizzle-kit migrate` (no backfill; prefer `npm run migrate`) |
 | `npm run db:studio` | Drizzle Studio |
 
 Local Postgres via `docker-compose.yml` (`postgres:16-alpine`, matches `.env.example`'s `DATABASE_URL`).
 
 ---
 
-See `IMPROVEMENT_SPEC.md` for an audited backlog of known gaps (security, testing/CI, dependency drift) as of the last full review.
+See `IMPROVEMENT_SPEC.md` for an audited backlog of known gaps (security, testing/CI, dependency drift) as of the last full review. It is a dated snapshot: its top five (better-auth CVE, unbound throttler, broken lint config, failing type-check, no tests) have since been addressed, except that there is still no CI for code.
