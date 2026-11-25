@@ -7,7 +7,7 @@
 
 Trackpath runs in the Railway project `stunning-manifestation` (`production`
 environment): the `trackpath` service (custom domain `vico.camp`), the `Postgres` database
-with its `postgres-volume`, and the environment variables listed in `CLAUDE.md`. The same
+with its `postgres-volume`, and the environment variables listed in `AGENTS.md` (formerly `CLAUDE.md`). The same
 project also hosts unrelated apps (calibre-wa, livetrack2, bridgeStatus); the dead
 Ghost blog and its MySQL database were deleted on 2026-10-14. Until now all of that was
 configured by hand in the Railway dashboard — nothing in the repo described it, and the

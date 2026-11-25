@@ -60,7 +60,7 @@ flowchart LR
 | **Weather** | On request, `GET /api/weather` (widget mount). | `WeatherService.getForecast` in `apps/api/src/weather/weather.service.ts` | `tracking_points` (latest non-manual point) → nothing; in-memory cache | Single in-memory slot, reused for 30 min while the latest position is unchanged; replaced when it moves; lost on restart. With no tracking points it returns `{ error }` and the widget hides itself. The Open-Meteo call has no timeout and no `res.ok` check: network errors surface as a 500, and a non-2xx JSON body is cached as a forecast-less result. |
 | **Static trail data** | Fetched by the browser on load. | `apps/web/public/at-trail.json`, `at-trail-elevation.json`, `at-highlights.json`; served by Vite in dev and by NestJS `express.static` in production | none | Each fetch has a `.catch`: the affected layer or profile simply doesn't render. |
 
-Configuration referenced above: `POLL_INTERVAL_MIN`, `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`. The Garmin MapShare ID lives in the `app_settings` table and is edited from the admin panel.
+Configuration referenced above: `POLL_INTERVAL_MIN`, `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`. The Garmin MapShare ID lives in the `app_settings` table. It is seeded once from the `MAPSHARE_ID` env var when `npm run migrate` first creates the AT hike (`packages/db/src/backfill-at-hike.ts`); the admin panel shows it read-only, and no API route edits it yet.
 
 ### Garmin ingestion, step by step
 

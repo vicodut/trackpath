@@ -67,7 +67,7 @@ flowchart LR
   files -- "static JSON" --> spa
 ```
 
-See [`docs/SYSTEM_DESIGN.md`](docs/SYSTEM_DESIGN.md) for a walkthrough of each flow, and `CLAUDE.md` for a full module-by-module breakdown and conventions.
+See [`docs/SYSTEM_DESIGN.md`](docs/SYSTEM_DESIGN.md) for a walkthrough of each flow, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the module-by-module breakdown, and [`AGENTS.md`](AGENTS.md) for contributor and agent conventions.
 
 ## Prerequisites
 
