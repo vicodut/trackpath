@@ -8,6 +8,7 @@
     "start": "NODE_ENV=production node dist/main.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint src/",
+    "migrate:bullmq": "tsx scripts/migrate-bullmq.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest"
   },
   "dependencies": {
