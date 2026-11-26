@@ -13,6 +13,8 @@ import { GearModule } from './gear/gear.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { PollsModule } from './polls/polls.module.js';
 import { CheersModule } from './cheers/cheers.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
+import { DailyUpdateModule } from './daily-update/daily-update.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -32,6 +34,8 @@ import { HealthController } from './health/health.controller.js';
     AdminModule,
     PollsModule,
     CheersModule,
+    NotificationsModule,
+    DailyUpdateModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

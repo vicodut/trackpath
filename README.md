@@ -37,6 +37,7 @@ flowchart LR
     garmin["Garmin inReach<br/>MapShare KML feed"]
     strava["Strava API"]
     meteo["Open-Meteo"]
+    llm["OpenRouter LLM<br/>optional"]
   end
 
   subgraph Railway["Railway (one NestJS process)"]
@@ -44,6 +45,7 @@ flowchart LR
     ssvc["StravaService<br/>daily + on demand"]
     cls{{"HikeClassifierService<br/>which hike is this?"}}
     wsvc["WeatherService<br/>30-min cache"]
+    nsvc["NotificationsService<br/>daily update at 21:00 New York"]
     api["REST /api/*<br/>+ SSE /api/stream"]
     files["Bundled trail data<br/>line, elevation, highlights"]
     db[("Postgres")]
@@ -61,6 +63,10 @@ flowchart LR
   ssvc -- "activities" --> db
   db -- "last device fix" --> wsvc
   meteo -- "forecast" --> wsvc
+  db -- "day's points + messages" --> nsvc
+  wsvc -- "tomorrow's forecast" --> nsvc
+  llm -- "narrative text" --> nsvc
+  nsvc -- "daily update row" --> db
   db --> api
   wsvc --> api
   api -- "JSON + live push" --> spa
