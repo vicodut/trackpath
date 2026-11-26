@@ -1,5 +1,6 @@
 import { Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { HikesModule } from '../hikes/hikes.module.js';
 import pg from 'pg';
 import type { Env } from '../config/env.schema.js';
 import { BULLMQ_POOL, DAILY_UPDATE_HANDLER, type DailyUpdateHandler } from './daily-update.constants.js';
@@ -11,6 +12,7 @@ const defaultHandler: DailyUpdateHandler = () => {
 };
 
 @Module({
+  imports: [HikesModule],
   providers: [
     {
       provide: BULLMQ_POOL,

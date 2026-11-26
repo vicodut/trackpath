@@ -6,7 +6,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "NODE_ENV=production node dist/main.js",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit && tsc -p tsconfig.scripts.json",
     "lint": "eslint src/",
     "migrate:bullmq": "tsx scripts/migrate-bullmq.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest"
