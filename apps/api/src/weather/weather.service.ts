@@ -16,6 +16,15 @@ const DAILY_FIELDS = [
 /** Cache the forecast for 30 minutes — weather doesn't change faster than that. */
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
+/** Abort an Open-Meteo request that takes longer than this. */
+const FETCH_TIMEOUT_MS = 8_000;
+
+/** Total attempts (first try + retries) before giving up. */
+const MAX_ATTEMPTS = 3;
+
+/** Backoff before retry n is RETRY_BASE_DELAY_MS * 2^(n-1): 500ms, then 1s. */
+const RETRY_BASE_DELAY_MS = 500;
+
 interface CacheEntry {
   result: WeatherResponse;
   expiresAt: number;
@@ -53,8 +62,10 @@ export class WeatherService {
       `&temperature_unit=celsius&windspeed_unit=kmh` +
       `&timezone=auto&forecast_days=2`;
 
-    const res = await fetch(url);
-    const weather = (await res.json()) as OpenMeteoResponse;
+    const weather = await this.fetchWithRetry(url);
+    if (!weather) {
+      return { error: 'Weather unavailable' };
+    }
 
     const result: WeatherResponse = {
       latitude,
@@ -68,5 +79,26 @@ export class WeatherService {
     this.logger.debug(`Weather cache updated for ${latitude},${longitude}`);
 
     return result;
+  }
+
+  /** Fetch with a timeout, status check and exponential backoff; null once all attempts fail (never cached). */
+  private async fetchWithRetry(url: string): Promise<OpenMeteoResponse | null> {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => { controller.abort(); }, FETCH_TIMEOUT_MS);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Open-Meteo responded ${res.status}`);
+        return (await res.json()) as OpenMeteoResponse;
+      } catch (err) {
+        this.logger.warn(`Weather fetch attempt ${attempt}/${MAX_ATTEMPTS} failed: ${String(err)}`);
+      } finally {
+        clearTimeout(timer);
+      }
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, RETRY_BASE_DELAY_MS * 2 ** (attempt - 1)));
+      }
+    }
+    return null;
   }
 }
