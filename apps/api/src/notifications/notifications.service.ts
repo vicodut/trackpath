@@ -46,29 +46,41 @@ export class NotificationsService implements OnApplicationBootstrap {
     const active = (await this.hikes.getAll()).filter(
       (h) => h.startDate <= date && (h.endDate === null || date <= h.endDate),
     );
-    for (const hike of active) {
-      const found = await this.db
-        .select()
-        .from(notifications)
-        .where(and(eq(notifications.hikeId, hike.id), eq(notifications.date, date)))
-        .limit(1);
-      if (found.length > 0) {
-        // Saved earlier: only a failed dispatch is left to retry.
-        const row = found[0];
-        if (!row.delivered) await this.deliver({ id: row.id, hikeId: hike.id, text: row.text });
-        continue;
-      }
+    for (const hike of active) await this.runForHike(hike.id, date);
+  }
 
-      const facts = await this.gatherer.gather(hike.id, date);
-      const { text, fallback } = await this.builder.build(facts);
-      // The unique (hike, date) constraint settles concurrent runs: only the inserter dispatches.
-      const inserted = await this.db
-        .insert(notifications)
-        .values({ hikeId: hike.id, date, facts, text, fallback })
-        .onConflictDoNothing()
-        .returning({ id: notifications.id });
-      if (inserted.length > 0) await this.deliver({ id: inserted[0].id, hikeId: hike.id, text });
+  /**
+   * Same as runDailyUpdate for one hike and a New York date handed over by the
+   * scheduler. Produces nothing when the date is outside the hike's range.
+   */
+  async runDailyUpdateFor(hikeId: number, date: string): Promise<void> {
+    const hike = await this.hikes.getById(hikeId);
+    if (!hike || hike.startDate > date || (hike.endDate !== null && date > hike.endDate)) return;
+    await this.runForHike(hikeId, date);
+  }
+
+  private async runForHike(hikeId: number, date: string): Promise<void> {
+    const found = await this.db
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.hikeId, hikeId), eq(notifications.date, date)))
+      .limit(1);
+    if (found.length > 0) {
+      // Saved earlier: only a failed dispatch is left to retry.
+      const row = found[0];
+      if (!row.delivered) await this.deliver({ id: row.id, hikeId, text: row.text });
+      return;
     }
+
+    const facts = await this.gatherer.gather(hikeId, date);
+    const { text, fallback } = await this.builder.build(facts);
+    // The unique (hike, date) constraint settles concurrent runs: only the inserter dispatches.
+    const inserted = await this.db
+      .insert(notifications)
+      .values({ hikeId, date, facts, text, fallback })
+      .onConflictDoNothing()
+      .returning({ id: notifications.id });
+    if (inserted.length > 0) await this.deliver({ id: inserted[0].id, hikeId, text });
   }
 
   /** Every stored update of the default hike, newest first, without the facts snapshot. */
