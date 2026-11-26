@@ -1,5 +1,14 @@
 import type { DailyFacts, Notification } from '@trackpath/db/schema';
 
+/** Public shape of one stored update. Deliberately omits the facts snapshot (coordinates). */
+export interface NotificationSummary {
+  /** YYYY-MM-DD */
+  date: string;
+  text: string;
+  fallback: boolean;
+  delivered: boolean;
+}
+
 export interface FactsGatherer {
   gather(hikeId: number, date: string): Promise<DailyFacts>;
 }

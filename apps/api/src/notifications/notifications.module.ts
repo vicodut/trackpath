@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { HikesModule } from '../hikes/hikes.module.js';
 import { ChannelDispatcher } from './channel.dispatcher.js';
 import { InAppChannel } from './in-app.channel.js';
+import { NotificationsController } from './notifications.controller.js';
 import { NotificationsService } from './notifications.service.js';
 import { DISPATCHER, FACTS_GATHERER, MESSAGE_BUILDER, NOTIFICATION_CHANNELS } from './notifications.types.js';
 
@@ -19,6 +20,7 @@ const dispatcher = { provide: DISPATCHER, useClass: ChannelDispatcher };
 
 @Module({
   imports: [HikesModule],
+  controllers: [NotificationsController],
   providers: [NotificationsService, placeholderGatherer, placeholderBuilder, InAppChannel, channels, dispatcher],
   exports: [NotificationsService],
 })

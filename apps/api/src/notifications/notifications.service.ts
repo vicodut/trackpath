@@ -1,12 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { OnApplicationBootstrap } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { notifications } from '@trackpath/db/schema';
 import { DRIZZLE } from '../database/drizzle.constants.js';
 import type { DrizzleClient } from '../database/drizzle.types.js';
+import { AppSettingsService } from '../hikes/app-settings.service.js';
 import { HikesService } from '../hikes/hikes.service.js';
 import { DISPATCHER, FACTS_GATHERER, MESSAGE_BUILDER } from './notifications.types.js';
-import type { DeliverableNotification, Dispatcher, FactsGatherer, MessageBuilder } from './notifications.types.js';
+import type { DeliverableNotification, Dispatcher, FactsGatherer, MessageBuilder, NotificationSummary } from './notifications.types.js';
 
 /** The trail day is America/New_York's; en-CA formats as YYYY-MM-DD. */
 const NY_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
@@ -18,6 +19,7 @@ export class NotificationsService implements OnApplicationBootstrap {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleClient,
     private readonly hikes: HikesService,
+    private readonly settings: AppSettingsService,
     @Inject(FACTS_GATHERER) private readonly gatherer: FactsGatherer,
     @Inject(MESSAGE_BUILDER) private readonly builder: MessageBuilder,
     @Inject(DISPATCHER) private readonly dispatcher: Dispatcher,
@@ -67,6 +69,18 @@ export class NotificationsService implements OnApplicationBootstrap {
         .returning({ id: notifications.id });
       if (inserted.length > 0) await this.deliver({ id: inserted[0].id, hikeId: hike.id, text });
     }
+  }
+
+  /** Every stored update of the default hike, newest first, without the facts snapshot. */
+  async getHistory(): Promise<NotificationSummary[]> {
+    const hikeId = await this.settings.getDefaultHikeId();
+    if (hikeId === null) return [];
+    const rows = await this.db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.hikeId, hikeId))
+      .orderBy(desc(notifications.date));
+    return rows.map(({ date, text, fallback, delivered }) => ({ date, text, fallback, delivered }));
   }
 
   /** The in-app channel flags the row delivered; a failed channel leaves it for the next run's retry. */

@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import type { DailyFacts } from '@trackpath/db/schema';
 import { DRIZZLE } from '../database/drizzle.constants.js';
+import { AppSettingsService } from '../hikes/app-settings.service.js';
 import { HikesService } from '../hikes/hikes.service.js';
 import { NotificationsService } from './notifications.service.js';
 import { DISPATCHER, FACTS_GATHERER, MESSAGE_BUILDER } from './notifications.types.js';
@@ -50,6 +51,7 @@ async function setup() {
         provide: HikesService,
         useValue: { getAll: () => Promise.resolve([{ id: 1, startDate: '2026-06-01', endDate: null }]) },
       },
+      { provide: AppSettingsService, useValue: {} },
       { provide: FACTS_GATHERER, useValue: { gather: () => { calls.push('gather'); return Promise.resolve(facts); } } },
       { provide: MESSAGE_BUILDER, useValue: { build: () => { calls.push('build'); return Promise.resolve({ text: 'hi', fallback: false }); } } },
       {
