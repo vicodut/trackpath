@@ -8,6 +8,9 @@ import { HikesService } from '../hikes/hikes.service.js';
 import { DISPATCHER, FACTS_GATHERER, MESSAGE_BUILDER } from './notifications.types.js';
 import type { Dispatcher, FactsGatherer, MessageBuilder } from './notifications.types.js';
 
+/** The trail day is America/New_York's; en-CA formats as YYYY-MM-DD. */
+const NY_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+
 @Injectable()
 export class NotificationsService implements OnApplicationBootstrap {
   private readonly logger = new Logger(NotificationsService.name);
@@ -20,7 +23,7 @@ export class NotificationsService implements OnApplicationBootstrap {
     @Inject(DISPATCHER) private readonly dispatcher: Dispatcher,
   ) {}
 
-  /** Catch-up: generate today's update if the app was down when it was due. */
+  /** Catch-up: generate today's update, or re-dispatch an undelivered one, after downtime. */
   async onApplicationBootstrap(): Promise<void> {
     try {
       await this.runDailyUpdate(new Date());
@@ -31,22 +34,28 @@ export class NotificationsService implements OnApplicationBootstrap {
   }
 
   /**
-   * Gather facts, build the message, store the row, dispatch, for every hike
-   * running on `now`'s date. At most one update per hike and date: if the row
-   * exists, nothing is gathered, written or sent.
+   * Gather facts, build the message, store the row, dispatch, then mark it
+   * delivered, for every hike running on `now`'s New York date. At most one row
+   * per hike and date. A row saved but not delivered (dispatch failed earlier)
+   * is re-dispatched without gathering or building again.
    */
   async runDailyUpdate(now: Date): Promise<void> {
-    const date = now.toISOString().slice(0, 10);
+    const date = NY_DATE.format(now);
     const active = (await this.hikes.getAll()).filter(
       (h) => h.startDate <= date && (h.endDate === null || date <= h.endDate),
     );
     for (const hike of active) {
-      const existing = await this.db
-        .select({ id: notifications.id })
+      const found = await this.db
+        .select()
         .from(notifications)
         .where(and(eq(notifications.hikeId, hike.id), eq(notifications.date, date)))
         .limit(1);
-      if (existing.length > 0) continue;
+      if (found.length > 0) {
+        // Saved earlier: only a failed dispatch is left to retry.
+        const row = found[0];
+        if (!row.delivered) await this.deliver(row.id, hike.id, row.text);
+        continue;
+      }
 
       const facts = await this.gatherer.gather(hike.id, date);
       const { text, fallback } = await this.builder.build(facts);
@@ -56,8 +65,12 @@ export class NotificationsService implements OnApplicationBootstrap {
         .values({ hikeId: hike.id, date, facts, text, fallback })
         .onConflictDoNothing()
         .returning({ id: notifications.id });
-      if (inserted.length === 0) continue;
-      await this.dispatcher.dispatch(hike.id, text);
+      if (inserted.length > 0) await this.deliver(inserted[0].id, hike.id, text);
     }
+  }
+
+  private async deliver(id: number, hikeId: number, text: string): Promise<void> {
+    await this.dispatcher.dispatch(hikeId, text);
+    await this.db.update(notifications).set({ delivered: true }).where(eq(notifications.id, id));
   }
 }

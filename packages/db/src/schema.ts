@@ -246,6 +246,8 @@ export const notifications = pgTable('notifications', {
   text: text('text').notNull(),
   /** True when the text is the templated fallback rather than the generated message. */
   fallback: boolean('fallback').notNull().default(false),
+  /** False until the dispatcher succeeded; undelivered rows are re-dispatched on the next run. */
+  delivered: boolean('delivered').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [unique('notifications_hike_date_unique').on(t.hikeId, t.date)]);
 
