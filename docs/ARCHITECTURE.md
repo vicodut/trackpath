@@ -19,6 +19,8 @@ A real-time Appalachian Trail thru-hike tracker with Garmin inReach integration,
    │Postgres│ │ Garmin │ │Strava │ │Open-Meteo │
    │  (DB)  │ │inReach │ │  API  │ │ (weather) │
    └────────┘ └────────┘ └───────┘ └───────────┘
+        (daily update: BullMQ on Postgres, 21:00 New York;
+         optional OpenRouter LLM for the message text)
 ```
 
 For how data flows between these boxes (ingestion, hike classification, live updates, weather caching), see [`SYSTEM_DESIGN.md`](SYSTEM_DESIGN.md).
@@ -106,6 +108,7 @@ apps/web/src/
 │   ├── GearPage/                # Gear list (categories, items, CSV import)
 │   ├── PollsPage/                # Voting UI + suggestions
 │   ├── CheersPage/               # Cheers feed + form
+│   ├── NotificationsPage/        # Daily update history pane
 │   ├── ResourcesPage/            # AT links, location-aware forecast button
 │   ├── TrailLogPage/              # Mobile full-screen point list
 │   ├── LocationBanner/, StatusBar/, CopyCoords/, PoopRain/
@@ -128,6 +131,7 @@ and `TrailLogPage` are lazy-loaded to keep them out of the initial bundle.
 - **Zod** for env var validation only (`config/env.schema.ts`, fail-fast at boot)
 - **@nestjs/throttler**, bound globally via `APP_GUARD` — default 120 req/min, 5 req/min via `@Throttle()` on the two manual sync endpoints
 - **@nestjs/schedule** for cron-based background jobs
+- **BullMQ** on its Postgres backend for the daily update schedule (no Redis)
 
 ### File Structure
 
@@ -145,6 +149,8 @@ apps/api/src/
 ├── sync-periods/           # SyncPeriodsService + controller (date ranges that limit kept data)
 ├── common/                 # Pure helpers: UTC day bounds, haversine
 ├── weather/                # WeatherService (Open-Meteo, 30-min cache), controller
+├── notifications/          # Daily update: facts gatherers, narrative builder (OpenRouter + template fallback), in-app channel, GET /api/notifications
+├── daily-update/           # DailyUpdateScheduler: BullMQ (Postgres backend) job at 21:00 America/New_York
 ├── gear/                   # GearService + controller (categories + items)
 ├── polls/                  # PollsService + controller (polls, votes, suggestions)
 ├── cheers/                 # CheersService + controller (motivation messages)
@@ -180,6 +186,8 @@ flowchart TB
 
   subgraph features["Read and community features"]
     weather["WeatherModule"]
+    notifications["NotificationsModule<br/>daily update, history"]
+    dailyupdate["DailyUpdateModule<br/>BullMQ 21:00 schedule"]
     admin["AdminModule"]
     gear["GearModule"]
     polls["PollsModule"]
@@ -194,6 +202,10 @@ flowchart TB
   strava --> hikes
   strava --> periods
   weather --> garmin
+  notifications --> hikes
+  notifications --> weather
+  dailyupdate --> hikes
+  dailyupdate --> notifications
   admin --> garmin
   admin --> strava
   admin --> hikes
@@ -218,6 +230,7 @@ Garmin and Strava data is hike-scoped today.
 | GET | `/api/stream` | No | SSE stream of new points |
 | GET | `/api/export.gpx` | No | GPX export of the trail |
 | GET | `/api/weather` | No | Forecast at last position |
+| GET | `/api/notifications` | No | Daily update history of the default hike, newest first |
 | GET | `/api/admin/sync-periods` | No | List sync periods (read by the public location banner) |
 | POST/DELETE | `/api/admin/sync-periods[/:id]` | Admin | Add or remove a sync period |
 | GET | `/api/strava/status` | No | Strava connection status |
@@ -250,7 +263,9 @@ is in `ADMIN_EMAILS`. An empty list means no one is an admin.
 - **Garmin auto-poll**: `setInterval`, every `POLL_INTERVAL_MIN` minutes (default 5), registered via `SchedulerRegistry` — runs once at boot, then each tick no-ops unless a MapShare ID is set in `app_settings` (seeded once from `MAPSHARE_ID` by the AT backfill; shown read-only in the admin panel, no API route edits it)
 - **Strava auto-sync**: `@Cron('0 0 * * *')` — daily at midnight server time, skipped when Strava credentials are unset
 
-Both jobs live in the single API process (`replicas: 1` in `.railway/railway.ts`); a second replica would poll twice.
+- **Daily update**: BullMQ job scheduler on the Postgres backend, `0 21 * * *` in `America/New_York`, upserted at boot; plus a catch-up run at every startup. Generates the message with OpenRouter when `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` are set, a template otherwise. See [`SYSTEM_DESIGN.md`](SYSTEM_DESIGN.md#daily-update-step-by-step)
+
+The Garmin and Strava jobs live in the single API process (`replicas: 1` in `.railway/railway.ts`); a second replica would poll twice.
 
 ### Auth
 
@@ -307,6 +322,7 @@ erDiagram
   hikes ||--o{ polls : "hike_id (cascade)"
   hikes ||--o{ poll_suggestions : "hike_id (cascade)"
   hikes ||--o{ cheers : "hike_id (cascade)"
+  hikes ||--o{ notifications : "hike_id (cascade)"
   hikes |o--o{ app_settings : "default_hike_id"
   gear_categories ||--o{ gear_items : "category_id (cascade)"
   polls ||--o{ poll_options : "poll_id (cascade)"
@@ -411,6 +427,15 @@ erDiagram
     text message
     bool is_public
   }
+  notifications {
+    serial id PK
+    int hike_id FK
+    text date "YYYY-MM-DD, UK with hike_id"
+    jsonb facts "snapshot"
+    text text
+    bool fallback "template, not the model"
+    bool delivered
+  }
   user {
     text id PK
     text email UK
@@ -442,15 +467,16 @@ erDiagram
   activities outside all of them are pruned; manual points are kept.
 - **`tracking_points`** are the source of truth for coordinates and are never mutated
   once written (only inserted, pruned, or deleted by an admin).
+- **`notifications`** holds one daily update per hike and New York date (unique `(hike_id, date)`, which makes a run idempotent): the facts snapshot, the message text, whether it is the template `fallback`, and whether it was `delivered`. An undelivered row is re-dispatched when a run for the same hike and date happens again (startup catch-up). `date` is `text` (YYYY-MM-DD).
 - **better-auth tables** (`user`, `session`, `account`, `verification`) are managed by
   better-auth. `account.issuer` (migration `0007`) is a synthetic key
   (`local:oauth:<providerId>`) better-auth 1.7+ uses instead of the raw `provider_id`.
 
-Migrations live in `packages/db/drizzle/` (currently 10, `0000`–`0009`) and are
+Migrations live in `packages/db/drizzle/` (currently 12, `0000`–`0011`) and are
 generated with `npm run db:generate` — never hand-edited. `0006` and `0007` are custom
 data migrations (reformat malformed Garmin timestamps, backfill `account.issuer`);
 `0008` adds `sync_periods`, `0009` adds `hikes`, `app_settings` and the `hike_id`
-columns. `npm run migrate` then runs `packages/db/src/backfill-at-hike.ts`, an
+columns; `0010` and `0011` add `notifications` and its `delivered` flag. `npm run migrate` then runs `packages/db/src/backfill-at-hike.ts`, an
 idempotent script that creates the `at` hike from the bundled AT JSON files on first
 run, points `app_settings` at it, and backfills `hike_id` on existing rows.
 
