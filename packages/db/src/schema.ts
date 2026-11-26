@@ -1,4 +1,4 @@
-import { pgTable, serial, doublePrecision, text, timestamp, boolean, integer, bigint, real, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, doublePrecision, text, timestamp, boolean, integer, bigint, real, index, jsonb, unique } from 'drizzle-orm/pg-core';
 
 // --- Hikes ---
 // A hike is the organizing entity for trail geometry, tracking data, and
@@ -226,3 +226,27 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
+
+// --- Daily update notifications ---
+// Shared shape of one day's facts for a hike. Stage tickets (gather, build,
+// dispatch) extend this; it is stored as a snapshot next to the generated text.
+export interface DailyFacts {
+  hikeId: number;
+  /** YYYY-MM-DD, the calendar day the facts describe. */
+  date: string;
+  distanceKmToday: number | null;
+}
+
+// One row per hike and date; the unique constraint is what makes a daily update idempotent.
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  hikeId: integer('hike_id').notNull().references(() => hikes.id, { onDelete: 'cascade' }),
+  date: text('date').notNull(),
+  facts: jsonb('facts').$type<DailyFacts>().notNull(),
+  text: text('text').notNull(),
+  /** True when the text is the templated fallback rather than the generated message. */
+  fallback: boolean('fallback').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [unique('notifications_hike_date_unique').on(t.hikeId, t.date)]);
+
+export type Notification = typeof notifications.$inferSelect;
