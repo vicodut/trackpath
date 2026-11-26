@@ -94,6 +94,8 @@ Validated at boot by `apps/api/src/config/env.schema.ts` (Zod); `.env.example` d
 | `MAPSHARE_ID` | Seeds `app_settings.mapshare_id` once, when `backfill-at-hike` first creates the AT hike. After that the DB value wins and changing the env var has no effect; no API route edits it yet |
 | `POLL_INTERVAL_MIN` | Garmin auto-sync interval in minutes (default 5) |
 | `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | Strava OAuth; the daily Strava cron is skipped when unset |
+| `OPENROUTER_API_KEY` | OpenRouter key for the LLM daily narrative; feature is off when unset or empty |
+| `OPENROUTER_MODEL` | OpenRouter model id, owner-supplied, never hardcoded; the narrative stays off when unset even if the key is set |
 | `NEST_PORT` / `PORT` | Listen port: `NEST_PORT` (local dev, default 3001) wins over `PORT` (set by Railway) |
 
 ## Agent skills

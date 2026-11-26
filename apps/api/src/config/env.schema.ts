@@ -26,6 +26,10 @@ export const envSchema = z.object({
   STRAVA_CLIENT_ID: z.string().optional(),
   STRAVA_CLIENT_SECRET: z.string().optional(),
 
+  // ── OpenRouter (optional — LLM narrative is off when the key is absent) ───
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_MODEL: z.string().optional(),
+
   // ── Server ────────────────────────────────────────────────────────────────
   // PORT and NEST_PORT are intentionally excluded — they are resolved in
   // main.ts only, not by application modules. Including them here would cause
@@ -35,6 +39,17 @@ export const envSchema = z.object({
 });
 
 export type Env = z.infer<typeof envSchema>;
+
+/**
+ * True only when both OPENROUTER_API_KEY and OPENROUTER_MODEL are non-empty.
+ * A key without a model counts as disabled: the model is owner-supplied and
+ * never defaulted in code.
+ */
+export function isNarrativeEnabled(
+  env: Pick<Env, 'OPENROUTER_API_KEY' | 'OPENROUTER_MODEL'>,
+): boolean {
+  return !!env.OPENROUTER_API_KEY && !!env.OPENROUTER_MODEL;
+}
 
 /**
  * Passed to ConfigModule.forRoot({ validate }).
