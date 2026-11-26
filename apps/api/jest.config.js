@@ -8,7 +8,7 @@ export default {
   transform: {
     '^.+\\.(t|j)s$': ['ts-jest', {
       useESM: true,
-      tsconfig: { module: 'NodeNext', moduleResolution: 'NodeNext' },
+      tsconfig: { module: 'NodeNext', moduleResolution: 'NodeNext', skipLibCheck: true },
     }],
   },
   extensionsToTreatAsEsm: ['.ts'],
