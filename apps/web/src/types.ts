@@ -51,3 +51,11 @@ export interface SyncResult {
   total: number;
   points: TrackingPoint[];
 }
+
+/** One daily update from GET /api/notifications. fallback/delivered are internal and never rendered. */
+export interface NotificationSummary {
+  date: string;
+  text: string;
+  fallback: boolean;
+  delivered: boolean;
+}

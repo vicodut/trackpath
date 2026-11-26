@@ -13,6 +13,7 @@ const TrailLogPage = lazy(() => import("./components/TrailLogPage").then(m => ({
 const PollsPage = lazy(() => import("./components/PollsPage").then(m => ({ default: m.PollsPage })));
 const ResourcesPage = lazy(() => import("./components/ResourcesPage").then(m => ({ default: m.ResourcesPage })));
 const CheersPage = lazy(() => import("./components/CheersPage").then(m => ({ default: m.CheersPage })));
+const NotificationsPage = lazy(() => import("./components/NotificationsPage").then(m => ({ default: m.NotificationsPage })));
 import { LocationBanner } from "./components/LocationBanner";
 import { PoopRain } from "./components/PoopRain";
 import type { LayerVisibility } from "./components/LayerToggle";
@@ -37,7 +38,7 @@ export function App() {
   const { activities: stravaActivities, connect: stravaConnect, syncActivities: stravaSync } = useStrava();
   const { polls, suggestions, vote: votePoll, create: createPoll, close: closePoll, remove: deletePoll, suggest: suggestPoll, loadSuggestions, accept: acceptSuggestion, reject: rejectSuggestion } = usePolls();
   const { cheers, submit: submitCheer, remove: deleteCheer } = useCheers(isAdmin);
-  const { showAdmin, showStats, showTrailLog, showGear, showPolls, showResources, showCheers, openAdmin, openStats, openTrailLog, openGear, openPolls, openResources, openCheers, closeModal } = useModals();
+  const { showAdmin, showStats, showTrailLog, showGear, showPolls, showResources, showCheers, showUpdates, openAdmin, openStats, openTrailLog, openGear, openPolls, openResources, openCheers, openUpdates, closeModal } = useModals();
   const { formOpen, setFormOpen, pickedCoords, sidebarVisible, setSidebarVisible, handleMapClick, handleLongPress, handleSubmit, handleSuccess, openForm } = useAddPoint(addPoint, isAdmin);
 
   const [poopRain, setPoopRain] = useState(false);
@@ -231,6 +232,7 @@ export function App() {
         onPolls={openPolls}
         onResources={openResources}
         onCheers={openCheers}
+        onUpdates={openUpdates}
       />
       <div className="main-container">
         <div className="map-wrapper">
@@ -354,6 +356,7 @@ export function App() {
             onClose={closeModal}
           />
         )}
+        {showUpdates && <NotificationsPage onClose={closeModal} />}
         {showResources && (
           <ResourcesPage
             trailProgressKm={trailProgressKm}
