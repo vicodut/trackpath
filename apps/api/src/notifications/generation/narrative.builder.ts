@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { OpenRouter } from '@openrouter/sdk';
 import type { DailyFacts } from '@trackpath/db/schema';
 import { isNarrativeEnabled } from '../../config/env.schema.js';
@@ -10,7 +11,8 @@ export const NARRATIVE_MAX_RETRIES = 2;
 /** First backoff delay; doubles on each retry (1s, 2s). */
 export const NARRATIVE_BACKOFF_BASE_MS = 1_000;
 /** Response size cap: a short update, not an essay. */
-export const NARRATIVE_MAX_TOKENS = 300;
+// Reasoning models spend the cap on hidden thinking first, so 300 returned empty text; 2000 leaves room for the answer.
+export const NARRATIVE_MAX_TOKENS = 2000;
 
 /**
  * Facts the narrative can use, on top of the base DailyFacts. Every extra is optional,
@@ -83,6 +85,7 @@ export function templateMessage(f: NarrativeFacts): string {
 export class NarrativeBuilder implements MessageBuilder {
   private readonly client: ChatClient | null;
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly logger = new Logger(NarrativeBuilder.name);
 
   constructor(
     private readonly env: { OPENROUTER_API_KEY?: string; OPENROUTER_MODEL?: string },
@@ -116,8 +119,10 @@ export class NarrativeBuilder implements MessageBuilder {
         const content = result.choices[0]?.message.content;
         const text = typeof content === 'string' ? content.trim() : '';
         if (text) return { text, fallback: false };
-      } catch {
+        this.logger.warn(`Narrative attempt ${attempt + 1} returned no text`);
+      } catch (error) {
         // try again; after the last attempt we fall through to the template
+        this.logger.warn(`Narrative attempt ${attempt + 1} failed: ${String(error)}`);
       }
     }
     return { text: templateMessage(facts), fallback: true };
