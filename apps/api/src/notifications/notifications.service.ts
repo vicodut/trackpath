@@ -6,7 +6,7 @@ import { DRIZZLE } from '../database/drizzle.constants.js';
 import type { DrizzleClient } from '../database/drizzle.types.js';
 import { HikesService } from '../hikes/hikes.service.js';
 import { DISPATCHER, FACTS_GATHERER, MESSAGE_BUILDER } from './notifications.types.js';
-import type { Dispatcher, FactsGatherer, MessageBuilder } from './notifications.types.js';
+import type { DeliverableNotification, Dispatcher, FactsGatherer, MessageBuilder } from './notifications.types.js';
 
 /** The trail day is America/New_York's; en-CA formats as YYYY-MM-DD. */
 const NY_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
@@ -53,7 +53,7 @@ export class NotificationsService implements OnApplicationBootstrap {
       if (found.length > 0) {
         // Saved earlier: only a failed dispatch is left to retry.
         const row = found[0];
-        if (!row.delivered) await this.deliver(row.id, hike.id, row.text);
+        if (!row.delivered) await this.deliver({ id: row.id, hikeId: hike.id, text: row.text });
         continue;
       }
 
@@ -65,12 +65,14 @@ export class NotificationsService implements OnApplicationBootstrap {
         .values({ hikeId: hike.id, date, facts, text, fallback })
         .onConflictDoNothing()
         .returning({ id: notifications.id });
-      if (inserted.length > 0) await this.deliver(inserted[0].id, hike.id, text);
+      if (inserted.length > 0) await this.deliver({ id: inserted[0].id, hikeId: hike.id, text });
     }
   }
 
-  private async deliver(id: number, hikeId: number, text: string): Promise<void> {
-    await this.dispatcher.dispatch(hikeId, text);
-    await this.db.update(notifications).set({ delivered: true }).where(eq(notifications.id, id));
+  /** The in-app channel flags the row delivered; a failed channel leaves it for the next run's retry. */
+  private async deliver(notification: DeliverableNotification): Promise<void> {
+    for (const r of await this.dispatcher.dispatch(notification)) {
+      if (!r.ok) this.logger.error(`Channel ${r.channel} failed for notification ${String(notification.id)}: ${r.error ?? ''}`);
+    }
   }
 }

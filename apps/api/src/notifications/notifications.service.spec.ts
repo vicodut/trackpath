@@ -57,7 +57,10 @@ async function setup() {
         useValue: {
           dispatch: () => {
             calls.push('dispatch');
-            return state.dispatchFails ? Promise.reject(new Error('down')) : Promise.resolve();
+            // Like the in-app channel: a successful delivery flags the stored row.
+            if (state.dispatchFails) return Promise.resolve([{ channel: 'in-app', ok: false, error: 'down' }]);
+            Object.assign(rows[0], { delivered: true });
+            return Promise.resolve([{ channel: 'in-app', ok: true }]);
           },
         },
       },
@@ -96,7 +99,7 @@ describe('NotificationsService', () => {
   it('re-dispatches a saved but undelivered row without gathering again', async () => {
     const { service, rows, calls, state } = await setup();
     state.dispatchFails = true;
-    await expect(service.runDailyUpdate(NOW)).rejects.toThrow('down');
+    await service.runDailyUpdate(NOW);
     expect(rows[0]).toMatchObject({ delivered: false });
     calls.length = 0;
     state.dispatchFails = false;
